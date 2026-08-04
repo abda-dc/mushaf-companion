@@ -1,10 +1,59 @@
 export type ReciterId = "alafasy" | "abdulbasit" | "saad";
 
-// Prototype content snapshot, verified 2026-08-04.
-// Uthmani text + transliteration: api.quran.com/api/v4/verses/by_chapter/1
-// Tajweed markup: api.quran.com/api/v4/quran/verses/uthmani_tajweed?chapter_number=1
-// Keep this file separate from rendering; production should hydrate the full 604-page
-// mapping through a server-side Quran Foundation integration and fail closed on errors.
+export interface PageWord {
+  id: number;
+  text: string;
+  tajweedHtml: string;
+  verseKey: string;
+  isEnd: boolean;
+}
+
+export interface PageLine {
+  number: number;
+  words: PageWord[];
+}
+
+export interface PageVerse {
+  key: string;
+  number: number;
+  chapterId: number;
+  uthmani: string;
+  transliteration: string;
+}
+
+export interface PageChapter {
+  id: number;
+  name: string;
+  translatedName: string;
+  arabicName: string;
+  revelationPlace: string;
+}
+
+export interface ChapterStart {
+  chapterId: number;
+  headerLine: number;
+  bismillahLine: number | null;
+}
+
+export interface QuranPage {
+  page: number;
+  juz: number;
+  hizb: number;
+  lines: PageLine[];
+  verses: PageVerse[];
+  chapters: PageChapter[];
+  chapterStarts: ChapterStart[];
+}
+
+export interface SearchResult {
+  id: string;
+  type: "page" | "chapter" | "verse";
+  label: string;
+  detail: string;
+  arabic?: string;
+  page?: number;
+  verseKey?: string;
+}
 
 export const RECITERS: Array<{ id: ReciterId; name: string; initials: string }> = [
   { id: "alafasy", name: "Mishary Rashid Alafasy", initials: "MA" },
@@ -12,61 +61,35 @@ export const RECITERS: Array<{ id: ReciterId; name: string; initials: string }> 
   { id: "saad", name: "Saad Al-Ghamdi", initials: "SG" },
 ];
 
-export const SURAH_FATIHAH = [
-  {
-    number: 1,
-    key: "1:1",
-    arabicNumber: "١",
-    uthmani: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
-    tajweed: 'بِسْمِ <tajweed class="ham-wasl">ٱ</tajweed>للَّهِ <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda-normal">ـٰ</tajweed>نِ <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>رَّح<tajweed class="madda-permissible">ِي</tajweed>مِ <span class="ayah-marker">١</span>',
-    transliteration: "Bismi Allahi arrahmani arraheem",
-  },
-  {
-    number: 2,
-    key: "1:2",
-    arabicNumber: "٢",
-    uthmani: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ",
-    tajweed: 'ٱلْحَمْدُ لِلَّهِ رَبِّ <tajweed class="ham-wasl">ٱ</tajweed>لْعَ<tajweed class="madda-normal">ـٰ</tajweed>لَم<tajweed class="madda-permissible">ِي</tajweed>نَ <span class="ayah-marker">٢</span>',
-    transliteration: "Alhamdu lillahi rabbi alAAalameen",
-  },
-  {
-    number: 3,
-    key: "1:3",
-    arabicNumber: "٣",
-    uthmani: "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
-    tajweed: 'ٱ<tajweed class="laam-shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda-normal">ـٰ</tajweed>نِ <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>رَّح<tajweed class="madda-permissible">ِي</tajweed>مِ <span class="ayah-marker">٣</span>',
-    transliteration: "Arrahmani arraheem",
-  },
-  {
-    number: 4,
-    key: "1:4",
-    arabicNumber: "٤",
-    uthmani: "مَـٰلِكِ يَوْمِ ٱلدِّينِ",
-    tajweed: 'مَ<tajweed class="madda-normal">ـٰ</tajweed>لِكِ يَوْمِ <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>دّ<tajweed class="madda-permissible">ِي</tajweed>نِ <span class="ayah-marker">٤</span>',
-    transliteration: "Maliki yawmi addeen",
-  },
-  {
-    number: 5,
-    key: "1:5",
-    arabicNumber: "٥",
-    uthmani: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
-    tajweed: 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَع<tajweed class="madda-permissible">ِي</tajweed>نُ <span class="ayah-marker">٥</span>',
-    transliteration: "Iyyaka naAAbudu wa-iyyaka nastaAAeen",
-  },
-  {
-    number: 6,
-    key: "1:6",
-    arabicNumber: "٦",
-    uthmani: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
-    tajweed: 'ٱهْدِنَا <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>صِّر<tajweed class="madda-normal">َٲ</tajweed>طَ <tajweed class="ham-wasl">ٱ</tajweed>لْمُسْتَق<tajweed class="madda-permissible">ِي</tajweed>مَ <span class="ayah-marker">٦</span>',
-    transliteration: "Ihdina assirata almustaqeem",
-  },
-  {
-    number: 7,
-    key: "1:7",
-    arabicNumber: "٧",
-    uthmani: "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
-    tajweed: 'صِر<tajweed class="madda-normal">َٲ</tajweed>طَ <tajweed class="ham-wasl">ٱ</tajweed>لَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ <tajweed class="ham-wasl">ٱ</tajweed>لْمَغْضُوبِ عَلَيْهِمْ وَلَا <tajweed class="ham-wasl">ٱ</tajweed><tajweed class="laam-shamsiyah">ل</tajweed>ضّ<tajweed class="madda-necessary">َا</tajweed>ٓلّ<tajweed class="madda-permissible">ِي</tajweed>نَ <span class="ayah-marker">٧</span>',
-    transliteration: "Sirata allatheena anAAamta AAalayhim ghayri almaghdoobi AAalayhim wala addalleen",
-  },
-] as const;
+const FATIHAH_VERSES: PageVerse[] = [
+  { key: "1:1", number: 1, chapterId: 1, uthmani: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Bismi Allahi arrahmani arraheem" },
+  { key: "1:2", number: 2, chapterId: 1, uthmani: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ", transliteration: "Alhamdu lillahi rabbi alAAalameen" },
+  { key: "1:3", number: 3, chapterId: 1, uthmani: "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Arrahmani arraheem" },
+  { key: "1:4", number: 4, chapterId: 1, uthmani: "مَـٰلِكِ يَوْمِ ٱلدِّينِ", transliteration: "Maliki yawmi addeen" },
+  { key: "1:5", number: 5, chapterId: 1, uthmani: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", transliteration: "Iyyaka naAAbudu wa-iyyaka nastaAAeen" },
+  { key: "1:6", number: 6, chapterId: 1, uthmani: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ", transliteration: "Ihdina assirata almustaqeem" },
+  { key: "1:7", number: 7, chapterId: 1, uthmani: "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ", transliteration: "Sirata allatheena anAAamta AAalayhim ghayri almaghdoobi AAalayhim wala addalleen" },
+];
+
+function fallbackLine(number: number, verse?: PageVerse): PageLine {
+  if (!verse) return { number, words: [] };
+  return {
+    number,
+    words: [
+      { id: verse.number * 2, text: verse.uthmani, tajweedHtml: verse.uthmani, verseKey: verse.key, isEnd: false },
+      { id: verse.number * 2 + 1, text: "٠١٢٣٤٥٦٧٨٩"[verse.number], tajweedHtml: "", verseKey: verse.key, isEnd: true },
+    ],
+  };
+}
+
+// Fail-safe content rendered before the selected Madani page is loaded. Dynamic page
+// data comes from the Quran Foundation page, word-line, tajweed and transliteration APIs.
+export const FALLBACK_PAGE: QuranPage = {
+  page: 1,
+  juz: 1,
+  hizb: 1,
+  verses: FATIHAH_VERSES,
+  chapters: [{ id: 1, name: "Al-Fātiḥah", translatedName: "The Opener", arabicName: "الفاتحة", revelationPlace: "makkah" }],
+  chapterStarts: [{ chapterId: 1, headerLine: 1, bismillahLine: null }],
+  lines: Array.from({ length: 15 }, (_, index) => fallbackLine(index + 1, index > 0 && index < 8 ? FATIHAH_VERSES[index - 1] : undefined)),
+};
