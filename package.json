@@ -1,6 +1,6 @@
 {
-  "name": "site-creator-vinext-starter",
-  "version": "0.1.0",
+  "name": "mushaf-companion",
+  "version": "0.5.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -10,16 +10,24 @@
     "build": "vinext build",
     "start": "vinext start --port 5550",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern android --ignore-pattern ios --ignore-pattern mobile-shell",
+    "db:generate": "drizzle-kit generate",
+    "mobile:sync": "cap sync",
+    "mobile:android": "cap sync android",
+    "mobile:ios": "cap sync ios",
+    "mobile:android:debug": "npm run mobile:android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "drizzle-orm": "0.45.2",
-    "next": "16.2.6",
+    "next": "^16.3.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",

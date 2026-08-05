@@ -2,6 +2,28 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.5.0 — 2026-08-05
+
+### Added
+
+- Playback speeds at 0.5×, 1.5×, 1.75×, and 2× in addition to the existing choices.
+- A front-matter Tajweed guide covering all 17 rule categories present in the verified markup, with five linked Quran examples per rule.
+- Contextual Tajweed explanations when a marked word is selected in the muṣḥaf.
+- A clickable 114-sūrah table of contents with Arabic/English names, meaning, Makkan/Madinan classification, āyah count, page range, juz coverage, and revelation order.
+- Complete sūrah playback initiated by double-clicking a displayed sūrah number.
+- Capacitor 8 Android and iOS projects, a verified local Android debug APK build, and a GitHub Actions native packaging workflow.
+
+### Changed
+
+- Page 1 now leads backward to the Tajweed guide as unnumbered front matter.
+- Complete sūrah mode automatically advances verified āyah files for verse-scoped reciters and uses continuous sūrah audio where supported.
+- Mobile navigation now includes the contents destination, and the reading-assistance bar includes direct guide access.
+
+### Reliability
+
+- The contents route combines the verified chapter catalog with juz mappings and removes duplicate juz entries.
+- The native shells enforce HTTPS and retain the reader’s same-origin local preferences.
+
 ## 0.4.0 — 2026-08-05
 
 ### Added

@@ -60,6 +60,21 @@ export interface SearchResult {
   verseKey?: string;
 }
 
+export interface QuranChapterInfo {
+  id: number;
+  name: string;
+  simpleName: string;
+  arabicName: string;
+  translatedName: string;
+  revelationPlace: "makkah" | "madinah";
+  revelationOrder: number;
+  versesCount: number;
+  startPage: number;
+  endPage: number;
+  juzs: number[];
+  bismillahPre: boolean;
+}
+
 export const RECITERS: Array<{ id: ReciterId; name: string; initials: string; scope: ReciterScope }> = [
   { id: "alafasy", name: "Mishary Rashid Alafasy", initials: "MA", scope: "ayah" },
   { id: "abdulbasit", name: "Abdul Basit Abdus Samad", initials: "AB", scope: "ayah" },

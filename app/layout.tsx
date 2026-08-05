@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Mushaf Companion — Faithful Quran Reading",
-  description: "A calm, page-faithful digital mushaf with all 604 Quran pages, authenticated Uthmani text, tajweed guidance, transliteration, bookmarks, and recitation.",
+  description: "A calm, page-faithful digital mushaf with all 604 Quran pages, an interactive Tajweed guide, a complete sūrah index, transliteration, bookmarks, and recitation.",
   applicationName: "Mushaf Companion",
   other: {
     google: "notranslate",

@@ -2,7 +2,7 @@
 
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
-The current implementation supports all 604 Quran pages, direct page navigation, verse-level audio, tajweed display, transliteration, bookmarks, search, night mode, and last-read resume behavior.
+The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, direct page navigation, verse and sūrah playback, transliteration, bookmarks, search, night mode, and last-read resume behavior.
 
 ![Mushaf Companion preview](./public/og.png)
 
@@ -45,6 +45,8 @@ The current production deployment is private:
 - Reading-font picker with Uthman Taha, Amiri, Lateef, and Scheherazade.
 - Explicit mobile Tajweed and Transliteration controls.
 - Responsive settings panel with persisted display, learning, reciter, and speed preferences.
+- A front-matter Tajweed guide covering all 17 markup categories used by the reader, with five linked Quran examples for each rule.
+- Tap a Tajweed-marked word to see its rule name, timing, and reading instruction without leaving the page.
 
 ### Audio
 
@@ -55,14 +57,16 @@ The current production deployment is private:
 - Minshawi Kids Repeat.
 - Sheikh Abdul Rashid Ali Sufi.
 - Verse play/pause and previous/next ayah controls.
-- Playback progress and speed control.
+- Playback progress with 0.5×, 0.75×, 1×, 1.25×, 1.5×, 1.75×, and 2× speed control.
 - Repeat current ayah or a selected range on the current page.
+- Double-click a displayed sūrah number to begin complete sūrah playback from āyah 1.
 - Stable mini-player plus a full transport/settings bottom sheet on mobile.
 - Five reciters use ayah-by-ayah files; Sheikh Abdul Rashid Ali Sufi uses clearly labeled continuous sūrah playback because verified verse timing is not available from the source.
 
 ### Finding and saving places
 
 - Search by page number, ayah key, surah name, or Quran text.
+- Clickable table of contents for all 114 sūrahs with Arabic and English names, translation, Makkan/Madinan classification, āyah count, page range, juz coverage, and revelation order.
 - Page and ayah search results.
 - Ayah bookmarks.
 - Resume from the last confirmed page and ayah.
@@ -76,6 +80,7 @@ Browser reader
   ├─ /api/pages/:page  ── verified page, line, tajweed and transliteration data
   ├─ /api/search       ── page, surah and verse search
   ├─ /api/lookup       ── verse-to-page mapping
+  ├─ /api/chapters     ── verified chapter, juz and revelation index
   └─ audio providers   ── verse-level recitation files
 ```
 
@@ -107,6 +112,8 @@ npm run build    # Create a production build
 npm run start    # Run the production build on port 5550
 npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint
+npm run mobile:sync           # Sync both native projects
+npm run mobile:android:debug  # Build an Android debug APK on Windows
 ```
 
 No application environment variables are required for the current read-only Quran API integration.
@@ -118,6 +125,7 @@ No application environment variables are required for the current read-only Qura
 | `GET /api/pages/:page` | Load one Madani mushaf page | Accepts pages 1–604 and fails closed on incomplete upstream content. |
 | `GET /api/search?q=` | Search pages, ayat, surahs, and text | Falls back to direct page and ayah matching if broad search is unavailable. |
 | `GET /api/lookup?verse=` | Resolve an ayah key to its page | Accepts keys such as `2:255`. |
+| `GET /api/chapters` | Load the 114-sūrah contents index | Includes page ranges, juz coverage, revelation metadata, and āyah counts. |
 
 ## Repository layout
 
@@ -127,10 +135,14 @@ app/
   globals.css          Reader, audio, modal, mobile, and theme styling
   page.tsx             Mushaf reader and interaction state
   quran-data.ts        Shared page, verse, reciter, and search types
+  tajweed-guide.ts     Tajweed taxonomy, teaching copy, and 85 linked examples
+android/               Capacitor Android Studio project
+ios/                   Capacitor Xcode project
 docs/
   ANALYTICS.md         Future analytics and event contract
   ROADMAP.md           Prioritized translations, tafsir, and offline roadmap
   UX-REVIEW.md         Current reader UX findings and acceptance checks
+  MOBILE.md            Android/iOS packaging and signing guide
 tests/
   rendered-html.test.mjs
 worker/
@@ -157,6 +169,8 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 - Offline reading is not supported.
 - The QCF page geometry still needs representative screenshot regression coverage before it should be described as pixel-identical on every supported browser and device.
 - Bookmarks and preferences are local to the current browser.
+- Native packages currently load the deployed server-backed reader over HTTPS; a fully bundled offline reader remains a future phase.
+- A signed iOS `.ipa` requires macOS, Xcode 26+, and an Apple Developer signing team.
 
 ## Product planning
 

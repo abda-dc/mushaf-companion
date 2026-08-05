@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   FALLBACK_PAGE,
   RECITERS,
+  type PageWord,
+  type QuranChapterInfo,
   type QuranPage,
   type ReciterId,
   type SearchResult,
 } from "./quran-data";
+import { TAJWEED_RULES, rulesForTajweedHtml, type TajweedRule } from "./tajweed-guide";
 
-type NavItem = "Home" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
+type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type Overlay = Exclude<NavItem, "Read"> | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
@@ -17,7 +20,8 @@ type PageScale = "compact" | "comfortable" | "large";
 type ReadingFont = "amiri" | "lateef" | "scheherazade" | "uthman-taha";
 
 const TOTAL_PAGES = 604;
-const PAGE_DATA_REVISION = "2026-08-05-rosette-fonts";
+const PAGE_DATA_REVISION = "2026-08-05-learning-contents";
+const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
   { id: "uthman-taha", label: "Uthman Taha" },
   { id: "amiri", label: "Amiri" },
@@ -26,6 +30,7 @@ const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
 ];
 const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Home", glyph: "⌂" },
+  { label: "Contents", glyph: "☷" },
   { label: "Read", glyph: "▤" },
   { label: "Listen", glyph: "◖" },
   { label: "Bookmarks", glyph: "◇" },
@@ -33,6 +38,12 @@ const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Settings", glyph: "⚙" },
 ];
 const FONT_LOADS = new Map<string, Promise<string>>();
+
+interface TajweedFocus {
+  word: string;
+  verseKey: string;
+  rules: TajweedRule[];
+}
 
 function clampPage(value: number) {
   return Math.min(TOTAL_PAGES, Math.max(1, Math.round(value)));
@@ -93,6 +104,13 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [chapters, setChapters] = useState<QuranChapterInfo[]>([]);
+  const [contentsQuery, setContentsQuery] = useState("");
+  const [contentsJuz, setContentsJuz] = useState(0);
+  const [contentsLoading, setContentsLoading] = useState(false);
+  const [tajweedGuideOpen, setTajweedGuideOpen] = useState(false);
+  const [tajweedFocus, setTajweedFocus] = useState<TajweedFocus | null>(null);
+  const [surahPlaybackChapter, setSurahPlaybackChapter] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [fontName, setFontName] = useState("");
@@ -103,6 +121,8 @@ export default function Home() {
   const lastGoodPageRef = useRef(FALLBACK_PAGE);
   const pendingVerseRef = useRef<string | null>(null);
   const pendingEdgeRef = useRef<PageEdge>(null);
+  const pendingAutoplayRef = useRef(false);
+  const surahPlaybackRef = useRef<number | null>(null);
 
   const activeNav: NavItem = overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
@@ -111,6 +131,7 @@ export default function Home() {
   const currentBookmark = `${pageData.page}|${selectedVerseKey}`;
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
+  const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
   const fontReady = fontName === fontKey;
   const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
@@ -122,6 +143,12 @@ export default function Home() {
     page: pageData.page,
     verseKey: verse.key,
   }));
+  const filteredChapters = chapters.filter((chapter) => {
+    const query = contentsQuery.trim().toLocaleLowerCase();
+    const matchesQuery = !query || `${chapter.id} ${chapter.name} ${chapter.simpleName} ${chapter.translatedName} ${chapter.arabicName}`.toLocaleLowerCase().includes(query);
+    const matchesJuz = contentsJuz === 0 || chapter.juzs.includes(contentsJuz);
+    return matchesQuery && matchesJuz;
+  });
 
   useEffect(() => {
     const urlPage = Number(new URL(window.location.href).searchParams.get("page"));
@@ -145,7 +172,7 @@ export default function Home() {
     if (["compact", "comfortable", "large"].includes(savedScale ?? "")) setPageScale(savedScale as PageScale);
     if (READING_FONTS.some((item) => item.id === savedReadingFont)) setReadingFont(savedReadingFont as ReadingFont);
     const savedSpeed = Number(localStorage.getItem("mushaf:speed") ?? "1");
-    if ([0.75, 1, 1.25].includes(savedSpeed)) setSpeed(savedSpeed);
+    if (PLAYBACK_SPEEDS.includes(savedSpeed as (typeof PLAYBACK_SPEEDS)[number])) setSpeed(savedSpeed);
     setHydrated(true);
   }, []);
 
@@ -157,6 +184,7 @@ export default function Home() {
       if (cancelled) return;
       lastGoodPageRef.current = data;
       setPageData(data);
+      setTajweedFocus(null);
       setLoadingPage(false);
       setJumpValue(String(data.page));
       const requestedVerse = pendingVerseRef.current;
@@ -164,7 +192,15 @@ export default function Home() {
       const nextVerse = requestedVerse && data.verses.some((verse) => verse.key === requestedVerse)
         ? requestedVerse
         : edge === "last" ? data.verses.at(-1)?.key : data.verses[0]?.key;
-      if (nextVerse) setSelectedVerseKey(nextVerse);
+      if (nextVerse) {
+        const nextChapterId = Number(nextVerse.split(":")[0]);
+        if (surahPlaybackRef.current !== null && nextChapterId !== surahPlaybackRef.current) {
+          pendingAutoplayRef.current = false;
+          updateSurahPlayback(null);
+          updatePlaying(false);
+        }
+        setSelectedVerseKey(nextVerse);
+      }
       setRangeStart(data.verses[0]?.key ?? "");
       setRangeEnd(data.verses.at(-1)?.key ?? "");
       pendingVerseRef.current = null;
@@ -258,10 +294,15 @@ export default function Home() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !selectedVerseKey) return;
+    const shouldAutoplay = playingRef.current || pendingAutoplayRef.current;
+    pendingAutoplayRef.current = false;
     audio.load();
     setProgress(0);
     setDuration(0);
-    if (playingRef.current) audio.play().catch(() => updatePlaying(false));
+    if (shouldAutoplay) audio.play().then(() => updatePlaying(true)).catch(() => {
+      updatePlaying(false);
+      setNotice("The recitation is ready. Tap play to begin.");
+    });
   }, [selectedVerseKey, reciter]);
 
   useEffect(() => {
@@ -283,12 +324,13 @@ export default function Home() {
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && overlay) {
+      if (event.key === "Escape" && (overlay || tajweedGuideOpen)) {
         event.preventDefault();
         setOverlay(null);
+        setTajweedGuideOpen(false);
         return;
       }
-      if (overlay || loadingPage) return;
+      if (overlay || tajweedGuideOpen || loadingPage) return;
       const target = event.target as HTMLElement;
       if (["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") {
@@ -309,16 +351,21 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKey);
   // goToPage is a render-local command whose latest closure is intentionally used.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, overlay, loadingPage]);
+  }, [page, overlay, tajweedGuideOpen, loadingPage]);
 
   useEffect(() => {
-    document.body.style.overflow = overlay ? "hidden" : "";
+    document.body.style.overflow = overlay || tajweedGuideOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [overlay]);
+  }, [overlay, tajweedGuideOpen]);
 
   function updatePlaying(value: boolean) {
     playingRef.current = value;
     setPlaying(value);
+  }
+
+  function updateSurahPlayback(chapterId: number | null) {
+    surahPlaybackRef.current = chapterId;
+    setSurahPlaybackChapter(chapterId);
   }
 
   function selectReciter(nextReciter: ReciterId) {
@@ -331,6 +378,12 @@ export default function Home() {
     if (next === pageData.page && !verseKey) return;
     audioRef.current?.pause();
     if (!keepPlaying) updatePlaying(false);
+    if (next === pageData.page && verseKey) {
+      pendingVerseRef.current = null;
+      setSelectedVerseKey(verseKey);
+      setTurnDirection("");
+      return;
+    }
     pendingVerseRef.current = verseKey ?? null;
     setTurnDirection(direction ?? (next > pageData.page ? "next" : "previous"));
     setPage(next);
@@ -363,6 +416,14 @@ export default function Home() {
     else goToPage(page - 1, "previous");
   }
 
+  function previousPage() {
+    if (pageData.page === 1) {
+      setTajweedGuideOpen(true);
+      return;
+    }
+    goToPage(pageData.page - 1, "previous");
+  }
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -392,6 +453,28 @@ export default function Home() {
   function handleEnded() {
     const audio = audioRef.current;
     if (!audio) return;
+    if (surahPlaybackRef.current !== null) {
+      if (currentReciter.scope === "surah") {
+        updateSurahPlayback(null);
+        updatePlaying(false);
+        return;
+      }
+      const nextVerse = pageData.verses[currentVerseIndex + 1];
+      if (nextVerse) {
+        if (nextVerse.chapterId === surahPlaybackRef.current) setSelectedVerseKey(nextVerse.key);
+        else {
+          updateSurahPlayback(null);
+          updatePlaying(false);
+        }
+      } else if (pageData.page < TOTAL_PAGES) {
+        pendingEdgeRef.current = "first";
+        goToPage(pageData.page + 1, "next", undefined, true);
+      } else {
+        updateSurahPlayback(null);
+        updatePlaying(false);
+      }
+      return;
+    }
     if (repeatMode === "ayah") {
       audio.currentTime = 0;
       audio.play().catch(() => updatePlaying(false));
@@ -414,7 +497,87 @@ export default function Home() {
   }
 
   function chooseNav(item: NavItem) {
+    if (item === "Contents") {
+      openContents();
+      return;
+    }
     setOverlay(item === "Read" ? null : item);
+  }
+
+  function openContents() {
+    setOverlay("Contents");
+    if (chapters.length || contentsLoading) return;
+    setContentsLoading(true);
+    fetch("/api/chapters")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Contents unavailable");
+        return response.json() as Promise<{ chapters: QuranChapterInfo[] }>;
+      })
+      .then((payload) => setChapters(payload.chapters))
+      .catch(() => setNotice("The verified table of contents could not be opened. Please try again."))
+      .finally(() => setContentsLoading(false));
+  }
+
+  function selectMushafWord(word: PageWord) {
+    setSelectedVerseKey(word.verseKey);
+    if (!tajweed || word.isEnd) {
+      setTajweedFocus(null);
+      return;
+    }
+    const rules = rulesForTajweedHtml(word.tajweedHtml);
+    setTajweedFocus(rules.length ? { word: word.text, verseKey: word.verseKey, rules } : null);
+  }
+
+  async function startSurahPlayback(chapterId: number) {
+    const verseKey = `${chapterId}:1`;
+    audioRef.current?.pause();
+    updatePlaying(false);
+    updateSurahPlayback(chapterId);
+    setRepeatMode("off");
+    pendingAutoplayRef.current = true;
+    setOverlay("Listen");
+    setNotice(`Starting complete sūrah playback for Sūrah ${chapterId}.`);
+    if (pageData.verses.some((verse) => verse.key === verseKey)) {
+      setSelectedVerseKey(verseKey);
+    } else {
+      try {
+        const response = await fetch(`/api/lookup?verse=${encodeURIComponent(verseKey)}`);
+        if (!response.ok) throw new Error("Lookup failed");
+        const target = await response.json() as { page: number; verseKey: string };
+        goToPage(target.page, undefined, target.verseKey);
+      } catch {
+        pendingAutoplayRef.current = false;
+        updateSurahPlayback(null);
+        setNotice("The beginning of that sūrah could not be confirmed right now.");
+      }
+      return;
+    }
+    if (selectedVerseKey === verseKey) {
+      window.setTimeout(() => {
+        const audio = audioRef.current;
+        pendingAutoplayRef.current = false;
+        audio?.load();
+        audio?.play().then(() => updatePlaying(true)).catch(() => setNotice("The sūrah is ready. Tap play to begin."));
+      }, 0);
+    }
+  }
+
+  async function openVerse(verseKey: string, closeGuide = false) {
+    try {
+      const response = await fetch(`/api/lookup?verse=${encodeURIComponent(verseKey)}`);
+      if (!response.ok) throw new Error("Lookup failed");
+      const target = await response.json() as { page: number; verseKey: string };
+      goToPage(target.page, undefined, target.verseKey);
+      setOverlay(null);
+      if (closeGuide) setTajweedGuideOpen(false);
+    } catch {
+      setNotice("That example’s page could not be confirmed right now.");
+    }
+  }
+
+  function openChapter(chapter: QuranChapterInfo) {
+    goToPage(chapter.startPage, undefined, `${chapter.id}:1`);
+    setOverlay(null);
   }
 
   async function openSearchResult(result: SearchResult) {
@@ -441,7 +604,7 @@ export default function Home() {
     const bismillahStart = pageData.chapterStarts.find((item) => item.bismillahLine === lineNumber);
     if (chapterStart) {
       const chapter = pageData.chapters.find((item) => item.id === chapterStart.chapterId);
-      return <div className="surah-line" lang="ar" dir="rtl" translate="no"><span>سُورَةُ</span><strong>{chapter?.arabicName}</strong><span>{chapter?.revelationPlace === "madinah" ? "مَدَنِيَّة" : "مَكِّيَّة"}</span></div>;
+      return <div className="surah-line" lang="ar" dir="rtl" translate="no"><span>سُورَةُ</span><strong>{chapter?.arabicName}</strong>{chapter && <button type="button" className="surah-number" onClick={() => setNotice(`Double-click Sūrah ${chapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(chapter.id)} aria-label={`Sūrah ${chapter.id}. Double-click to play the complete sūrah`} title="Double-click to play the complete sūrah">{chapter.id}</button>}<span>{chapter?.revelationPlace === "madinah" ? "مَدَنِيَّة" : "مَكِّيَّة"}</span></div>;
     }
     if (bismillahStart) {
       return <div className="bismillah-line" lang="ar" dir="rtl" translate="no">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>;
@@ -457,8 +620,8 @@ export default function Home() {
               type="button"
               key={word.id}
               className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}`}
-              onClick={() => setSelectedVerseKey(word.verseKey)}
-              aria-label={`Select ayah ${word.verseKey}`}
+              onClick={() => selectMushafWord(word)}
+              aria-label={`${tajweed && rulesForTajweedHtml(word.tajweedHtml).length ? "Explain Tajweed in" : "Select"} ayah ${word.verseKey}`}
               tabIndex={word.isEnd ? 0 : -1}
             >
               {useQcfGlyph
@@ -505,6 +668,7 @@ export default function Home() {
           <div className="header-tools">
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
+            <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
             <button type="button" className={`icon-button ${bookmarks.includes(currentBookmark) ? "active" : ""}`} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
             <button type="button" className="icon-button" onClick={() => setOverlay("Search")} aria-label="Search Quran">⌕</button>
             <button type="button" className="icon-button settings-shortcut" onClick={() => setOverlay("Settings")} aria-label="Open settings">⚙</button>
@@ -515,12 +679,13 @@ export default function Home() {
         <div className="mobile-layer-bar" aria-label="Reading assistance">
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
+          <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
         </div>
 
         <section className="reading-area" aria-label="Mushaf reader">
-          <button type="button" className="page-turn-control previous" onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page <= 1 || loadingPage} aria-label="Previous page"><span>‹</span><small>PREVIOUS</small></button>
+          <button type="button" className="page-turn-control previous" onClick={previousPage} disabled={loadingPage} aria-label={pageData.page === 1 ? "Open Tajweed guide before page one" : "Previous page"}><span>‹</span><small>{pageData.page === 1 ? "GUIDE" : "PREVIOUS"}</small></button>
           <div className="book-stage">
-            <div className="book-meta"><span>JUZ {pageData.juz}</span><span>{currentChapter?.name ?? "Quran"}</span><span>HIZB {pageData.hizb}</span></div>
+            <div className="book-meta"><span>JUZ {pageData.juz}</span>{currentChapter ? <button type="button" onClick={() => setNotice(`Double-click Sūrah ${currentChapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(currentChapter.id)} aria-label={`Sūrah ${currentChapter.id}, ${currentChapter.name}. Double-click to play from the beginning`}>{currentChapter.id} · {currentChapter.name}</button> : <span>Quran</span>}<span>HIZB {pageData.hizb}</span></div>
             <article
               className={`mushaf-page reading-font-${readingFont} ${turnDirection ? `turn-${turnDirection}` : ""}`}
               aria-label={`Quran page ${pageData.page}`}
@@ -533,9 +698,10 @@ export default function Home() {
               <footer className="page-footer"><span>◈</span><strong>{pageData.page}</strong><span>◈</span></footer>
               {loadingPage && <div className="page-loading" role="status"><span /><p>Opening verified page {page}…</p></div>}
             </article>
+            {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
             <div className="mobile-page-controls">
-              <button type="button" onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page <= 1}>‹ Previous</button>
+              <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
               <form onSubmit={submitJump}><label className="sr-only" htmlFor="mobile-page-jump">Jump to page</label><input id="mobile-page-jump" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form>
               <button type="button" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES}>Next ›</button>
             </div>
@@ -547,7 +713,7 @@ export default function Home() {
       <section className="audio-mini" aria-label="Audio mini player">
         <button type="button" className="mini-now-playing" onClick={() => setOverlay("Listen")} aria-label="Open full audio player">
           <span className="reciter-avatar">{currentReciter.initials}</span>
-          <span><small>NOW PLAYING · {currentReciter.scope === "surah" ? `SURAH ${selectedVerseKey.split(":")[0]}` : `AYAH ${selectedVerseKey}`}</small><strong>{currentReciter.name}</strong></span>
+          <span><small>NOW PLAYING · {isSurahPlayback ? `SURAH ${surahPlaybackChapter ?? selectedVerseKey.split(":")[0]}` : `AYAH ${selectedVerseKey}`}</small><strong>{currentReciter.name}</strong></span>
         </button>
         <div className="mini-transport">
           <button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button>
@@ -575,7 +741,26 @@ export default function Home() {
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
-              <div className="home-shortcuts"><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Surah, ayah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button></div>
+              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button></div>
+            </section>
+          )}
+
+          {overlay === "Contents" && (
+            <section className="panel-shell contents-panel" role="dialog" aria-modal="true" aria-labelledby="contents-title">
+              <header><div><span className="panel-kicker">QURAN INDEX</span><h2 id="contents-title">Table of contents</h2></div>{closeButton}</header>
+              <div className="contents-tools"><label><span className="sr-only">Filter sūrahs</span><input value={contentsQuery} onChange={(event) => setContentsQuery(event.target.value)} placeholder="Search sūrah name or number" aria-label="Filter sūrahs" /></label><label><span className="sr-only">Filter by juz</span><select value={contentsJuz} onChange={(event) => setContentsJuz(Number(event.target.value))} aria-label="Filter by juz"><option value={0}>All 30 juz</option>{Array.from({ length: 30 }, (_, index) => <option value={index + 1} key={index + 1}>Juz {index + 1}</option>)}</select></label></div>
+              <button type="button" className="contents-guide-card" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span className="guide-number">00</span><span><strong>Begin with the Tajweed guide</strong><small>All 17 color categories · five verified examples for every rule</small></span><span>›</span></button>
+              <div className="contents-heading" aria-hidden="true"><span>SŪRAH</span><span>DETAILS</span><span>LOCATION</span></div>
+              <div className="contents-list">
+                {filteredChapters.map((chapter) => {
+                  const firstJuz = chapter.juzs[0];
+                  const lastJuz = chapter.juzs.at(-1);
+                  const juzLabel = firstJuz === lastJuz ? `Juz ${firstJuz}` : `Juz ${firstJuz}–${lastJuz}`;
+                  return <button type="button" key={chapter.id} onClick={() => openChapter(chapter)} aria-label={`Open Sūrah ${chapter.id}, ${chapter.name}, page ${chapter.startPage}`}><span className="chapter-number">{chapter.id.toString().padStart(3, "0")}</span><span className="chapter-name"><strong>{chapter.name}</strong><em lang="ar" dir="rtl" translate="no">{chapter.arabicName}</em><small>{chapter.translatedName}</small></span><span className="chapter-facts"><strong>{chapter.revelationPlace === "madinah" ? "Madinan" : "Makkan"}</strong><small>{chapter.versesCount} āyāt · {juzLabel}</small><small>Pages {chapter.startPage}–{chapter.endPage} · Revelation {chapter.revelationOrder}</small></span><span className="result-arrow">›</span></button>;
+                })}
+                {contentsLoading && <p className="empty-state">Opening the verified sūrah index…</p>}
+                {!contentsLoading && !filteredChapters.length && <p className="empty-state">No sūrahs match this filter.</p>}
+              </div>
             </section>
           )}
 
@@ -610,7 +795,7 @@ export default function Home() {
               <div className="settings-content">
                 <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
                 <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label></section>
-                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed"><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></div></section>
+                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
                 <footer className="edition-note"><span>TEXT EDITION</span><strong>Madani Mushaf · Hafs · 15-line page map</strong></footer>
               </div>
             </section>
@@ -619,15 +804,30 @@ export default function Home() {
           {overlay === "Listen" && (
             <section className="panel-shell audio-sheet" role="dialog" aria-modal="true" aria-labelledby="audio-title">
               <div className="sheet-handle" aria-hidden="true" />
-              <header><div><span className="panel-kicker">{currentReciter.scope === "surah" ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{currentReciter.scope === "surah" ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
+              <header><div><span className="panel-kicker">{isSurahPlayback ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{isSurahPlayback ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
               <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}</small></div></div>
               <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
               <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
-              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={currentReciter.scope === "surah"}><option value="off">{currentReciter.scope === "surah" ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={isSurahPlayback}><option value="off">{isSurahPlayback ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
               {currentReciter.scope === "surah" && <p className="audio-scope-note">This recitation is provided as continuous sūrah audio. Ayah repeat remains available with the five verse-by-verse reciters.</p>}
+              {surahPlaybackChapter !== null && currentReciter.scope === "ayah" && <p className="audio-scope-note">Complete sūrah mode is active. Each verified āyah file will continue in order until the end of this sūrah.</p>}
               {repeatMode === "range" && <div className="range-settings"><label>FROM<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><span>to</span><label>TO<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}
             </section>
           )}
+        </div>
+      )}
+
+      {tajweedGuideOpen && (
+        <div className="layer-backdrop guide-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setTajweedGuideOpen(false); }}>
+          <section className="panel-shell tajweed-guide-panel" role="dialog" aria-modal="true" aria-labelledby="tajweed-guide-title">
+            <header><div><span className="panel-kicker">BEFORE PAGE ONE</span><h2 id="tajweed-guide-title">Tajweed color guide</h2></div><button type="button" className="panel-close" onClick={() => setTajweedGuideOpen(false)} aria-label="Close Tajweed guide">×</button></header>
+            <div className="tajweed-guide-content">
+              <section className="guide-intro"><div><span>17 RULES · 85 EXAMPLES</span><h3>Read the color, then hear it in context.</h3><p>Each card explains one markup category used by this reader. Select any example to open its verified muṣḥaf page. A qualified teacher remains the best guide for articulation and timing.</p></div><button type="button" onClick={() => { goToPage(1, "previous", "1:1"); setTajweedGuideOpen(false); }}>Begin reading · Page 1</button></section>
+              <div className="tajweed-rule-grid">
+                {TAJWEED_RULES.map((rule, index) => <article className={`tajweed-rule-card rule-${rule.id}`} key={rule.id}><header><span className="rule-index">{(index + 1).toString().padStart(2, "0")}</span><span className="rule-swatch" /><div><small>{rule.family}</small><h3>{rule.name}</h3><em lang="ar" dir="rtl">{rule.arabicName}</em></div>{rule.count && <strong className="rule-count">{rule.count}</strong>}</header><p>{rule.instruction}</p><div className="tajweed-examples" aria-label={`Five examples of ${rule.name}`}>{rule.examples.map((example) => <button type="button" key={`${rule.id}-${example.verseKey}`} onClick={() => openVerse(example.verseKey, true)}><span lang="ar" dir="rtl" translate="no">{example.text}</span><small>{example.verseKey}</small></button>)}</div></article>)}
+              </div>
+            </div>
+          </section>
         </div>
       )}
 
