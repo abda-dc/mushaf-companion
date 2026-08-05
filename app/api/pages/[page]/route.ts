@@ -6,9 +6,13 @@ const API_ROOT = "https://api.quran.com/api/v4";
 interface ApiWord {
   id: number;
   text_uthmani: string;
+  text_qpc_hafs?: string;
   text: string;
+  code_v2?: string;
+  code_v4?: string;
   char_type_name: string;
   line_number: number;
+  page_number?: number;
 }
 
 interface ApiVerse {
@@ -81,10 +85,11 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
   }
 
   const pageQuery = new URLSearchParams({
+    mushaf: "1",
     words: "true",
     translations: "57",
     fields: "text_uthmani",
-    word_fields: "line_number,text_uthmani",
+    word_fields: "line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4",
     per_page: "50",
   });
 
@@ -130,10 +135,13 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
         const isEnd = word.char_type_name === "end";
         const mapped: PageWord = {
           id: word.id,
-          text: word.text_uthmani || word.text,
-          tajweedHtml: isEnd ? "" : alignedTajweed[contentIndex] ?? (word.text_uthmani || word.text),
+          text: word.text_qpc_hafs || word.text_uthmani || word.text,
+          tajweedHtml: isEnd ? "" : alignedTajweed[contentIndex] ?? (word.text_qpc_hafs || word.text_uthmani || word.text),
           verseKey: verse.verse_key,
           isEnd,
+          qcfCode: word.code_v2,
+          qcfTajweedCode: word.code_v4,
+          pageNumber: word.page_number ?? page,
         };
         if (!isEnd) contentIndex += 1;
         const line = lineMap.get(word.line_number) ?? [];

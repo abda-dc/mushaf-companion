@@ -6,6 +6,9 @@ export interface PageWord {
   tajweedHtml: string;
   verseKey: string;
   isEnd: boolean;
+  qcfCode?: string;
+  qcfTajweedCode?: string;
+  pageNumber?: number;
 }
 
 export interface PageLine {

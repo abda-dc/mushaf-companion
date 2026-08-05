@@ -10,8 +10,10 @@ import {
 } from "./quran-data";
 
 type NavItem = "Home" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
+type Overlay = Exclude<NavItem, "Read"> | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
+type PageScale = "compact" | "comfortable" | "large";
 
 const TOTAL_PAGES = 604;
 const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
@@ -22,9 +24,19 @@ const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Search", glyph: "⌕" },
   { label: "Settings", glyph: "⚙" },
 ];
+const FONT_LOADS = new Map<string, Promise<string>>();
 
 function clampPage(value: number) {
   return Math.min(TOTAL_PAGES, Math.max(1, Math.round(value)));
+}
+
+function safeBookmarks(value: string | null) {
+  try {
+    const parsed = JSON.parse(value ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)) : [];
+  } catch {
+    return [];
+  }
 }
 
 function audioUrl(reciter: ReciterId, verseKey: string) {
@@ -37,9 +49,7 @@ function audioUrl(reciter: ReciterId, verseKey: string) {
 
 function formatTime(value: number) {
   if (!Number.isFinite(value)) return "0:00";
-  const minutes = Math.floor(value / 60);
-  const seconds = Math.floor(value % 60).toString().padStart(2, "0");
-  return `${minutes}:${seconds}`;
+  return `${Math.floor(value / 60)}:${Math.floor(value % 60).toString().padStart(2, "0")}`;
 }
 
 function chapterForVerse(pageData: QuranPage, verseKey: string) {
@@ -48,7 +58,7 @@ function chapterForVerse(pageData: QuranPage, verseKey: string) {
 }
 
 export default function Home() {
-  const [activeNav, setActiveNav] = useState<NavItem>("Read");
+  const [overlay, setOverlay] = useState<Overlay>(null);
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState<QuranPage>(FALLBACK_PAGE);
   const [jumpValue, setJumpValue] = useState("1");
@@ -57,9 +67,9 @@ export default function Home() {
   const [tajweed, setTajweed] = useState(true);
   const [transliteration, setTransliteration] = useState(false);
   const [dark, setDark] = useState(false);
+  const [pageScale, setPageScale] = useState<PageScale>("comfortable");
   const [selectedVerseKey, setSelectedVerseKey] = useState("1:1");
   const [bookmarks, setBookmarks] = useState<string[]>([]);
-  const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -68,25 +78,38 @@ export default function Home() {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [rangeStart, setRangeStart] = useState("1:1");
   const [rangeEnd, setRangeEnd] = useState("1:7");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [audioExpanded, setAudioExpanded] = useState(false);
   const [notice, setNotice] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [fontName, setFontName] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
+  const playingRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const pageCacheRef = useRef(new Map<number, QuranPage>());
   const lastGoodPageRef = useRef(FALLBACK_PAGE);
   const pendingVerseRef = useRef<string | null>(null);
   const pendingEdgeRef = useRef<PageEdge>(null);
 
+  const activeNav: NavItem = overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
   const currentBookmark = `${pageData.page}|${selectedVerseKey}`;
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
+  const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
+  const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
+  const fontReady = fontName === fontKey;
+  const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
+    id: `current-${verse.key}`,
+    type: "verse",
+    label: `Ayah ${verse.key}`,
+    detail: verse.transliteration || `Current page · ${currentChapter?.name ?? "Quran"}`,
+    arabic: verse.uthmani,
+    page: pageData.page,
+    verseKey: verse.key,
+  }));
 
   useEffect(() => {
     const urlPage = Number(new URL(window.location.href).searchParams.get("page"));
@@ -94,12 +117,21 @@ export default function Home() {
     const initialPage = clampPage(Number.isInteger(urlPage) && urlPage >= 1 && urlPage <= TOTAL_PAGES ? urlPage : savedPage);
     const savedVerse = localStorage.getItem("mushaf:last-verse");
     const savedVersePage = Number(localStorage.getItem("mushaf:last-verse-page") ?? "0");
-    const savedBookmarks = JSON.parse(localStorage.getItem("mushaf:bookmarks-v2") ?? "[]") as string[];
+    const savedReciter = localStorage.getItem("mushaf:reciter") as ReciterId | null;
+    const savedScale = localStorage.getItem("mushaf:page-scale") as PageScale | null;
     pendingVerseRef.current = savedVersePage === initialPage ? savedVerse : null;
+    // Browser-only persistence is intentionally hydrated after the server shell.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(initialPage);
     setJumpValue(String(initialPage));
-    setBookmarks(savedBookmarks.filter((item) => /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)));
+    setBookmarks(safeBookmarks(localStorage.getItem("mushaf:bookmarks-v2")));
     setDark(localStorage.getItem("mushaf:theme") === "dark");
+    setTajweed(localStorage.getItem("mushaf:tajweed") !== "false");
+    setTransliteration(localStorage.getItem("mushaf:transliteration") === "true");
+    if (RECITERS.some((item) => item.id === savedReciter)) setReciter(savedReciter as ReciterId);
+    if (["compact", "comfortable", "large"].includes(savedScale ?? "")) setPageScale(savedScale as PageScale);
+    const savedSpeed = Number(localStorage.getItem("mushaf:speed") ?? "1");
+    if ([0.75, 1, 1.25].includes(savedSpeed)) setSpeed(savedSpeed);
     setHydrated(true);
   }, []);
 
@@ -107,7 +139,6 @@ export default function Home() {
     if (!hydrated) return;
     let cancelled = false;
     const cached = pageCacheRef.current.get(page);
-
     const applyPage = (data: QuranPage) => {
       if (cancelled) return;
       lastGoodPageRef.current = data;
@@ -118,9 +149,7 @@ export default function Home() {
       const edge = pendingEdgeRef.current;
       const nextVerse = requestedVerse && data.verses.some((verse) => verse.key === requestedVerse)
         ? requestedVerse
-        : edge === "last"
-          ? data.verses.at(-1)?.key
-          : data.verses[0]?.key;
+        : edge === "last" ? data.verses.at(-1)?.key : data.verses[0]?.key;
       if (nextVerse) setSelectedVerseKey(nextVerse);
       setRangeStart(data.verses[0]?.key ?? "");
       setRangeEnd(data.verses.at(-1)?.key ?? "");
@@ -132,12 +161,10 @@ export default function Home() {
       window.history.replaceState(null, "", nextUrl);
       window.setTimeout(() => setTurnDirection(""), 420);
     };
-
     if (cached) {
       applyPage(cached);
       return () => { cancelled = true; };
     }
-
     setLoadingPage(true);
     fetch(`/api/pages/${page}`)
       .then(async (response) => {
@@ -166,12 +193,47 @@ export default function Home() {
   }, [page, hydrated]);
 
   useEffect(() => {
-    if (!hydrated || !selectedVerseKey) return;
+    if (!hydrated) return;
     localStorage.setItem("mushaf:last-verse", selectedVerseKey);
     localStorage.setItem("mushaf:last-verse-page", String(pageData.page));
     localStorage.setItem("mushaf:bookmarks-v2", JSON.stringify(bookmarks));
     localStorage.setItem("mushaf:theme", dark ? "dark" : "light");
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, hydrated]);
+    localStorage.setItem("mushaf:tajweed", String(tajweed));
+    localStorage.setItem("mushaf:transliteration", String(transliteration));
+    localStorage.setItem("mushaf:reciter", reciter);
+    localStorage.setItem("mushaf:speed", String(speed));
+    localStorage.setItem("mushaf:page-scale", pageScale);
+  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || typeof FontFace === "undefined") return;
+    let cancelled = false;
+    const palette = dark ? "dark" : "light";
+    const name = fontKey;
+    const firefox = navigator.userAgent.includes("Firefox");
+    const url = tajweed
+      ? firefox
+        ? `https://verses.quran.foundation/fonts/quran/hafs/v4/ot-svg/${palette}/woff2/p${pageData.page}.woff2`
+        : `https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p${pageData.page}.woff2`
+      : `https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p${pageData.page}.woff2`;
+    let request = FONT_LOADS.get(name);
+    if (!request) {
+      request = new FontFace(name, `url("${url}")`, { display: "block" }).load().then((face) => {
+        document.fonts.add(face);
+        return name;
+      });
+      FONT_LOADS.set(name, request);
+    }
+    request.then((loadedName) => {
+      if (!cancelled) {
+        setFontName(loadedName);
+      }
+    }).catch(() => {
+      FONT_LOADS.delete(name);
+      if (!cancelled) setFontName("");
+    });
+    return () => { cancelled = true; };
+  }, [pageData.page, tajweed, dark, hydrated, fontKey]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -184,23 +246,12 @@ export default function Home() {
     audio.load();
     setProgress(0);
     setDuration(0);
-    if (playing) audio.play().catch(() => setPlaying(false));
+    if (playingRef.current) audio.play().catch(() => updatePlaying(false));
   }, [selectedVerseKey, reciter]);
 
   useEffect(() => {
-    if (!searchOpen) return;
-    if (!search.trim()) {
-      setSearchResults(pageData.verses.slice(0, 10).map((verse) => ({
-        id: `current-${verse.key}`,
-        type: "verse",
-        label: `Ayah ${verse.key}`,
-        detail: verse.transliteration || `Current page · ${currentChapter?.name ?? "Quran"}`,
-        arabic: verse.uthmani,
-        page: pageData.page,
-        verseKey: verse.key,
-      })));
-      return;
-    }
+    if (overlay !== "Search") return;
+    if (!search.trim()) return;
     const timer = window.setTimeout(() => {
       setSearching(true);
       fetch(`/api/search?q=${encodeURIComponent(search)}`)
@@ -213,41 +264,53 @@ export default function Home() {
         .finally(() => setSearching(false));
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [search, searchOpen, pageData, currentChapter?.name]);
+  }, [search, overlay]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      if (searchOpen || bookmarkPanelOpen || loadingPage) return;
+      if (event.key === "Escape" && overlay) {
+        event.preventDefault();
+        setOverlay(null);
+        return;
+      }
+      if (overlay || loadingPage) return;
       const target = event.target as HTMLElement;
       if (["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") {
         event.preventDefault();
         goToPage(page + 1, "next");
-      }
-      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
         event.preventDefault();
         goToPage(page - 1, "previous");
-      }
-      if (event.key === "Home") {
+      } else if (event.key === "Home") {
         event.preventDefault();
         goToPage(1, "previous");
-      }
-      if (event.key === "End") {
+      } else if (event.key === "End") {
         event.preventDefault();
         goToPage(TOTAL_PAGES, "next");
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [page, searchOpen, bookmarkPanelOpen, loadingPage]);
+  // goToPage is a render-local command whose latest closure is intentionally used.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, overlay, loadingPage]);
+
+  useEffect(() => {
+    document.body.style.overflow = overlay ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [overlay]);
+
+  function updatePlaying(value: boolean) {
+    playingRef.current = value;
+    setPlaying(value);
+  }
 
   function goToPage(target: number, direction?: "next" | "previous", verseKey?: string, keepPlaying = false) {
     const next = clampPage(target);
     if (next === pageData.page && !verseKey) return;
-    if (!keepPlaying) {
-      audioRef.current?.pause();
-      setPlaying(false);
-    }
+    audioRef.current?.pause();
+    if (!keepPlaying) updatePlaying(false);
     pendingVerseRef.current = verseKey ?? null;
     setTurnDirection(direction ?? (next > pageData.page ? "next" : "previous"));
     setPage(next);
@@ -285,9 +348,9 @@ export default function Home() {
     if (!audio) return;
     if (playing) {
       audio.pause();
-      setPlaying(false);
+      updatePlaying(false);
     } else {
-      audio.play().then(() => setPlaying(true)).catch(() => setNotice("Audio could not start. Check your connection and try again."));
+      audio.play().then(() => updatePlaying(true)).catch(() => setNotice("Audio could not start. Check your connection and try again."));
     }
   }
 
@@ -300,8 +363,7 @@ export default function Home() {
     if (direction === 1 && pageData.page < TOTAL_PAGES) {
       pendingEdgeRef.current = "first";
       goToPage(pageData.page + 1, "next", undefined, playing);
-    }
-    if (direction === -1 && pageData.page > 1) {
+    } else if (direction === -1 && pageData.page > 1) {
       pendingEdgeRef.current = "last";
       goToPage(pageData.page - 1, "previous", undefined, playing);
     }
@@ -312,7 +374,7 @@ export default function Home() {
     if (!audio) return;
     if (repeatMode === "ayah") {
       audio.currentTime = 0;
-      audio.play();
+      audio.play().catch(() => updatePlaying(false));
       return;
     }
     if (repeatMode === "range") {
@@ -332,27 +394,13 @@ export default function Home() {
   }
 
   function chooseNav(item: NavItem) {
-    if (item === "Read" || item === "Listen") {
-      setActiveNav(item);
-      setAudioExpanded(item === "Listen");
-      return;
-    }
-    if (item === "Search") {
-      setSearchOpen(true);
-      return;
-    }
-    if (item === "Bookmarks") {
-      setBookmarkPanelOpen(true);
-      return;
-    }
-    setActiveNav(item);
-    setNotice(item === "Home" ? `Last read: page ${pageData.page}, ayah ${selectedVerseKey}` : "Reader settings are available in the header controls.");
+    setOverlay(item === "Read" ? null : item);
   }
 
   async function openSearchResult(result: SearchResult) {
     if (result.page) {
       goToPage(result.page, undefined, result.verseKey);
-      setSearchOpen(false);
+      setOverlay(null);
       return;
     }
     if (!result.verseKey) return;
@@ -361,7 +409,7 @@ export default function Home() {
       if (!response.ok) throw new Error("Lookup failed");
       const target = await response.json() as { page: number; verseKey: string };
       goToPage(target.page, undefined, target.verseKey);
-      setSearchOpen(false);
+      setOverlay(null);
     } catch {
       setNotice("That ayah’s page could not be confirmed right now.");
     }
@@ -376,96 +424,192 @@ export default function Home() {
       return <div className="surah-line" lang="ar" dir="rtl" translate="no"><span>سُورَةُ</span><strong>{chapter?.arabicName}</strong><span>{chapter?.revelationPlace === "madinah" ? "مَدَنِيَّة" : "مَكِّيَّة"}</span></div>;
     }
     if (bismillahStart) {
-      return <div className="bismillah-line" lang="ar" dir="rtl" translate="no">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</div>;
+      return <div className="bismillah-line" lang="ar" dir="rtl" translate="no">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>;
     }
-    const wordCount = line?.words.length ?? 0;
+    if (!line?.words.length) return <div className="empty-line" aria-hidden="true" />;
     return (
-      <div className={`mushaf-line${wordCount > 7 ? " dense" : ""} word-count-${Math.min(12, wordCount)}`} dir="rtl" lang="ar" translate="no">
-        {line?.words.map((word) => (
-          <button
-            key={word.id}
-            className={`${word.isEnd ? "ayah-end" : "mushaf-word"}${word.verseKey === selectedVerseKey ? " selected" : ""}`}
-            onClick={() => setSelectedVerseKey(word.verseKey)}
-            onDoubleClick={toggleBookmark}
-            tabIndex={word.isEnd ? 0 : -1}
-            aria-label={word.isEnd ? `Select ayah ${word.verseKey}` : undefined}
-          >
-            {tajweed && !word.isEnd ? <span className="tajweed-on" dangerouslySetInnerHTML={{ __html: word.tajweedHtml }} /> : word.text}
-          </button>
-        ))}
+      <div className="mushaf-line" lang="ar" dir="rtl" translate="no" style={fontReady ? { fontFamily: `"${fontName}"` } : undefined}>
+        {line.words.map((word) => {
+          const glyph = tajweed ? (word.qcfTajweedCode ?? word.qcfCode) : word.qcfCode;
+          return (
+            <button
+              type="button"
+              key={word.id}
+              className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}`}
+              onClick={() => setSelectedVerseKey(word.verseKey)}
+              aria-label={`Select ayah ${word.verseKey}`}
+              tabIndex={word.isEnd ? 0 : -1}
+            >
+              {fontReady && glyph
+                ? <span className="qcf-glyph" dangerouslySetInnerHTML={{ __html: glyph }} />
+                : word.isEnd
+                  ? <span className="ayah-number">{word.text}</span>
+                  : tajweed
+                    ? <span dangerouslySetInnerHTML={{ __html: word.tajweedHtml }} />
+                    : word.text}
+            </button>
+          );
+        })}
       </div>
     );
   }
 
+  const closeButton = <button type="button" className="panel-close" onClick={() => setOverlay(null)} aria-label="Close panel">×</button>;
+
   return (
-    <main className={dark ? "app-shell dark" : "app-shell"}>
-      <a className="skip-link" href="#mushaf-page">Skip to mushaf page</a>
+    <main className={`app-shell ${dark ? "dark" : ""} page-scale-${pageScale}`}>
       <aside className="side-rail" aria-label="Primary navigation">
-        <button className="brand-mark" aria-label="Mushaf Companion home" onClick={() => chooseNav("Home")}>م</button>
-        <nav>{NAV_ITEMS.map((item) => <button key={item.label} className={activeNav === item.label ? "nav-button active" : "nav-button"} onClick={() => chooseNav(item.label)} aria-label={item.label} title={item.label}><span aria-hidden="true">{item.glyph}</span><small>{item.label}</small></button>)}</nav>
-        <button className="profile-button" aria-label="Reader profile">KA</button>
+        <div className="brand-mark" aria-label="Mushaf Companion"><span>م</span></div>
+        <nav>
+          {NAV_ITEMS.map((item) => (
+            <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}>
+              <span>{item.glyph}</span><small>{item.label}</small>
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="theme-rail" onClick={() => setDark((value) => !value)} aria-label={dark ? "Use light theme" : "Use night theme"}>{dark ? "☀" : "◐"}</button>
       </aside>
 
-      <section className="workspace">
+      <section className="reader-shell">
         <header className="reader-header">
           <div className="surah-identity">
-            <span className="eyebrow">Juz {pageData.juz} · Hizb {pageData.hizb}</span>
-            <div className="title-row"><h1>{currentChapter?.name ?? "The Quran"}</h1><span className="arabic-title" lang="ar" dir="rtl" translate="no">{currentChapter?.arabicName}</span></div>
+            <span className="eyebrow">NOW READING</span>
+            <div className="title-row"><h1>{currentChapter?.name ?? "The Quran"}</h1><span>{currentChapter?.translatedName}</span></div>
           </div>
           <form className="header-page-jump" onSubmit={submitJump} aria-label="Jump to Quran page">
-            <label htmlFor="page-jump">Page</label>
-            <input id="page-jump" type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} />
-            <span>of {TOTAL_PAGES}</span><button type="submit">Go</button>
+            <label htmlFor="page-jump">PAGE</label>
+            <input id="page-jump" type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} aria-label="Page number" />
+            <span>/ {TOTAL_PAGES}</span><button type="submit">Go</button>
           </form>
           <div className="header-tools">
-            <button className={tajweed ? "toggle-control active" : "toggle-control"} onClick={() => setTajweed(!tajweed)} aria-pressed={tajweed}><span className="tajweed-dot" /> <span>Tajweed</span></button>
-            <button className={transliteration ? "toggle-control active" : "toggle-control"} onClick={() => setTransliteration(!transliteration)} aria-pressed={transliteration}>Aa <span>Transliteration</span></button>
-            <button className="icon-button" onClick={() => setSearchOpen(true)} aria-label="Search">⌕</button>
-            <button className={bookmarks.includes(currentBookmark) ? "icon-button bookmarked" : "icon-button"} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
-            <button className="icon-button" onClick={() => setDark(!dark)} aria-label="Toggle night mode">{dark ? "☀" : "☾"}</button>
+            <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
+            <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
+            <button type="button" className={`icon-button ${bookmarks.includes(currentBookmark) ? "active" : ""}`} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
+            <button type="button" className="icon-button" onClick={() => setOverlay("Search")} aria-label="Search Quran">⌕</button>
+            <button type="button" className="icon-button settings-shortcut" onClick={() => setOverlay("Settings")} aria-label="Open settings">⚙</button>
           </div>
         </header>
         <div className="page-progress" aria-hidden="true"><span style={{ width: `${pageProgress}%` }} /></div>
 
-        <section className="reading-area" aria-label="Mushaf reader">
-          <button className="page-turn-control previous" onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page === 1 || loadingPage} aria-label="Previous page"><span>‹</span><small>Previous</small></button>
-          <div className="reader-column">
-            <div className="book-meta"><span>Page {pageData.page}</span><span>Swipe or use ← →</span><span>{currentChapter?.translatedName}</span></div>
-            <div className="book-stage" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
-              <article id="mushaf-page" className={`mushaf-page ${turnDirection ? `turn-${turnDirection}` : ""}`} aria-label={`Quran page ${pageData.page}`} aria-busy={loadingPage}>
-                <div className="page-stack stack-one" /><div className="page-stack stack-two" />
-                <div className="frame-line frame-outer" /><div className="frame-line frame-inner" />
-                <div className="corner corner-tl" /><div className="corner corner-tr" /><div className="corner corner-bl" /><div className="corner corner-br" />
-                <div className="mushaf-lines">{Array.from({ length: 15 }, (_, index) => <div className="line-slot" key={index + 1}>{renderLine(index + 1)}</div>)}</div>
-                <footer className="page-footer"><span>Madani · Hafs</span><span className="page-medallion">{pageData.page}</span><span>{pageData.page} / {TOTAL_PAGES}</span></footer>
-                {loadingPage && <div className="page-loading" role="status"><span className="loading-ornament">◆</span><strong>Turning to page {page}</strong><small>Loading verified mushaf text</small></div>}
-              </article>
-            </div>
-            {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>{selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is unavailable for this ayah."}</p></aside>}
-            <div className="mobile-page-controls"><button onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page === 1}>‹ Previous</button><form onSubmit={submitJump}><input aria-label="Page number" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form><button onClick={() => goToPage(page + 1, "next")} disabled={pageData.page === TOTAL_PAGES}>Next ›</button></div>
-          </div>
-          <button className="page-turn-control next" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page === TOTAL_PAGES || loadingPage} aria-label="Next page"><span>›</span><small>Next</small></button>
-        </section>
+        <div className="mobile-layer-bar" aria-label="Reading assistance">
+          <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
+          <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
+        </div>
 
-        <section className={audioExpanded ? "audio-dock expanded" : "audio-dock"} aria-label="Audio player">
-          <button className="drag-handle" aria-label={audioExpanded ? "Collapse player" : "Expand player"} onClick={() => setAudioExpanded(!audioExpanded)}><span /></button>
-          <div className="now-playing"><div className="reciter-avatar" aria-hidden="true">{RECITERS.find((item) => item.id === reciter)?.initials}</div><div><span className="eyebrow">Page {pageData.page} · Ayah {selectedVerseKey}</span><strong>{RECITERS.find((item) => item.id === reciter)?.name}</strong></div></div>
-          <div className="transport"><button onClick={() => moveAyah(-1)} aria-label="Previous ayah">|‹</button><button className="play-button" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>{playing ? "Ⅱ" : "▶"}</button><button onClick={() => moveAyah(1)} aria-label="Next ayah">›|</button></div>
-          <div className="progress-cluster"><span>{formatTime(progress)}</span><input type="range" min="0" max={duration || 1} step="0.1" value={Math.min(progress, duration || 1)} onChange={(event) => { const next = Number(event.target.value); if (audioRef.current) audioRef.current.currentTime = next; setProgress(next); }} aria-label="Audio progress" style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} /><span>{formatTime(duration)}</span></div>
-          <div className="audio-actions"><button className={repeatMode !== "off" ? "active" : ""} onClick={() => setRepeatMode(repeatMode === "off" ? "ayah" : repeatMode === "ayah" ? "range" : "off")} aria-label={`Repeat mode: ${repeatMode}`}>↻ <small>{repeatMode === "off" ? "Off" : repeatMode === "ayah" ? "Ayah" : "Range"}</small></button><button onClick={() => setSpeed(speed === 1 ? .75 : speed === .75 ? 1.25 : 1)} aria-label="Playback speed">{speed}×</button><button onClick={() => setAudioExpanded(!audioExpanded)} aria-label="Audio settings">•••</button></div>
-          {audioExpanded && <div className="audio-options"><label>Reciter<select value={reciter} onChange={(event) => setReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Repeat<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}><option value="off">Off</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label>{repeatMode === "range" && <div className="range-inputs"><label>From<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><label>To<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}</div>}
-          <audio ref={audioRef} src={audioUrl(reciter, selectedVerseKey)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(event) => setProgress(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} onEnded={handleEnded} preload="metadata" />
+        <section className="reading-area" aria-label="Mushaf reader">
+          <button type="button" className="page-turn-control previous" onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page <= 1 || loadingPage} aria-label="Previous page"><span>‹</span><small>PREVIOUS</small></button>
+          <div className="book-stage">
+            <div className="book-meta"><span>JUZ {pageData.juz}</span><span>{currentChapter?.name ?? "Quran"}</span><span>HIZB {pageData.hizb}</span></div>
+            <article
+              className={`mushaf-page ${turnDirection ? `turn-${turnDirection}` : ""}`}
+              aria-label={`Quran page ${pageData.page}`}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+            >
+              <div className="frame-outer" aria-hidden="true" /><div className="frame-inner" aria-hidden="true" />
+              <span className="corner corner-tl" aria-hidden="true" /><span className="corner corner-tr" aria-hidden="true" /><span className="corner corner-bl" aria-hidden="true" /><span className="corner corner-br" aria-hidden="true" />
+              <div className="mushaf-lines">{Array.from({ length: 15 }, (_, index) => <div className="line-slot" key={index + 1} data-line={index + 1}>{renderLine(index + 1)}</div>)}</div>
+              <footer className="page-footer"><span>◈</span><strong>{pageData.page}</strong><span>◈</span></footer>
+              {loadingPage && <div className="page-loading" role="status"><span /><p>Opening verified page {page}…</p></div>}
+            </article>
+            {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
+            <div className="mobile-page-controls">
+              <button type="button" onClick={() => goToPage(page - 1, "previous")} disabled={pageData.page <= 1}>‹ Previous</button>
+              <form onSubmit={submitJump}><label className="sr-only" htmlFor="mobile-page-jump">Jump to page</label><input id="mobile-page-jump" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form>
+              <button type="button" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES}>Next ›</button>
+            </div>
+          </div>
+          <button type="button" className="page-turn-control next" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES || loadingPage} aria-label="Next page"><span>›</span><small>NEXT</small></button>
         </section>
       </section>
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">{NAV_ITEMS.slice(0, 5).map((item) => <button key={item.label} className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)}><span>{item.glyph}</span>{item.label}</button>)}</nav>
+      <section className="audio-mini" aria-label="Audio mini player">
+        <button type="button" className="mini-now-playing" onClick={() => setOverlay("Listen")} aria-label="Open full audio player">
+          <span className="reciter-avatar">{currentReciter.initials}</span>
+          <span><small>NOW PLAYING · AYAH {selectedVerseKey}</small><strong>{currentReciter.name}</strong></span>
+        </button>
+        <div className="mini-transport">
+          <button type="button" onClick={() => moveAyah(-1)} aria-label="Previous ayah">‹</button>
+          <button type="button" className="mini-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button>
+          <button type="button" onClick={() => moveAyah(1)} aria-label="Next ayah">›</button>
+        </div>
+        <div className="mini-progress-cluster">
+          <span>{formatTime(progress)}</span>
+          <input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" />
+          <span>{formatTime(duration)}</span>
+        </div>
+        <button type="button" className={`mini-repeat ${repeatMode !== "off" ? "active" : ""}`} onClick={() => setOverlay("Listen")} aria-label="Open repeat controls">↻ <small>{repeatMode}</small></button>
+        <div className="mobile-mini-progress" aria-hidden="true"><span style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }} /></div>
+      </section>
 
-      {searchOpen && <div className="modal-backdrop" onMouseDown={() => setSearchOpen(false)}><section className="search-panel" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Search Quran"><header><div><span className="eyebrow">Find your place</span><h2>Search all 604 pages</h2></div><button onClick={() => setSearchOpen(false)} aria-label="Close search">×</button></header><div className="search-field"><span>⌕</span><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Surah, ayah, phrase, or page number" /></div><div className="search-meta"><span>{search ? "Quran-wide results" : `Current page ${pageData.page}`}</span><span>{searching ? "Searching…" : `${searchResults.length} results`}</span></div><div className="search-results">{searchResults.map((result) => <button key={result.id} onClick={() => openSearchResult(result)}><span className="result-number">{result.type === "page" ? result.page : result.verseKey?.split(":")[1] ?? result.label.split(".")[0]}</span><span><strong>{result.label}</strong><small>{result.detail}</small>{result.arabic && <em lang="ar" dir="rtl" translate="no">{result.arabic}</em>}</span><span className="result-arrow">→</span></button>)}{!searchResults.length && !searching && <p className="empty-state">No verified results found. Try a surah name, ayah key such as 2:255, or a page number.</p>}</div></section></div>}
+      <audio ref={audioRef} src={selectedVerse ? audioUrl(reciter, selectedVerse.key) : undefined} onTimeUpdate={(event) => setProgress(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} onEnded={handleEnded} onPlay={() => updatePlaying(true)} onPause={() => updatePlaying(false)} preload="metadata" />
 
-      {bookmarkPanelOpen && <div className="modal-backdrop" onMouseDown={() => setBookmarkPanelOpen(false)}><section className="bookmark-panel" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Bookmarks"><header><div><span className="eyebrow">Saved places</span><h2>Bookmarks</h2></div><button onClick={() => setBookmarkPanelOpen(false)} aria-label="Close bookmarks">×</button></header><div className="bookmark-list">{bookmarks.map((bookmark) => { const [savedPage, verseKey] = bookmark.split("|"); return <div key={bookmark}><button onClick={() => { goToPage(Number(savedPage), undefined, verseKey); setBookmarkPanelOpen(false); }}><span>Page {savedPage}</span><strong>Ayah {verseKey}</strong></button><button aria-label={`Remove bookmark ${verseKey}`} onClick={() => setBookmarks((current) => current.filter((item) => item !== bookmark))}>×</button></div>; })}{!bookmarks.length && <p className="empty-state">Select an ayah, then use the bookmark control to save your place.</p>}</div></section></div>}
+      <nav className="mobile-nav" aria-label="Primary navigation">
+        {NAV_ITEMS.map((item) => <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}><span>{item.glyph}</span><small>{item.label}</small></button>)}
+      </nav>
 
-      {notice && <button className="toast" onClick={() => setNotice("")} aria-live="polite">{notice}<span>×</span></button>}
-      <div className="sr-only" aria-live="polite">Page {pageData.page} of {TOTAL_PAGES}. {loadingPage ? "Loading page." : "Page ready."}</div>
+      {overlay && (
+        <div className={`layer-backdrop ${overlay === "Listen" ? "audio-layer" : ""}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setOverlay(null); }}>
+          {overlay === "Home" && (
+            <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
+              <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
+              <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
+              <div className="home-shortcuts"><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Surah, ayah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button></div>
+            </section>
+          )}
+
+          {overlay === "Search" && (
+            <section className="panel-shell search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title">
+              <header><div><span className="panel-kicker">NAVIGATE</span><h2 id="search-title">Search the Quran</h2></div>{closeButton}</header>
+              <label className="search-field"><span>⌕</span><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Surah, 2:255, page 42, juz 30…" aria-label="Search the Quran" /></label>
+              <div className="search-meta"><span>{searching ? "Searching…" : search ? `${displayedSearchResults.length} results` : "On this page"}</span><span>PAGE {pageData.page}</span></div>
+              <div className="search-results">
+                {displayedSearchResults.map((result, index) => <button type="button" key={result.id} onClick={() => openSearchResult(result)}><span className="result-number">{index + 1}</span><span><strong>{result.label}</strong><small>{result.detail}</small>{result.arabic && <em lang="ar" dir="rtl">{result.arabic}</em>}</span><span className="result-arrow">›</span></button>)}
+                {!searching && !displayedSearchResults.length && <p className="empty-state">No verified results found.</p>}
+              </div>
+            </section>
+          )}
+
+          {overlay === "Bookmarks" && (
+            <section className="panel-shell bookmark-panel" role="dialog" aria-modal="true" aria-labelledby="bookmarks-title">
+              <header><div><span className="panel-kicker">SAVED PLACES</span><h2 id="bookmarks-title">Bookmarks</h2></div>{closeButton}</header>
+              <div className="bookmark-list">
+                {bookmarks.map((bookmark) => {
+                  const [savedPage, verseKey] = bookmark.split("|");
+                  return <div key={bookmark}><button type="button" onClick={() => { goToPage(Number(savedPage), undefined, verseKey); setOverlay(null); }}><span>PAGE {savedPage}</span><strong>Ayah {verseKey}</strong></button><button type="button" onClick={() => setBookmarks((items) => items.filter((item) => item !== bookmark))} aria-label={`Remove bookmark ${verseKey}`}>×</button></div>;
+                })}
+                {!bookmarks.length && <p className="empty-state">Bookmark an ayah to keep your place here.</p>}
+              </div>
+            </section>
+          )}
+
+          {overlay === "Settings" && (
+            <section className="panel-shell settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+              <header><div><span className="panel-kicker">READER PREFERENCES</span><h2 id="settings-title">Settings</h2></div>{closeButton}</header>
+              <div className="settings-content">
+                <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div></section>
+                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label></section>
+                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>Used for verse playback.</small></span><select value={reciter} onChange={(event) => setReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed"><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></div></section>
+                <footer className="edition-note"><span>TEXT EDITION</span><strong>Madani Mushaf · Hafs · QCF V2 / V4 Tajweed</strong></footer>
+              </div>
+            </section>
+          )}
+
+          {overlay === "Listen" && (
+            <section className="panel-shell audio-sheet" role="dialog" aria-modal="true" aria-labelledby="audio-title">
+              <div className="sheet-handle" aria-hidden="true" />
+              <header><div><span className="panel-kicker">VERSE RECITATION</span><h2 id="audio-title">Ayah {selectedVerseKey}</h2></div>{closeButton}</header>
+              <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}</small></div></div>
+              <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} aria-label="Next ayah">›</button></div>
+              <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
+              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => setReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}><option value="off">Off</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              {repeatMode === "range" && <div className="range-settings"><label>FROM<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><span>to</span><label>TO<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}
+            </section>
+          )}
+        </div>
+      )}
+
+      {notice && <button type="button" className="toast" onClick={() => setNotice("")}><span>◇</span>{notice}<strong>×</strong></button>}
     </main>
   );
 }

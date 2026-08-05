@@ -23,15 +23,22 @@ test("server-renders a complete page-navigation reader shell", async () => {
   assert.match(html, /aria-label="Previous page"/);
   assert.match(html, /aria-label="Next page"/);
   assert.match(html, /Jump to Quran page/);
-  assert.match(html, /Page (?:<!-- -->)?1(?:<!-- -->)? of (?:<!-- -->)?604/);
+  assert.match(html, /aria-label="Page number" value="1"/);
+  assert.match(html, /\/ (?:<!-- -->)?604/);
   assert.match(html, /class="mushaf-lines"/);
+  assert.equal((html.match(/class="line-slot"/g) ?? []).length, 15);
+  assert.match(html, /aria-label="Reading assistance"/);
+  assert.match(html, />Tajweed</);
+  assert.match(html, />Transliteration</);
+  assert.match(html, /aria-label="Audio mini player"/);
   assert.match(html, /translate="no"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
 test("implements dynamic Madani pages and every requested navigation path", async () => {
-  const [page, data, pageRoute, searchRoute, layout, packageJson] = await Promise.all([
+  const [page, styles, data, pageRoute, searchRoute, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/quran-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/pages/[page]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/search/route.ts", import.meta.url), "utf8"),
@@ -49,9 +56,20 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /type="number" min="1" max=\{TOTAL_PAGES\}/);
   assert.match(page, /fetch\(`\/api\/pages\/\$\{page\}`\)/);
   assert.match(page, /pageCacheRef/);
-  assert.match(pageRoute, /line_number,text_uthmani/);
+  assert.match(pageRoute, /mushaf: "1"/);
+  assert.match(pageRoute, /line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4/);
   assert.match(pageRoute, /uthmani_tajweed\?page_number/);
   assert.match(pageRoute, /Array\.from\(\{ length: 15 \}/);
+  assert.match(page, /new FontFace/);
+  assert.match(page, /qcfTajweedCode/);
+  assert.match(styles, /grid-template-rows: repeat\(15/);
+  assert.match(page, /role="dialog" aria-modal="true" aria-labelledby="settings-title"/);
+  assert.match(page, /className="audio-mini"/);
+  assert.match(page, /className="panel-shell audio-sheet"/);
+  assert.match(page, /event\.key === "Escape"/);
+  assert.match(styles, /\.mobile-layer-bar/);
+  assert.match(styles, /grid-template-columns: repeat\(6,1fr\)/);
+  assert.match(styles, /\.audio-sheet/);
   assert.match(searchRoute, /chapters\?language=en/);
   assert.match(searchRoute, /type: "page"/);
   assert.match(data, /FALLBACK_PAGE/);
@@ -65,6 +83,9 @@ test("maps verified API words into the 15-line Madani page structure", async () 
   globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.includes("/verses/by_page/2")) {
+      assert.match(url, /mushaf=1/);
+      assert.match(url, /code_v2/);
+      assert.match(url, /code_v4/);
       return Response.json({ verses: [{
         verse_number: 1,
         verse_key: "2:1",
@@ -73,8 +94,8 @@ test("maps verified API words into the 15-line Madani page structure", async () 
         text_uthmani: "الٓمٓ",
         translations: [{ text: "Alif-lam-meem" }],
         words: [
-          { id: 11, text_uthmani: "الٓمٓ", text: "الٓمٓ", char_type_name: "word", line_number: 3 },
-          { id: 12, text_uthmani: "١", text: "١", char_type_name: "end", line_number: 3 },
+          { id: 11, text_uthmani: "الٓمٓ", text_qpc_hafs: "الٓمٓ", text: "الٓمٓ", code_v2: "v2-glyph", code_v4: "v4-glyph", char_type_name: "word", line_number: 3, page_number: 2 },
+          { id: 12, text_uthmani: "١", text_qpc_hafs: "١", text: "١", code_v2: "v2-end", code_v4: "v4-end", char_type_name: "end", line_number: 3, page_number: 2 },
         ],
       }] });
     }
@@ -102,6 +123,9 @@ test("maps verified API words into the 15-line Madani page structure", async () 
     assert.equal(page.lines.length, 15);
     assert.equal(page.lines[2].words[0].verseKey, "2:1");
     assert.match(page.lines[2].words[0].tajweedHtml, /madda_necessary/);
+    assert.equal(page.lines[2].words[0].qcfCode, "v2-glyph");
+    assert.equal(page.lines[2].words[0].qcfTajweedCode, "v4-glyph");
+    assert.equal(page.lines[2].words[0].pageNumber, 2);
     assert.deepEqual(page.chapterStarts[0], { chapterId: 2, headerLine: 1, bismillahLine: 2 });
   } finally {
     globalThis.fetch = originalFetch;
