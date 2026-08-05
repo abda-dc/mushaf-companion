@@ -58,6 +58,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /pageCacheRef/);
   assert.match(pageRoute, /mushaf: "1"/);
   assert.match(pageRoute, /line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4/);
+  assert.match(pageRoute, /qcfGlyphFromWord\(word\.text\)/);
   assert.match(pageRoute, /uthmani_tajweed\?page_number/);
   assert.match(pageRoute, /Array\.from\(\{ length: 15 \}/);
   assert.match(page, /new FontFace/);
@@ -70,6 +71,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(styles, /\.mobile-layer-bar/);
   assert.match(styles, /grid-template-columns: repeat\(6,1fr\)/);
   assert.match(styles, /\.audio-sheet/);
+  assert.match(styles, /\.ayah-number::before/);
+  assert.match(styles, /\.ayah-number::after/);
   assert.match(searchRoute, /chapters\?language=en/);
   assert.match(searchRoute, /type: "page"/);
   assert.match(data, /FALLBACK_PAGE/);
@@ -95,7 +98,7 @@ test("maps verified API words into the 15-line Madani page structure", async () 
         translations: [{ text: "Alif-lam-meem" }],
         words: [
           { id: 11, text_uthmani: "الٓمٓ", text_qpc_hafs: "الٓمٓ", text: "الٓمٓ", code_v2: "v2-glyph", code_v4: "v4-glyph", char_type_name: "word", line_number: 3, page_number: 2 },
-          { id: 12, text_uthmani: "١", text_qpc_hafs: "١", text: "١", code_v2: "v2-end", code_v4: "v4-end", char_type_name: "end", line_number: 3, page_number: 2 },
+          { id: 12, text_uthmani: "١", text_qpc_hafs: "١", text: "ﱂ", char_type_name: "end", line_number: 3, page_number: 2 },
         ],
       }] });
     }
@@ -126,6 +129,8 @@ test("maps verified API words into the 15-line Madani page structure", async () 
     assert.equal(page.lines[2].words[0].qcfCode, "v2-glyph");
     assert.equal(page.lines[2].words[0].qcfTajweedCode, "v4-glyph");
     assert.equal(page.lines[2].words[0].pageNumber, 2);
+    assert.equal(page.lines[2].words[1].qcfCode, "ﱂ");
+    assert.equal(page.lines[2].words[1].qcfTajweedCode, "ﱂ");
     assert.deepEqual(page.chapterStarts[0], { chapterId: 2, headerLine: 1, bismillahLine: 2 });
   } finally {
     globalThis.fetch = originalFetch;

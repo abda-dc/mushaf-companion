@@ -34,6 +34,11 @@ interface ApiChapter {
   translated_name: { name: string };
 }
 
+function qcfGlyphFromWord(value?: string) {
+  if (!value) return undefined;
+  return /[\uFB50-\uFDFF\uFE70-\uFEFF]/u.test(value) ? value : undefined;
+}
+
 function splitTajweedWords(raw: string, expectedWords: number) {
   const cleaned = raw
     .replace(/<span\s+class=(?:["']?end["']?)[^>]*>[\s\S]*?<\/span>/gi, "")
@@ -133,14 +138,18 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
       let contentIndex = 0;
       for (const word of verse.words) {
         const isEnd = word.char_type_name === "end";
+        // The content API exposes early-page QCF glyphs through `text` even
+        // when the optional code_v2/code_v4 fields are absent. Preserve those
+        // page-font glyphs so ayah endings keep their authentic rosettes.
+        const qcfCode = word.code_v2 ?? qcfGlyphFromWord(word.text);
         const mapped: PageWord = {
           id: word.id,
           text: word.text_qpc_hafs || word.text_uthmani || word.text,
           tajweedHtml: isEnd ? "" : alignedTajweed[contentIndex] ?? (word.text_qpc_hafs || word.text_uthmani || word.text),
           verseKey: verse.verse_key,
           isEnd,
-          qcfCode: word.code_v2,
-          qcfTajweedCode: word.code_v4,
+          qcfCode,
+          qcfTajweedCode: word.code_v4 ?? qcfCode,
           pageNumber: word.page_number ?? page,
         };
         if (!isEnd) contentIndex += 1;

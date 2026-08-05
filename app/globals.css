@@ -95,7 +95,9 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .mushaf-word:hover, .mushaf-word.selected { background: rgba(159,119,61,.065); }
 .qcf-glyph { display: inline-block; line-height: 1; }
 .ayah-end { margin-inline: .08em; }
-.ayah-number { min-width: 1.85em; height: 1.85em; padding: .18em; border: 1px solid rgba(164,124,67,.75); border-radius: 50%; color: #8f6c3d; display: grid; place-items: center; font-size: .43em; font-family: "UthmanicHafs", serif; }
+.ayah-number { position: relative; min-width: 1.85em; height: 1.85em; padding: .18em; border: 1px solid rgba(164,124,67,.78); border-radius: 50%; color: #8f6c3d; display: grid; place-items: center; font-size: .43em; font-family: "UthmanicHafs", serif; }
+.ayah-number::before { content: ""; position: absolute; inset: -.24em; border: 1px solid currentColor; border-radius: 50%; opacity: .48; }
+.ayah-number::after { content: ""; position: absolute; width: .24em; height: .24em; top: -.36em; left: calc(50% - .12em); border-radius: 50%; background: currentColor; box-shadow: 0 2.33em 0 currentColor, 1.165em 1.165em 0 currentColor, -1.165em 1.165em 0 currentColor; opacity: .72; }
 .mushaf-page .ham_wasl, .mushaf-page .ham-wasl { color: #7a7167; }
 .mushaf-page .laam_shamsiyah, .mushaf-page .laam-shamsiyah { color: var(--tajweed-red); }
 .mushaf-page .madda_normal, .mushaf-page .madda-normal, .mushaf-page .qalaqah { color: var(--tajweed-blue); }

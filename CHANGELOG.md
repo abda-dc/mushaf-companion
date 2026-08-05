@@ -2,6 +2,14 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.3.1 — 2026-08-05
+
+### Fixed
+
+- Restored the page-font ayah rosettes on pages 1–3 when the Quran content response exposes QCF glyphs through the word text field instead of the optional code fields.
+- Added a decorative double-ring rosette fallback for any ayah ending that has no usable QCF glyph, preventing plain number-only markers on any page.
+- Added regression coverage for early-page end markers without `code_v2` or `code_v4` fields.
+
 ## 0.3.0 — 2026-08-05
 
 ### Added
