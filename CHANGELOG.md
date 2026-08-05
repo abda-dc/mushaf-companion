@@ -2,6 +2,20 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.4.0 — 2026-08-05
+
+### Added
+
+- Reading-font picker with persisted Amiri, Lateef, Scheherazade, and page-faithful Uthman Taha choices.
+- Dr. Aymen Suwayed and Minshawi Kids Repeat as verified ayah-by-ayah reciters.
+- Sheikh Abdul Rashid Ali Sufi as clearly identified continuous sūrah playback, with verse-only controls disabled when that source is selected.
+
+### Fixed
+
+- Replaced the early-page number-outline fallback with a visibly ornamental scalloped rosette on every ayah ending that lacks a native QCF marker.
+- Added a page-data revision key so pages 1 and 3 no longer reuse a stale cached API payload after marker fixes.
+- Kept native QCF rosettes for every page that provides them, including when a non-QCF reading font is selected.
+
 ## 0.3.1 — 2026-08-05
 
 ### Fixed

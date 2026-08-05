@@ -1,4 +1,6 @@
-export type ReciterId = "alafasy" | "abdulbasit" | "saad";
+export type ReciterId = "alafasy" | "abdulbasit" | "saad" | "aymen" | "minshawi-kids" | "abdul-rashid-sufi";
+
+export type ReciterScope = "ayah" | "surah";
 
 export interface PageWord {
   id: number;
@@ -58,10 +60,13 @@ export interface SearchResult {
   verseKey?: string;
 }
 
-export const RECITERS: Array<{ id: ReciterId; name: string; initials: string }> = [
-  { id: "alafasy", name: "Mishary Rashid Alafasy", initials: "MA" },
-  { id: "abdulbasit", name: "Abdul Basit Abdus Samad", initials: "AB" },
-  { id: "saad", name: "Saad Al-Ghamdi", initials: "SG" },
+export const RECITERS: Array<{ id: ReciterId; name: string; initials: string; scope: ReciterScope }> = [
+  { id: "alafasy", name: "Mishary Rashid Alafasy", initials: "MA", scope: "ayah" },
+  { id: "abdulbasit", name: "Abdul Basit Abdus Samad", initials: "AB", scope: "ayah" },
+  { id: "saad", name: "Saad Al-Ghamdi", initials: "SG", scope: "ayah" },
+  { id: "aymen", name: "Dr. Aymen Suwayed", initials: "AS", scope: "ayah" },
+  { id: "minshawi-kids", name: "Minshawi Kids Repeat", initials: "MK", scope: "ayah" },
+  { id: "abdul-rashid-sufi", name: "Sheikh Abdul Rashid Ali Sufi", initials: "RS", scope: "surah" },
 ];
 
 const FATIHAH_VERSES: PageVerse[] = [

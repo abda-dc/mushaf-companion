@@ -14,8 +14,16 @@ type Overlay = Exclude<NavItem, "Read"> | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
+type ReadingFont = "amiri" | "lateef" | "scheherazade" | "uthman-taha";
 
 const TOTAL_PAGES = 604;
+const PAGE_DATA_REVISION = "2026-08-05-rosette-fonts";
+const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
+  { id: "uthman-taha", label: "Uthman Taha" },
+  { id: "amiri", label: "Amiri" },
+  { id: "lateef", label: "Lateef" },
+  { id: "scheherazade", label: "Scheherazade" },
+];
 const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Home", glyph: "⌂" },
   { label: "Read", glyph: "▤" },
@@ -42,6 +50,9 @@ function safeBookmarks(value: string | null) {
 function audioUrl(reciter: ReciterId, verseKey: string) {
   const [chapter, ayah] = verseKey.split(":");
   const file = `${chapter.padStart(3, "0")}${ayah.padStart(3, "0")}.mp3`;
+  if (reciter === "abdul-rashid-sufi") return `https://api.kalamalah.com/api/abdul-rashid-sofi/murattal/${chapter.padStart(3, "0")}`;
+  if (reciter === "aymen") return `https://everyayah.com/data/Ayman_Sowaid_64kbps/${file}`;
+  if (reciter === "minshawi-kids") return `https://everyayah.com/data/Minshawy_Teacher_128kbps/${file}`;
   if (reciter === "saad") return `https://everyayah.com/data/Ghamadi_40kbps/${file}`;
   const folder = reciter === "alafasy" ? "Alafasy" : "AbdulBaset/Murattal";
   return `https://verses.quran.foundation/${folder}/mp3/${file}`;
@@ -68,6 +79,7 @@ export default function Home() {
   const [transliteration, setTransliteration] = useState(false);
   const [dark, setDark] = useState(false);
   const [pageScale, setPageScale] = useState<PageScale>("comfortable");
+  const [readingFont, setReadingFont] = useState<ReadingFont>("uthman-taha");
   const [selectedVerseKey, setSelectedVerseKey] = useState("1:1");
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -119,6 +131,7 @@ export default function Home() {
     const savedVersePage = Number(localStorage.getItem("mushaf:last-verse-page") ?? "0");
     const savedReciter = localStorage.getItem("mushaf:reciter") as ReciterId | null;
     const savedScale = localStorage.getItem("mushaf:page-scale") as PageScale | null;
+    const savedReadingFont = localStorage.getItem("mushaf:reading-font") as ReadingFont | null;
     pendingVerseRef.current = savedVersePage === initialPage ? savedVerse : null;
     // Browser-only persistence is intentionally hydrated after the server shell.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -130,6 +143,7 @@ export default function Home() {
     setTransliteration(localStorage.getItem("mushaf:transliteration") === "true");
     if (RECITERS.some((item) => item.id === savedReciter)) setReciter(savedReciter as ReciterId);
     if (["compact", "comfortable", "large"].includes(savedScale ?? "")) setPageScale(savedScale as PageScale);
+    if (READING_FONTS.some((item) => item.id === savedReadingFont)) setReadingFont(savedReadingFont as ReadingFont);
     const savedSpeed = Number(localStorage.getItem("mushaf:speed") ?? "1");
     if ([0.75, 1, 1.25].includes(savedSpeed)) setSpeed(savedSpeed);
     setHydrated(true);
@@ -166,7 +180,7 @@ export default function Home() {
       return () => { cancelled = true; };
     }
     setLoadingPage(true);
-    fetch(`/api/pages/${page}`)
+    fetch(`/api/pages/${page}?v=${PAGE_DATA_REVISION}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Page unavailable");
         return response.json() as Promise<QuranPage>;
@@ -175,7 +189,7 @@ export default function Home() {
         pageCacheRef.current.set(page, data);
         applyPage(data);
         [page - 1, page + 1].filter((item) => item >= 1 && item <= TOTAL_PAGES && !pageCacheRef.current.has(item)).forEach((item) => {
-          fetch(`/api/pages/${item}`).then((response) => response.ok ? response.json() as Promise<QuranPage> : null).then((next) => {
+          fetch(`/api/pages/${item}?v=${PAGE_DATA_REVISION}`).then((response) => response.ok ? response.json() as Promise<QuranPage> : null).then((next) => {
             if (next) pageCacheRef.current.set(item, next);
           }).catch(() => undefined);
         });
@@ -203,7 +217,8 @@ export default function Home() {
     localStorage.setItem("mushaf:reciter", reciter);
     localStorage.setItem("mushaf:speed", String(speed));
     localStorage.setItem("mushaf:page-scale", pageScale);
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, hydrated]);
+    localStorage.setItem("mushaf:reading-font", readingFont);
+  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, readingFont, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -304,6 +319,11 @@ export default function Home() {
   function updatePlaying(value: boolean) {
     playingRef.current = value;
     setPlaying(value);
+  }
+
+  function selectReciter(nextReciter: ReciterId) {
+    setReciter(nextReciter);
+    if (RECITERS.find((item) => item.id === nextReciter)?.scope === "surah") setRepeatMode("off");
   }
 
   function goToPage(target: number, direction?: "next" | "previous", verseKey?: string, keepPlaying = false) {
@@ -428,9 +448,10 @@ export default function Home() {
     }
     if (!line?.words.length) return <div className="empty-line" aria-hidden="true" />;
     return (
-      <div className="mushaf-line" lang="ar" dir="rtl" translate="no" style={fontReady ? { fontFamily: `"${fontName}"` } : undefined}>
+      <div className="mushaf-line" lang="ar" dir="rtl" translate="no" style={fontReady && readingFont === "uthman-taha" ? { fontFamily: `"${fontName}"` } : undefined}>
         {line.words.map((word) => {
           const glyph = tajweed ? (word.qcfTajweedCode ?? word.qcfCode) : word.qcfCode;
+          const useQcfGlyph = fontReady && glyph && (readingFont === "uthman-taha" || word.isEnd);
           return (
             <button
               type="button"
@@ -440,10 +461,10 @@ export default function Home() {
               aria-label={`Select ayah ${word.verseKey}`}
               tabIndex={word.isEnd ? 0 : -1}
             >
-              {fontReady && glyph
-                ? <span className="qcf-glyph" dangerouslySetInnerHTML={{ __html: glyph }} />
+              {useQcfGlyph
+                ? <span className="qcf-glyph" style={{ fontFamily: `"${fontName}"` }} dangerouslySetInnerHTML={{ __html: glyph }} />
                 : word.isEnd
-                  ? <span className="ayah-number">{word.text}</span>
+                  ? <span className="ayah-rosette"><span>{word.text}</span></span>
                   : tajweed
                     ? <span dangerouslySetInnerHTML={{ __html: word.tajweedHtml }} />
                     : word.text}
@@ -501,7 +522,7 @@ export default function Home() {
           <div className="book-stage">
             <div className="book-meta"><span>JUZ {pageData.juz}</span><span>{currentChapter?.name ?? "Quran"}</span><span>HIZB {pageData.hizb}</span></div>
             <article
-              className={`mushaf-page ${turnDirection ? `turn-${turnDirection}` : ""}`}
+              className={`mushaf-page reading-font-${readingFont} ${turnDirection ? `turn-${turnDirection}` : ""}`}
               aria-label={`Quran page ${pageData.page}`}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
@@ -526,12 +547,12 @@ export default function Home() {
       <section className="audio-mini" aria-label="Audio mini player">
         <button type="button" className="mini-now-playing" onClick={() => setOverlay("Listen")} aria-label="Open full audio player">
           <span className="reciter-avatar">{currentReciter.initials}</span>
-          <span><small>NOW PLAYING · AYAH {selectedVerseKey}</small><strong>{currentReciter.name}</strong></span>
+          <span><small>NOW PLAYING · {currentReciter.scope === "surah" ? `SURAH ${selectedVerseKey.split(":")[0]}` : `AYAH ${selectedVerseKey}`}</small><strong>{currentReciter.name}</strong></span>
         </button>
         <div className="mini-transport">
-          <button type="button" onClick={() => moveAyah(-1)} aria-label="Previous ayah">‹</button>
+          <button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button>
           <button type="button" className="mini-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button>
-          <button type="button" onClick={() => moveAyah(1)} aria-label="Next ayah">›</button>
+          <button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button>
         </div>
         <div className="mini-progress-cluster">
           <span>{formatTime(progress)}</span>
@@ -587,10 +608,10 @@ export default function Home() {
             <section className="panel-shell settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
               <header><div><span className="panel-kicker">READER PREFERENCES</span><h2 id="settings-title">Settings</h2></div>{closeButton}</header>
               <div className="settings-content">
-                <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div></section>
+                <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
                 <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label></section>
-                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>Used for verse playback.</small></span><select value={reciter} onChange={(event) => setReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed"><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></div></section>
-                <footer className="edition-note"><span>TEXT EDITION</span><strong>Madani Mushaf · Hafs · QCF V2 / V4 Tajweed</strong></footer>
+                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed"><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></div></section>
+                <footer className="edition-note"><span>TEXT EDITION</span><strong>Madani Mushaf · Hafs · 15-line page map</strong></footer>
               </div>
             </section>
           )}
@@ -598,11 +619,12 @@ export default function Home() {
           {overlay === "Listen" && (
             <section className="panel-shell audio-sheet" role="dialog" aria-modal="true" aria-labelledby="audio-title">
               <div className="sheet-handle" aria-hidden="true" />
-              <header><div><span className="panel-kicker">VERSE RECITATION</span><h2 id="audio-title">Ayah {selectedVerseKey}</h2></div>{closeButton}</header>
+              <header><div><span className="panel-kicker">{currentReciter.scope === "surah" ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{currentReciter.scope === "surah" ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
               <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}</small></div></div>
-              <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} aria-label="Next ayah">›</button></div>
+              <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
               <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
-              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => setReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)}><option value="off">Off</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}><option value={0.75}>0.75×</option><option value={1}>1×</option><option value={1.25}>1.25×</option></select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={currentReciter.scope === "surah"}><option value="off">{currentReciter.scope === "surah" ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              {currentReciter.scope === "surah" && <p className="audio-scope-note">This recitation is provided as continuous sūrah audio. Ayah repeat remains available with the five verse-by-verse reciters.</p>}
               {repeatMode === "range" && <div className="range-settings"><label>FROM<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><span>to</span><label>TO<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}
             </section>
           )}

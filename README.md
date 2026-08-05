@@ -42,6 +42,7 @@ The current production deployment is private:
 - Verse transliteration toggle.
 - Selected-ayah state.
 - Light and night themes.
+- Reading-font picker with Uthman Taha, Amiri, Lateef, and Scheherazade.
 - Explicit mobile Tajweed and Transliteration controls.
 - Responsive settings panel with persisted display, learning, reciter, and speed preferences.
 
@@ -50,10 +51,14 @@ The current production deployment is private:
 - Mishary Rashid Alafasy.
 - Abdul Basit Abdus Samad.
 - Saad Al-Ghamdi.
+- Dr. Aymen Suwayed.
+- Minshawi Kids Repeat.
+- Sheikh Abdul Rashid Ali Sufi.
 - Verse play/pause and previous/next ayah controls.
 - Playback progress and speed control.
 - Repeat current ayah or a selected range on the current page.
 - Stable mini-player plus a full transport/settings bottom sheet on mobile.
+- Five reciters use ayah-by-ayah files; Sheikh Abdul Rashid Ali Sufi uses clearly labeled continuous sūrah playback because verified verse timing is not available from the source.
 
 ### Finding and saving places
 

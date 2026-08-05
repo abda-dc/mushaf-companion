@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Lateef:wght@400;600&family=Scheherazade+New:wght@400;600&display=swap");
+
 @font-face {
   font-family: "UthmanicHafs";
   src: url("https://verses.quran.foundation/fonts/quran/uthmanic_hafs/UthmanicHafs1Ver18.woff2") format("woff2");
@@ -91,13 +93,22 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .line-slot { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: visible; }
 .mushaf-line, .empty-line { width: 100%; height: 100%; }
 .mushaf-line { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0; white-space: nowrap; font-family: "UthmanicHafs", "Traditional Arabic", serif; font-size: 5.7cqw; font-weight: 400; line-height: 1; }
+.reading-font-amiri .mushaf-line, .reading-font-amiri .surah-line, .reading-font-amiri .bismillah-line { font-family: "Amiri", serif; }
+.reading-font-lateef .mushaf-line, .reading-font-lateef .surah-line, .reading-font-lateef .bismillah-line { font-family: "Lateef", serif; }
+.reading-font-scheherazade .mushaf-line, .reading-font-scheherazade .surah-line, .reading-font-scheherazade .bismillah-line { font-family: "Scheherazade New", serif; }
+.reading-font-uthman-taha .mushaf-line, .reading-font-uthman-taha .surah-line, .reading-font-uthman-taha .bismillah-line { font-family: "UthmanicHafs", "Traditional Arabic", serif; }
+.reading-font-amiri .mushaf-line { font-size: 5.45cqw; }
+.reading-font-lateef .mushaf-line { font-size: 6.25cqw; }
+.reading-font-scheherazade .mushaf-line { font-size: 5.45cqw; }
 .mushaf-word { min-width: 0; height: 100%; padding: 0 .015em; border: 0; background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font: inherit; line-height: inherit; white-space: nowrap; }
 .mushaf-word:hover, .mushaf-word.selected { background: rgba(159,119,61,.065); }
 .qcf-glyph { display: inline-block; line-height: 1; }
 .ayah-end { margin-inline: .08em; }
-.ayah-number { position: relative; min-width: 1.85em; height: 1.85em; padding: .18em; border: 1px solid rgba(164,124,67,.78); border-radius: 50%; color: #8f6c3d; display: grid; place-items: center; font-size: .43em; font-family: "UthmanicHafs", serif; }
-.ayah-number::before { content: ""; position: absolute; inset: -.24em; border: 1px solid currentColor; border-radius: 50%; opacity: .48; }
-.ayah-number::after { content: ""; position: absolute; width: .24em; height: .24em; top: -.36em; left: calc(50% - .12em); border-radius: 50%; background: currentColor; box-shadow: 0 2.33em 0 currentColor, 1.165em 1.165em 0 currentColor, -1.165em 1.165em 0 currentColor; opacity: .72; }
+.ayah-rosette { position: relative; width: 2.25em; height: 2.25em; margin-inline: .06em; display: inline-grid; place-items: center; color: #244d42; font: 500 .42em/1 "UthmanicHafs", serif; isolation: isolate; }
+.ayah-rosette::before { content: ""; position: absolute; inset: -.15em; z-index: -2; background: #a95365; clip-path: polygon(50% 0%, 60% 13%, 75% 6%, 80% 22%, 97% 25%, 88% 43%, 100% 54%, 84% 64%, 88% 82%, 69% 81%, 59% 98%, 47% 86%, 31% 96%, 26% 78%, 7% 76%, 16% 58%, 0% 46%, 16% 36%, 12% 18%, 31% 19%); }
+.ayah-rosette::after { content: ""; position: absolute; inset: .12em; z-index: -1; border: .09em solid #2f6658; border-radius: 50%; background: #f3ecd9; box-shadow: 0 0 0 .11em #d5ad68, inset 0 0 0 .08em rgba(255,255,255,.9); }
+.ayah-rosette > span { display: block; transform: translateY(-.01em); }
+.dark .ayah-rosette::after { background: #e8ddc6; }
 .mushaf-page .ham_wasl, .mushaf-page .ham-wasl { color: #7a7167; }
 .mushaf-page .laam_shamsiyah, .mushaf-page .laam-shamsiyah { color: var(--tajweed-red); }
 .mushaf-page .madda_normal, .mushaf-page .madda-normal, .mushaf-page .qalaqah { color: var(--tajweed-blue); }
@@ -144,6 +155,7 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .mini-repeat.active { color: #e4c590; }
 .mini-repeat small { margin-left: 3px; font-size: 7px; text-transform: uppercase; }
 .mobile-mini-progress { display: none; }
+.audio-scope-note { margin: 0 24px 22px; padding: 12px 14px; border: 1px solid rgba(164,124,67,.24); color: var(--ink-soft); background: rgba(164,124,67,.06); font-size: 10px; line-height: 1.45; }
 
 .layer-backdrop { position: fixed; z-index: 70; inset: 0; padding: 6vh 18px; background: rgba(8,24,19,.62); backdrop-filter: blur(11px); display: flex; justify-content: center; align-items: flex-start; }
 .panel-shell { width: min(700px, 100%); max-height: 88vh; overflow: hidden; color: var(--ink); background: #f7f1e6; border: 1px solid #cbbda5; box-shadow: 0 30px 90px rgba(13,27,23,.4); }
