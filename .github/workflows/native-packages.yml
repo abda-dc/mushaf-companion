@@ -1,0 +1,59 @@
+name: Native packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run mobile:android
+      - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mushaf-Companion-Android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  ios:
+    name: iOS simulator package
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:ios
+      - name: Build unsigned simulator app
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -derivedDataPath ios/build
+          CODE_SIGNING_ALLOWED=NO
+      - name: Package simulator app
+        run: ditto -c -k --sequesterRsrc --keepParent ios/build/Build/Products/Debug-iphonesimulator/App.app Mushaf-Companion-iOS-Simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mushaf-Companion-iOS-Simulator
+          path: Mushaf-Companion-iOS-Simulator.zip
