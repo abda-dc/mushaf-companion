@@ -1,5 +1,5 @@
-const CACHE_NAME = "mushaf-companion-v1";
-const SHELL = ["/offline.html", "/icon.svg", "/og.png", "/manifest.webmanifest"];
+const CACHE_NAME = "mushaf-companion-v3-tafsir";
+const SHELL = ["/", "/offline.html", "/icon.svg", "/og.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

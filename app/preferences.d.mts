@@ -6,7 +6,7 @@ export type PageScalePreference = "compact" | "comfortable" | "large";
 export type ReadingFontPreference = "uthman-taha" | "amiri" | "lateef" | "scheherazade";
 
 export interface MushafPreferences {
-  version: 2;
+  version: 3;
   reader: {
     lastPage: number;
     lastVerse: string;
@@ -22,10 +22,11 @@ export interface MushafPreferences {
   };
   bookmarks: string[];
   hifz: HifzProgress;
+  downloads: { wifiOnly: boolean };
 }
 
-export const PREFERENCE_STORAGE_KEY: "mushaf:preferences-v2";
-export const PREFERENCE_SCHEMA_VERSION: 2;
+export const PREFERENCE_STORAGE_KEY: "mushaf:preferences-v3";
+export const PREFERENCE_SCHEMA_VERSION: 3;
 export const DEFAULT_PREFERENCES: Readonly<MushafPreferences>;
 export function normalizePreferences(value: unknown): MushafPreferences;
 export function migrateLegacyPreferences(storage: Pick<Storage, "getItem">): MushafPreferences;
@@ -33,4 +34,3 @@ export function loadPreferences(storage: Pick<Storage, "getItem" | "setItem">): 
 export function savePreferences(storage: Pick<Storage, "setItem">, value: unknown): MushafPreferences;
 export function createPortableBackup(value: unknown, exportedAt?: string): string;
 export function restorePortableBackup(raw: string | unknown): MushafPreferences;
-

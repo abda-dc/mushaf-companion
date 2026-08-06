@@ -6,7 +6,7 @@
 
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
-The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, transliteration, bookmarks, search, night mode, and last-read resume behavior.
+The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior.
 
 ![Mushaf Companion preview](./public/og.png)
 
@@ -54,6 +54,15 @@ Install or open the public app:
 - A front-matter Tajweed guide covering all 17 markup categories used by the reader, with five linked Quran examples for each rule.
 - Tap a Tajweed-marked word to see its rule name, timing, and reading instruction without leaving the page.
 
+### Study (Tafsir)
+
+- Selected-ayah English Ibn Kathir (Abridged) commentary by Hafiz Ibn Kathir from Quran Foundation/Quran.com resource 169.
+- Open from the desktop toolbar, mobile assistance controls, Settings, or selected-ayah actions.
+- Responsive long-form study panel with fixed ayah context and previous/next ayah navigation across page boundaries.
+- Explicit source, author, edition, revision, licensing, single/multi-ayah section boundaries, and SHA-256 provenance.
+- Server-side structured-text normalization; raw provider HTML is never inserted into the browser DOM.
+- In-session and HTTP caching with clear loading, unavailable, retry, and multi-verse-section states.
+
 ### Memorization (Hifz)
 
 - “My Mushaf” dashboard opened from the reader toolbar or Home, with no additional bottom navigation tab.
@@ -80,6 +89,10 @@ Install or open the public app:
 - Double-click a displayed sūrah number to begin complete sūrah playback from āyah 1.
 - Stable mini-player plus a full transport/settings bottom sheet on mobile.
 - Five reciters use ayah-by-ayah files; Sheikh Abdul Rashid Ali Sufi uses clearly labeled continuous sūrah playback because verified verse timing is not available from the source.
+- Download Mishary Rashid Alafasy packs by sūrah or juz with estimated size, free-space checks, progress, pause, resume, retry, repair, and deletion.
+- SHA-256 verification before and after IndexedDB storage; partial packs never appear complete.
+- Downloaded-first playback with streaming fallback when online, plus first-to-last pack sequencing that does not depend on page retrieval.
+- Wi-Fi-only safeguards, cellular warnings, storage persistence status, quota visibility, and per-pack totals.
 
 ### Finding and saving places
 
@@ -103,6 +116,8 @@ Mushaf Companion is a full-stack React application built with Next-compatible Ap
 ```text
 Browser reader
   ├─ /api/pages/:page  ── verified page, line, tajweed and transliteration data
+  ├─ /api/audio-manifest ── versioned sūrah/juz download plans and provider attribution
+  ├─ /api/tafsir        ── sanitized, checksummed Ibn Kathir sections by verse key
   ├─ /api/search       ── page, surah and verse search
   ├─ /api/lookup       ── verse-to-page mapping
   ├─ /api/chapters     ── verified chapter, juz and revelation index
@@ -151,6 +166,8 @@ No application environment variables are required for the current read-only Qura
 | --- | --- | --- |
 | `GET /api/pages/:page` | Load one Madani mushaf page | Accepts pages 1–604 and fails closed on incomplete upstream content. |
 | `GET /api/content-manifest` | Inspect Quran source and integrity metadata | Identifies edition, resource IDs, revision, audit status, and checksum policy. |
+| `GET /api/audio-manifest?type=surah&id=1&reciter=alafasy` | Build one offline-audio pack manifest | Supports sūrah or juz scope, paginates every verse key, and identifies its source revision. |
+| `GET /api/tafsir?verse=2:255` | Load one source-attributed tafsir section | Uses resource 169, retains multi-ayah boundaries, strips provider markup, and returns SHA-256 provenance. |
 | `GET /api/search?q=` | Search pages, ayat, surahs, and text | Falls back to direct page and ayah matching if broad search is unavailable. |
 | `GET /api/lookup?verse=` | Resolve an ayah key to its page | Accepts keys such as `2:255`. |
 | `GET /api/chapters` | Load the 114-sūrah contents index | Includes page ranges, juz coverage, revelation metadata, and āyah counts. |
@@ -163,12 +180,16 @@ app/
   globals.css          Reader, audio, modal, mobile, and theme styling
   page.tsx             Mushaf reader and interaction state
   quran-data.ts        Shared page, verse, reciter, and search types
+  tafsir-source.mjs    Tafsir edition metadata and fail-closed text normalization
+  tafsir-panel.tsx     Responsive selected-ayah study surface
   tajweed-guide.ts     Tajweed taxonomy, teaching copy, and 85 linked examples
 android/               Capacitor Android Studio project
 ios/                   Capacitor Xcode project
 github-pages/          Static installable PWA shell deployed by GitHub Actions
 docs/
   ANALYTICS.md         Future analytics and event contract
+  OFFLINE-AUDIO.md     Offline pack integrity, recovery, and platform limits
+  TAFSIR.md            Tafsir source, safety, mapping, and reader behavior
   ROADMAP.md           Prioritized translations, tafsir, and offline roadmap
   UX-REVIEW.md         Current reader UX findings and acceptance checks
   MOBILE.md            Android/iOS packaging and signing guide
@@ -195,18 +216,23 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 
 ## Current limitations
 
-- Translation is currently one vetted selected-ayah English layer; translation comparison and tafsir are not implemented yet.
-- Audio requires a network connection and cannot be downloaded yet.
-- Offline reading is not supported.
+- Translation and tafsir currently provide one vetted English edition each; source comparison and additional languages are not implemented yet.
+- Tafsir requires a network connection when a section is not already available in the browser’s ordinary HTTP cache; full offline tafsir packs are not claimed.
+- Offline downloads currently support Mishary Rashid Alafasy only; the other reciters continue to stream.
+- Offline packs are limited to sūrah and juz scopes while storage behavior is validated; whole-Quran download remains deferred.
+- Downloads run while the app is active and resume safely after interruption, but browsers may suspend work in the background.
+- The application shell must be opened once online before it can cold-start offline. Verified Quran page retrieval still requires a network connection; saved audio packs can play independently.
 - Representative desktop and responsive screenshots are locked, but the reader is not claimed to be pixel-identical on every browser and device.
 - Bookmarks and preferences remain local by default; users can export and restore a private JSON backup.
 - Native packages currently load the deployed server-backed reader over HTTPS; a fully bundled offline reader remains a future phase.
-- The PWA caches its application/offline shell, but Quran page verification and recitation still require a network connection.
+- Browser storage may be reclaimed unless persistent storage is granted; the Offline Audio manager reports that state and provides verification, repair, and deletion controls.
 - A signed iOS `.ipa` requires macOS, Xcode 26+, and an Apple Developer signing team.
 
 ## Product planning
 
 - [V2 roadmap](./docs/ROADMAP.md)
+- [Offline audio integrity and recovery](./docs/OFFLINE-AUDIO.md)
+- [Tafsir source, safety, and mapping](./docs/TAFSIR.md)
 - [Current UX review](./docs/UX-REVIEW.md)
 - [Analytics requirements](./docs/ANALYTICS.md)
 - [Product changelog](./CHANGELOG.md)

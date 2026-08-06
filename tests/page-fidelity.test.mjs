@@ -27,6 +27,7 @@ test("page delivery enforces provenance, checksum, and fixed line slots", async 
   assert.match(styles, /grid-template-rows: repeat\(15/);
   assert.match(manifest, /Hafs 'an Asim/);
   assert.match(manifest, /Saheeh International/);
+  assert.match(manifest, /TAFSIR_RESOURCE/);
   assert.match(manifest, /attribution:/);
   assert.match(manifest, /license:/);
 });

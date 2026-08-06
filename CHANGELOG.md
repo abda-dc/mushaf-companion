@@ -2,6 +2,41 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 1.0.0 — 2026-08-06
+
+### Added
+
+- A responsive selected-ayah tafsir study panel using Quran Foundation/Quran.com English resource 169, Ibn Kathir (Abridged) by Hafiz Ibn Kathir.
+- Tafsir entry points in the reader toolbar, mobile learning controls, selected-ayah actions, and Settings.
+- Previous and next ayah study navigation that preserves the underlying mushaf context, including page-boundary movement.
+- Explicit single-ayah and multi-ayah section labels, source catalog links, edition and author attribution, revision metadata, and SHA-256 response checksums.
+- Clear loading, unavailable, retry, and source-attribution states for long-form commentary.
+
+### Reliability
+
+- Provider markup is converted server-side into a small structured-text model; raw tafsir HTML is never inserted into the browser DOM.
+- Tafsir responses fail closed when the resource ID, requested verse mapping, content blocks, or checksum contract is invalid.
+- Sampled real one-verse and multi-verse mappings for 1:1, 2:8–9, 3:1–4, 93:1–10, and 2:255.
+- Added sanitizer, edition, mapping, API, accessibility-contract, and source-attribution regression coverage.
+
+## 0.9.0 — 2026-08-06
+
+### Added
+
+- Downloadable Mishary Rashid Alafasy audio packs by sūrah or juz, with file-count and size estimates before download.
+- A responsive Offline Audio library with progress, pause, resume, retry, verification, repair, playback, and storage-safe deletion controls.
+- Versioned audio manifests containing stable verse keys, source revision, provider attribution, and deterministic file identities.
+- IndexedDB-backed audio storage with SHA-256 verification both before and after each file is committed.
+- Wi-Fi-only preferences, cellular warnings, browser quota visibility, persistent-storage requests, and per-pack storage totals.
+- Downloaded-first playback with online streaming fallback, plus an offline queue that advances from the first to last verified verse without a page API request.
+
+### Reliability
+
+- Partial or interrupted packs remain visibly incomplete and resume without redownloading verified files.
+- Missing, truncated, or corrupt files fail closed and can be repaired from the pack manager.
+- Downloads use bounded concurrency and retry only recoverable failures; the interface does not promise unsupported background execution.
+- Added manifest pagination, URL stability, checksum, retry, migration, and partial-pack regression coverage.
+
 ## 0.8.0 — 2026-08-06
 
 ### Added

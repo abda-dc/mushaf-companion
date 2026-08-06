@@ -1,6 +1,8 @@
+import { TAFSIR_RESOURCE } from "./tafsir-source.mjs";
+
 export const CONTENT_MANIFEST = {
   schemaVersion: 1,
-  revision: "2026-08-06-phase-one",
+  revision: "2026-08-06-phase-three",
   verseIdentity: {
     field: "verse_key",
     pattern: "^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$",
@@ -61,6 +63,7 @@ export const CONTENT_MANIFEST = {
       attribution: "Saheeh International translation displayed from Quran.com resource 20.",
       license: "Upstream content terms apply; this application does not relicense the translation.",
     },
+    tafsir: TAFSIR_RESOURCE,
   },
   integrity: {
     algorithm: "SHA-256",

@@ -4,7 +4,7 @@ import { PwaRegister } from "./pwa-register";
 
 export const metadata: Metadata = {
   title: "Mushaf Companion — Faithful Quran Reading",
-  description: "A calm, page-faithful digital mushaf with all 604 Quran pages, an interactive Tajweed guide, a complete sūrah index, transliteration, bookmarks, and recitation.",
+  description: "A calm, page-faithful digital mushaf with all 604 Quran pages, Hifz tools, verified offline recitation, translation, and source-attributed tafsir.",
   applicationName: "Mushaf Companion",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -24,14 +24,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Mushaf Companion",
-    description: "All 604 pages. The mushaf, faithfully reimagined.",
+    description: "All 604 pages, with verified learning, memorization, recitation, and tafsir layers.",
     type: "website",
     images: [{ url: "/og.png", width: 1536, height: 1024, alt: "Mushaf Companion" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Mushaf Companion",
-    description: "All 604 pages. The mushaf, faithfully reimagined.",
+    description: "All 604 pages, with verified learning, memorization, recitation, and tafsir layers.",
     images: ["/og.png"],
   },
 };

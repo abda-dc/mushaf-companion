@@ -1,7 +1,8 @@
 import { DEFAULT_HIFZ_PROGRESS, normalizeHifzProgress } from "./hifz-state.mjs";
 
-export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v2";
-export const PREFERENCE_SCHEMA_VERSION = 2;
+export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v3";
+export const PREFERENCE_SCHEMA_VERSION = 3;
+const PREVIOUS_PREFERENCE_STORAGE_KEY = "mushaf:preferences-v2";
 
 const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
@@ -26,6 +27,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   },
   bookmarks: [],
   hifz: DEFAULT_HIFZ_PROGRESS,
+  downloads: { wifiOnly: true },
 });
 
 function parseJson(value, fallback = null) {
@@ -64,6 +66,7 @@ export function normalizePreferences(value) {
     },
     bookmarks: normalizeBookmarks(source.bookmarks),
     hifz: normalizeHifzProgress(source.hifz),
+    downloads: { wifiOnly: source.downloads?.wifiOnly !== false },
   };
 }
 
@@ -91,7 +94,8 @@ export function migrateLegacyPreferences(storage) {
 
 export function loadPreferences(storage) {
   const current = parseJson(storage.getItem(PREFERENCE_STORAGE_KEY));
-  const preferences = current ? normalizePreferences(current) : migrateLegacyPreferences(storage);
+  const previous = parseJson(storage.getItem(PREVIOUS_PREFERENCE_STORAGE_KEY));
+  const preferences = current ? normalizePreferences(current) : previous ? normalizePreferences(previous) : migrateLegacyPreferences(storage);
   if (!current) storage.setItem(PREFERENCE_STORAGE_KEY, JSON.stringify(preferences));
   return preferences;
 }
@@ -118,4 +122,3 @@ export function restorePortableBackup(raw) {
   }
   return normalizePreferences(parsed.preferences);
 }
-

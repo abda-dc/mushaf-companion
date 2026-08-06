@@ -28,12 +28,24 @@ test("migrates fragmented legacy keys into one versioned preference record", () 
     "mushaf:hifz-v1": '{"memorized":[{"verseKey":"2:255","page":42,"markedAt":"2026-08-06"}],"activityDates":["2026-08-06"],"dailyGoal":7}',
   });
   const preferences = loadPreferences(storage);
-  assert.equal(preferences.version, 2);
+  assert.equal(preferences.version, 3);
   assert.equal(preferences.reader.lastPage, 42);
   assert.equal(preferences.reader.translation, true);
   assert.deepEqual(preferences.bookmarks, ["42|2:255"]);
   assert.equal(preferences.hifz.memorized[0].verseKey, "2:255");
+  assert.equal(preferences.downloads.wifiOnly, true);
   assert.ok(storage.values.has(PREFERENCE_STORAGE_KEY));
+});
+
+test("migrates the Phase One preference document into Phase Two download settings", () => {
+  const storage = memoryStorage({
+    "mushaf:preferences-v2": JSON.stringify({ version: 2, reader: { lastPage: 18, lastVerse: "2:142", lastVersePage: 22 }, bookmarks: ["22|2:142"] }),
+  });
+  const preferences = loadPreferences(storage);
+  assert.equal(preferences.version, 3);
+  assert.equal(preferences.reader.lastPage, 18);
+  assert.equal(preferences.downloads.wifiOnly, true);
+  assert.ok(storage.values.has("mushaf:preferences-v3"));
 });
 
 test("portable backups normalize restored progress and reader settings", () => {
@@ -44,7 +56,7 @@ test("portable backups normalize restored progress and reader settings", () => {
   assert.equal(restored.reader.lastPage, 604);
   assert.equal(restored.reader.lastVerse, "114:6");
   assert.equal(restored.reader.translation, true);
+  assert.equal(restored.downloads.wifiOnly, true);
   assert.deepEqual(restored.bookmarks, ["604|114:6"]);
   assert.throws(() => restorePortableBackup('{"kind":"unknown"}'));
 });
-

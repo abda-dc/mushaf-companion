@@ -1,6 +1,6 @@
 # V2 product roadmap
 
-> Foundation update — 2026-08-06: Phase 0 is complete in version 0.8.0. The gate now includes a versioned content manifest, fail-closed page checksums, preference migration, a 604-page/6,236-ayah source audit, and fourteen reviewed desktop/responsive baselines for seven representative pages.
+> Delivery update — 2026-08-06: the trust foundation is complete in version 0.8.0, the offline-audio MVP is code-complete in version 0.9.0, and the source-attributed tafsir MVP is complete in version 1.0.0.
 
 This roadmap covers translations, tafsir, and offline audio without compromising the page-first reading experience.
 
@@ -86,7 +86,7 @@ Target: one to two sprints after Phase 0.
 
 ## Phase 2 — offline audio MVP
 
-Target: two to three sprints after translation MVP.
+Status: completed 2026-08-06 in version 0.9.0.
 
 ### Scope
 
@@ -117,9 +117,13 @@ Target: two to three sprints after translation MVP.
 - Audio event ordering, repeat behavior, and page-follow mode remain correct offline.
 - Download controls meet platform background-execution limits without promising unsupported behavior.
 
+Evidence: [`OFFLINE-AUDIO.md`](./OFFLINE-AUDIO.md), [`offline-audio.test.mjs`](../tests/offline-audio.test.mjs), and the versioned manifest endpoint at `GET /api/audio-manifest`.
+
+Release note: automated integrity, interruption, storage, and sequence gates pass. A final installed-device airplane-mode walkthrough remains part of publication QA.
+
 ## Phase 3 — tafsir MVP
 
-Target: two to three sprints after the shared content panel has proven stable.
+Status: completed 2026-08-06 in version 1.0.0.
 
 ### Scope
 
@@ -146,6 +150,8 @@ Target: two to three sprints after the shared content panel has proven stable.
 - Long-form reading is keyboard and screen-reader accessible.
 - Opening tafsir never changes the Arabic page geometry.
 - Users can return to the exact selected ayah with one action.
+
+Evidence: [`TAFSIR.md`](./TAFSIR.md), [`tafsir.test.mjs`](../tests/tafsir.test.mjs), and the checksummed endpoint at `GET /api/tafsir?verse=2:255`.
 
 ## Phase 4 — expansion after evidence
 

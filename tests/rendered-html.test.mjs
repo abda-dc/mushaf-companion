@@ -39,7 +39,7 @@ test("server-renders a complete page-navigation reader shell", async () => {
 });
 
 test("implements dynamic Madani pages and every requested navigation path", async () => {
-  const [page, styles, data, guide, pageRoute, searchRoute, chaptersRoute, layout, packageJson, capacitorConfig, mobileWorkflow, pagesWorkflow, manifest, serviceWorker, pagesShell, license] = await Promise.all([
+  const [page, styles, data, guide, pageRoute, searchRoute, chaptersRoute, audioManifestRoute, audioManifest, offlineAudio, offlinePanel, tafsirRoute, tafsirSource, tafsirPanel, layout, packageJson, capacitorConfig, mobileWorkflow, pagesWorkflow, manifest, serviceWorker, pagesShell, license] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/quran-data.ts", import.meta.url), "utf8"),
@@ -47,6 +47,13 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../app/api/pages/[page]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/search/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/chapters/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/audio-manifest/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/audio-manifest.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/offline-audio.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/offline-audio-panel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/tafsir/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/tafsir-source.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/tafsir-panel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8"),
@@ -86,6 +93,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /event\.key === "Escape"/);
   assert.match(styles, /\.mobile-layer-bar/);
   assert.match(styles, /grid-template-columns: repeat\(7,1fr\)/);
+  assert.match(styles, /grid-template-columns: repeat\(6,1fr\)/);
   assert.match(styles, /\.audio-sheet/);
   assert.match(styles, /\.ayah-rosette::before/);
   assert.match(styles, /\.ayah-rosette::after/);
@@ -97,9 +105,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(data, /Dr\. Aymen Suwayed/);
   assert.match(data, /Minshawi Kids Repeat/);
   assert.match(data, /Sheikh Abdul Rashid Ali Sufi/);
-  assert.match(page, /Ayman_Sowaid_64kbps/);
-  assert.match(page, /Minshawy_Teacher_128kbps/);
-  assert.match(page, /abdul-rashid-sofi/);
+  assert.match(audioManifest, /Ayman_Sowaid_64kbps/);
+  assert.match(audioManifest, /Minshawy_Teacher_128kbps/);
+  assert.match(audioManifest, /abdul-rashid-sofi/);
   assert.match(page, /PLAYBACK_SPEEDS = \[0\.5, 0\.75, 1, 1\.25, 1\.5, 1\.75, 2\]/);
   assert.match(page, /Table of contents/);
   assert.match(page, /Double-click to play the complete sūrah/);
@@ -121,7 +129,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(layout, /PwaRegister/);
   assert.match(manifest, /"display": "standalone"/);
   assert.match(manifest, /"purpose": "any maskable"/);
-  assert.match(serviceWorker, /mushaf-companion-v1/);
+  assert.match(serviceWorker, /mushaf-companion-v3-tafsir/);
   assert.match(pagesShell, /mushaf-companion\.abda-dc\.chatgpt\.site/);
   assert.match(pagesShell, /beforeinstallprompt/);
   assert.match(pagesWorkflow, /actions\/deploy-pages@v5/);
@@ -135,6 +143,27 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /Start today&apos;s session/);
   assert.match(page, /createPortableBackup/);
   assert.match(page, /Saheeh International/);
+  assert.match(page, /getVerifiedAudioBlob/);
+  assert.match(page, /OfflineAudioPanel/);
+  assert.match(audioManifestRoute, /verses\/by_juz/);
+  assert.match(audioManifestRoute, /X-Audio-Manifest-Revision/);
+  assert.match(offlineAudio, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(offlineAudio, /indexedDB\.open/);
+  assert.match(offlineAudio, /deleteAudioPack/);
+  assert.match(offlinePanel, /Wi-Fi only/);
+  assert.match(offlinePanel, /AUDIO_DOWNLOAD_CONCURRENCY/);
+  assert.match(offlinePanel, /Partial downloads never appear as ready/);
+  assert.match(page, /openTafsir/);
+  assert.match(page, /Study tafsir/);
+  assert.match(page, /isVerifiedTafsir/);
+  assert.match(tafsirRoute, /tafsirs\/\$\{TAFSIR_RESOURCE\.id\}\/by_ayah/);
+  assert.match(tafsirRoute, /X-Tafsir-Revision/);
+  assert.match(tafsirRoute, /contentChecksum/);
+  assert.match(tafsirSource, /Ibn Kathir \(Abridged\)/);
+  assert.match(tafsirSource, /UNSAFE_BLOCKS/);
+  assert.match(tafsirPanel, /SOURCE &amp; EDITION/);
+  assert.doesNotMatch(tafsirPanel, /dangerouslySetInnerHTML/);
+  assert.match(styles, /\.tafsir-panel/);
   assert.match(layout, /all 604 Quran pages/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", import.meta.url)));

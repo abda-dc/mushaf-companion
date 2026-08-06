@@ -11,6 +11,11 @@ import {
   type SearchResult,
 } from "./quran-data";
 import { TAJWEED_RULES, rulesForTajweedHtml, type TajweedRule } from "./tajweed-guide";
+import { audioStreamUrl } from "./audio-manifest.mjs";
+import { OfflineAudioPanel } from "./offline-audio-panel";
+import { formatAudioBytes, getOfflineAudioStats, getVerifiedAudioBlob, type OfflineAudioPack } from "./offline-audio.mjs";
+import { TafsirPanel } from "./tafsir-panel";
+import type { TafsirDocument } from "./tafsir-source.mjs";
 import {
   DEFAULT_HIFZ_PROGRESS,
   buildDailyPlan,
@@ -36,7 +41,7 @@ import {
 } from "./preferences.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
-type Overlay = Exclude<NavItem, "Read"> | "Hifz" | null;
+type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -54,7 +59,7 @@ interface HifzLoop {
 }
 
 const TOTAL_PAGES = 604;
-const PAGE_DATA_REVISION = "2026-08-06-phase-one";
+const PAGE_DATA_REVISION = "2026-08-06-phase-three";
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
   { id: "uthman-taha", label: "Uthman Taha" },
@@ -99,15 +104,19 @@ function isVerifiedPage(value: unknown, expectedPage: number): value is QuranPag
     && /^[a-f0-9]{64}$/.test(page.provenance.pageChecksum ?? "");
 }
 
-function audioUrl(reciter: ReciterId, verseKey: string) {
-  const [chapter, ayah] = verseKey.split(":");
-  const file = `${chapter.padStart(3, "0")}${ayah.padStart(3, "0")}.mp3`;
-  if (reciter === "abdul-rashid-sufi") return `https://api.kalamalah.com/api/abdul-rashid-sofi/murattal/${chapter.padStart(3, "0")}`;
-  if (reciter === "aymen") return `https://everyayah.com/data/Ayman_Sowaid_64kbps/${file}`;
-  if (reciter === "minshawi-kids") return `https://everyayah.com/data/Minshawy_Teacher_128kbps/${file}`;
-  if (reciter === "saad") return `https://everyayah.com/data/Ghamadi_40kbps/${file}`;
-  const folder = reciter === "alafasy" ? "Alafasy" : "AbdulBaset/Murattal";
-  return `https://verses.quran.foundation/${folder}/mp3/${file}`;
+function isVerifiedTafsir(value: unknown, verseKey: string): value is TafsirDocument {
+  if (!value || typeof value !== "object") return false;
+  const document = value as Partial<TafsirDocument>;
+  return document.schemaVersion === 1
+    && document.requestedVerseKey === verseKey
+    && document.resource?.id === 169
+    && Array.isArray(document.mappedVerseKeys)
+    && document.mappedVerseKeys.includes(verseKey)
+    && Array.isArray(document.blocks)
+    && document.blocks.length > 0
+    && document.blocks.every((block) => typeof block.text === "string" && block.text.length > 0)
+    && document.provenance?.verified === true
+    && /^[a-f0-9]{64}$/.test(document.provenance.contentChecksum ?? "");
 }
 
 function formatTime(value: number) {
@@ -155,6 +164,16 @@ export default function Home() {
   const [hifzLoop, setHifzLoop] = useState<HifzLoop | null>(null);
   const [activePlan, setActivePlan] = useState<DailyPlanItem[]>([]);
   const [activePlanIndex, setActivePlanIndex] = useState(0);
+  const [wifiOnlyDownloads, setWifiOnlyDownloads] = useState(true);
+  const [offlineAudioRevision, setOfflineAudioRevision] = useState(0);
+  const [offlineAudioStats, setOfflineAudioStats] = useState({ usedBytes: 0, packCount: 0, completePacks: 0 });
+  const [audioSource, setAudioSource] = useState<{ key: string; url: string; offline: boolean } | null>(null);
+  const [offlinePackQueue, setOfflinePackQueue] = useState<string[]>([]);
+  const [offlinePackIndex, setOfflinePackIndex] = useState(0);
+  const [tafsirDocument, setTafsirDocument] = useState<TafsirDocument | null>(null);
+  const [tafsirLoading, setTafsirLoading] = useState(false);
+  const [tafsirError, setTafsirError] = useState("");
+  const [tafsirRevision, setTafsirRevision] = useState(0);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -179,15 +198,20 @@ export default function Home() {
   const surahPlaybackRef = useRef<number | null>(null);
   const hifzPauseTimerRef = useRef<number | null>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
+  const tafsirCacheRef = useRef(new Map<string, TafsirDocument>());
 
-  const activeNav: NavItem = overlay === "Hifz" ? "Read" : overlay ?? "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
+  const displayedTafsir = tafsirDocument?.requestedVerseKey === selectedVerseKey ? tafsirDocument : null;
+  const canStudyPrevious = currentVerseIndex > 0 || pageData.page > 1;
+  const canStudyNext = currentVerseIndex >= 0 && (currentVerseIndex < pageData.verses.length - 1 || pageData.page < TOTAL_PAGES);
   const currentBookmark = `${pageData.page}|${selectedVerseKey}`;
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
   const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
+  const isOfflinePackPlayback = offlinePackQueue.length > 0;
   const todayKey = toLocalDateKey();
   const hifzStreak = calculateStreak(hifzProgress.activityDates, todayKey);
   const todayMemorized = todaysMemorizedCount(hifzProgress, todayKey);
@@ -198,6 +222,7 @@ export default function Home() {
   const masteryCounts = useMemo(() => pageMasteryMap.reduce((counts, item) => ({ ...counts, [item.status]: counts[item.status] + 1 }), { "not-started": 0, learning: 0, due: 0, strong: 0 }), [pageMasteryMap]);
   const dailyPlan = useMemo(() => buildDailyPlan(hifzProgress, pageData.verses.map((verse) => ({ verseKey: verse.key, page: pageData.page })), pageData.page, todayKey), [hifzProgress, pageData, todayKey]);
   const currentPlanItem = activePlan[activePlanIndex];
+  const targetAudioKey = `${reciter}|${selectedVerseKey}`;
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
   const fontReady = fontName === fontKey;
   const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
@@ -238,6 +263,7 @@ export default function Home() {
     setPageScale(preferences.reader.pageScale);
     setReadingFont(preferences.reader.readingFont);
     setSpeed(preferences.reader.speed);
+    setWifiOnlyDownloads(preferences.downloads.wifiOnly);
     setHydrated(true);
   }, []);
 
@@ -314,7 +340,7 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     savePreferences(localStorage, {
-      version: 2,
+      version: 3,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -330,8 +356,9 @@ export default function Home() {
       },
       bookmarks,
       hifz: hifzProgress,
+      downloads: { wifiOnly: wifiOnlyDownloads },
     } satisfies MushafPreferences);
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, hydrated]);
+  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, wifiOnlyDownloads, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -369,8 +396,35 @@ export default function Home() {
   }, [speed]);
 
   useEffect(() => {
+    if (!hydrated) return;
+    getOfflineAudioStats().then((stats) => setOfflineAudioStats({ usedBytes: stats.usedBytes, packCount: stats.packCount, completePacks: stats.completePacks })).catch(() => undefined);
+  }, [hydrated, offlineAudioRevision]);
+
+  useEffect(() => {
+    if (!hydrated || !selectedVerseKey) return;
+    let cancelled = false;
+    let objectUrl = "";
+    if (playingRef.current) pendingAutoplayRef.current = true;
+    const resolveSource = async () => {
+      const blob = reciter === "alafasy" ? await getVerifiedAudioBlob(reciter, selectedVerseKey).catch(() => null) : null;
+      if (cancelled) return;
+      if (blob) {
+        objectUrl = URL.createObjectURL(blob);
+        setAudioSource({ key: targetAudioKey, url: objectUrl, offline: true });
+      } else {
+        setAudioSource({ key: targetAudioKey, url: audioStreamUrl(reciter, selectedVerseKey), offline: false });
+      }
+    };
+    void resolveSource();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [hydrated, offlineAudioRevision, reciter, selectedVerseKey, targetAudioKey]);
+
+  useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !selectedVerseKey) return;
+    if (!audio || !audioSource || audioSource.key !== targetAudioKey) return;
     const shouldAutoplay = playingRef.current || pendingAutoplayRef.current;
     pendingAutoplayRef.current = false;
     audio.load();
@@ -380,7 +434,7 @@ export default function Home() {
       updatePlaying(false);
       setNotice("The recitation is ready. Tap play to begin.");
     });
-  }, [selectedVerseKey, reciter]);
+  }, [audioSource, targetAudioKey]);
 
   useEffect(() => {
     if (overlay !== "Search") return;
@@ -398,6 +452,46 @@ export default function Home() {
     }, 320);
     return () => window.clearTimeout(timer);
   }, [search, overlay]);
+
+  useEffect(() => {
+    if (overlay !== "Tafsir" || !selectedVerseKey) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const cached = tafsirCacheRef.current.get(selectedVerseKey);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setTafsirError("");
+      if (cached) {
+        setTafsirDocument(cached);
+        setTafsirLoading(false);
+      } else {
+        setTafsirLoading(true);
+      }
+    });
+    if (!cached) {
+      fetch(`/api/tafsir?verse=${encodeURIComponent(selectedVerseKey)}`, { signal: controller.signal })
+        .then(async (response) => {
+          const payload = await response.json() as unknown;
+          if (!response.ok) throw new Error((payload as { error?: string })?.error ?? "Tafsir is unavailable.");
+          if (!isVerifiedTafsir(payload, selectedVerseKey)) throw new Error("Tafsir integrity verification failed.");
+          return payload;
+        })
+        .then((document) => {
+          if (cancelled) return;
+          tafsirCacheRef.current.set(selectedVerseKey, document);
+          setTafsirDocument(document);
+        })
+        .catch((error: unknown) => {
+          if (cancelled || controller.signal.aborted) return;
+          setTafsirError(error instanceof Error ? error.message : "Tafsir is unavailable.");
+        })
+        .finally(() => { if (!cancelled) setTafsirLoading(false); });
+    }
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [overlay, selectedVerseKey, tafsirRevision]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -450,6 +544,8 @@ export default function Home() {
   }
 
   function selectReciter(nextReciter: ReciterId) {
+    setOfflinePackQueue([]);
+    setOfflinePackIndex(0);
     setReciter(nextReciter);
     if (RECITERS.find((item) => item.id === nextReciter)?.scope === "surah") setRepeatMode("off");
   }
@@ -458,6 +554,10 @@ export default function Home() {
     const next = clampPage(target);
     if (next === pageData.page && !verseKey) return;
     if (hifzLoop && next !== pageData.page) stopHifzLoop(false);
+    if (offlinePackQueue.length) {
+      setOfflinePackQueue([]);
+      setOfflinePackIndex(0);
+    }
     audioRef.current?.pause();
     if (!keepPlaying) updatePlaying(false);
     if (next === pageData.page && verseKey) {
@@ -508,7 +608,10 @@ export default function Home() {
 
   function togglePlay() {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !audioSource || audioSource.key !== targetAudioKey) {
+      setNotice("Preparing this recitation…");
+      return;
+    }
     if (playing) {
       audio.pause();
       updatePlaying(false);
@@ -518,6 +621,20 @@ export default function Home() {
   }
 
   function moveAyah(direction: -1 | 1) {
+    if (offlinePackQueue.length) {
+      const nextPackIndex = offlinePackIndex + direction;
+      const nextVerseKey = offlinePackQueue[nextPackIndex];
+      if (nextVerseKey) {
+        setOfflinePackIndex(nextPackIndex);
+        setSelectedVerseKey(nextVerseKey);
+      } else if (direction === 1) {
+        setOfflinePackQueue([]);
+        setOfflinePackIndex(0);
+        updatePlaying(false);
+        setNotice("Offline pack complete.");
+      }
+      return;
+    }
     const nextIndex = currentVerseIndex + direction;
     if (pageData.verses[nextIndex]) {
       setSelectedVerseKey(pageData.verses[nextIndex].key);
@@ -570,6 +687,21 @@ export default function Home() {
         hifzPauseTimerRef.current = window.setTimeout(beginNextPass, hifzLoop.pauseMs);
       } else {
         beginNextPass();
+      }
+      return;
+    }
+    if (offlinePackQueue.length) {
+      const nextPackIndex = offlinePackIndex + 1;
+      const nextVerseKey = offlinePackQueue[nextPackIndex];
+      if (nextVerseKey) {
+        setOfflinePackIndex(nextPackIndex);
+        pendingAutoplayRef.current = true;
+        setSelectedVerseKey(nextVerseKey);
+      } else {
+        setOfflinePackQueue([]);
+        setOfflinePackIndex(0);
+        updatePlaying(false);
+        setNotice("Offline pack complete · every verified file played.");
       }
       return;
     }
@@ -668,7 +800,7 @@ export default function Home() {
 
   function preferenceSnapshot(): MushafPreferences {
     return {
-      version: 2,
+      version: 3,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -684,6 +816,7 @@ export default function Home() {
       },
       bookmarks,
       hifz: hifzProgress,
+      downloads: { wifiOnly: wifiOnlyDownloads },
     };
   }
 
@@ -715,6 +848,7 @@ export default function Home() {
       setSpeed(restored.reader.speed);
       setPageScale(restored.reader.pageScale);
       setReadingFont(restored.reader.readingFont);
+      setWifiOnlyDownloads(restored.downloads.wifiOnly);
       goToPage(restored.reader.lastPage, undefined, restored.reader.lastVerse);
       setNotice("Backup restored. Your mastery map and reading preferences are ready.");
     } catch (error) {
@@ -751,6 +885,8 @@ export default function Home() {
     audioRef.current?.pause();
     updatePlaying(false);
     updateSurahPlayback(null);
+    setOfflinePackQueue([]);
+    setOfflinePackIndex(0);
     setRepeatMode("off");
     setSpeed(hifzPace);
     setHifzLoop({ active: true, verseKeys, pass: 1, totalPasses: hifzRepeatCount, pauseMs: hifzPauseMs });
@@ -782,8 +918,64 @@ export default function Home() {
     setOverlay(item === "Read" ? null : item);
   }
 
+  function openTafsir() {
+    if (!pageData.verses.some((verse) => verse.key === selectedVerseKey)) {
+      setNotice("Open the ayah on its Quran page before studying its tafsir.");
+      return;
+    }
+    setVerseActionsOpen(false);
+    setTajweedFocus(null);
+    setOverlay("Tafsir");
+  }
+
+  function moveStudyAyah(direction: -1 | 1) {
+    const nextIndex = currentVerseIndex + direction;
+    const nextVerse = pageData.verses[nextIndex];
+    if (nextVerse) {
+      setSelectedVerseKey(nextVerse.key);
+      return;
+    }
+    if (direction === 1 && pageData.page < TOTAL_PAGES) {
+      pendingEdgeRef.current = "first";
+      goToPage(pageData.page + 1, "next");
+    } else if (direction === -1 && pageData.page > 1) {
+      pendingEdgeRef.current = "last";
+      goToPage(pageData.page - 1, "previous");
+    }
+  }
+
   function openContents() {
     setOverlay("Contents");
+    loadChapters();
+  }
+
+  function openDownloads() {
+    setOverlay("Downloads");
+    loadChapters();
+  }
+
+  function playOfflinePack(pack: OfflineAudioPack) {
+    const verseKeys = pack.files.filter((file) => file.status === "complete" && file.checksum).map((file) => file.verseKey);
+    if (!verseKeys.length || verseKeys.length !== pack.totalFiles) {
+      setNotice("This pack is not fully verified yet. Resume or repair it first.");
+      return;
+    }
+    audioRef.current?.pause();
+    updatePlaying(false);
+    updateSurahPlayback(null);
+    setHifzLoop(null);
+    setRepeatMode("off");
+    setReciter("alafasy");
+    setOfflinePackQueue(verseKeys);
+    setOfflinePackIndex(0);
+    pendingAutoplayRef.current = true;
+    setSelectedVerseKey(verseKeys[0]);
+    setOfflineAudioRevision((value) => value + 1);
+    setOverlay("Listen");
+    setNotice(`${pack.label} · playing ${verseKeys.length} verified files offline.`);
+  }
+
+  function loadChapters() {
     if (chapters.length || contentsLoading) return;
     setContentsLoading(true);
     fetch("/api/chapters")
@@ -792,11 +984,15 @@ export default function Home() {
         return response.json() as Promise<{ chapters: QuranChapterInfo[] }>;
       })
       .then((payload) => setChapters(payload.chapters))
-      .catch(() => setNotice("The verified table of contents could not be opened. Please try again."))
+      .catch(() => setNotice("The verified sūrah index could not be opened. Please try again."))
       .finally(() => setContentsLoading(false));
   }
 
   function selectMushafWord(word: PageWord) {
+    if (offlinePackQueue.length) {
+      setOfflinePackQueue([]);
+      setOfflinePackIndex(0);
+    }
     setSelectedVerseKey(word.verseKey);
     setVerseActionsOpen(true);
     if (hifzHidden) {
@@ -816,6 +1012,8 @@ export default function Home() {
     const verseKey = `${chapterId}:1`;
     audioRef.current?.pause();
     updatePlaying(false);
+    setOfflinePackQueue([]);
+    setOfflinePackIndex(0);
     updateSurahPlayback(chapterId);
     setRepeatMode("off");
     pendingAutoplayRef.current = true;
@@ -953,6 +1151,7 @@ export default function Home() {
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${translation ? "active" : ""}`} onClick={() => setTranslation((value) => !value)} aria-label="Toggle Saheeh International translation"><span>Translation</span></button>
+            <button type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Tafsir" ? "active" : ""}`} onClick={openTafsir} aria-label="Open tafsir for selected ayah"><span>Tafsir</span></button>
             <button type="button" className={`toggle-control hifz-shortcut ${hifzHidden || hifzLoop ? "active" : ""}`} onClick={() => setOverlay("Hifz")} aria-label="Open Hifz memorization mode"><span>Hifz</span></button>
             <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
             <button type="button" className={`icon-button ${bookmarks.includes(currentBookmark) ? "active" : ""}`} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
@@ -966,6 +1165,7 @@ export default function Home() {
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
           <button type="button" className={translation ? "active" : ""} onClick={() => setTranslation((value) => !value)} aria-pressed={translation}>Translation</button>
+          <button type="button" className={overlay === "Tafsir" ? "active" : ""} onClick={openTafsir}>Tafsir</button>
           <button type="button" className={hifzHidden || hifzLoop ? "active" : ""} onClick={() => setOverlay("Hifz")}>Hifz</button>
           <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
         </div>
@@ -992,7 +1192,7 @@ export default function Home() {
             {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
             {translation && selectedVerse && <aside className="learning-strip translation-strip" aria-live="polite"><span>SAHEEH INTERNATIONAL · AYAH {selectedVerse.key}</span><p>{selectedVerse.translation || "Translation is temporarily unavailable for this ayah."}</p></aside>}
-            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
+            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
               <form onSubmit={submitJump}><label className="sr-only" htmlFor="mobile-page-jump">Jump to page</label><input id="mobile-page-jump" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form>
@@ -1006,7 +1206,7 @@ export default function Home() {
       <section className="audio-mini" aria-label="Audio mini player">
         <button type="button" className="mini-now-playing" onClick={() => setOverlay("Listen")} aria-label="Open full audio player">
           <span className="reciter-avatar">{currentReciter.initials}</span>
-          <span><small>NOW PLAYING · {isSurahPlayback ? `SURAH ${surahPlaybackChapter ?? selectedVerseKey.split(":")[0]}` : `AYAH ${selectedVerseKey}`}</small><strong>{currentReciter.name}</strong></span>
+          <span><small>NOW PLAYING · {isOfflinePackPlayback ? `OFFLINE PACK ${offlinePackIndex + 1}/${offlinePackQueue.length}` : isSurahPlayback ? `SURAH ${surahPlaybackChapter ?? selectedVerseKey.split(":")[0]}` : `AYAH ${selectedVerseKey}`}{audioSource?.offline ? " · VERIFIED" : ""}</small><strong>{currentReciter.name}</strong></span>
         </button>
         <div className="mini-transport">
           <button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button>
@@ -1022,7 +1222,12 @@ export default function Home() {
         <div className="mobile-mini-progress" aria-hidden="true"><span style={{ width: `${duration ? (progress / duration) * 100 : 0}%` }} /></div>
       </section>
 
-      <audio ref={audioRef} src={selectedVerse ? audioUrl(reciter, selectedVerse.key) : undefined} onTimeUpdate={(event) => setProgress(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} onEnded={handleEnded} onPlay={() => updatePlaying(true)} onPause={() => updatePlaying(false)} preload="metadata" />
+      <audio ref={audioRef} src={audioSource?.url} onTimeUpdate={(event) => setProgress(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} onEnded={handleEnded} onPlay={() => updatePlaying(true)} onPause={() => updatePlaying(false)} onError={() => {
+        if (audioSource?.offline && navigator.onLine) {
+          setAudioSource({ key: targetAudioKey, url: audioStreamUrl(reciter, selectedVerseKey), offline: false });
+          setNotice("The stored file needs repair. Streaming this ayah instead.");
+        } else if (audioSource) setNotice(audioSource.offline ? "This stored file could not play. Open Downloads to repair it." : "Audio could not start. Check your connection and try again.");
+      }} preload="metadata" />
 
       <nav className="mobile-nav" aria-label="Primary navigation">
         {NAV_ITEMS.map((item) => <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}><span>{item.glyph}</span><small>{item.label}</small></button>)}
@@ -1147,24 +1352,56 @@ export default function Home() {
               <header><div><span className="panel-kicker">READER PREFERENCES</span><h2 id="settings-title">Settings</h2></div>{closeButton}</header>
               <div className="settings-content">
                 <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
-                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label><label className="setting-row"><span><strong>English translation</strong><small>Saheeh International · source resource 20.</small></span><input className="switch" type="checkbox" checked={translation} onChange={(event) => setTranslation(event.target.checked)} /></label></section>
+                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label><label className="setting-row"><span><strong>English translation</strong><small>Saheeh International · source resource 20.</small></span><input className="switch" type="checkbox" checked={translation} onChange={(event) => setTranslation(event.target.checked)} /></label><div className="setting-row tafsir-setting"><span><strong>English tafsir</strong><small>Ibn Kathir (Abridged) · source resource 169.</small></span><button type="button" onClick={openTafsir}>Open for ayah {selectedVerseKey}</button></div></section>
                 <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
+                <section className="settings-group offline-settings"><h3>Offline audio</h3><p>{offlineAudioStats.completePacks} verified packs · {formatAudioBytes(offlineAudioStats.usedBytes)} on this device.</p><button type="button" onClick={openDownloads}>Manage downloads <span>→</span></button><small>Surah and juz packs are stored privately in this browser.</small></section>
                 <section className="settings-group data-portability"><h3>Private backup</h3><p>Your reading history and mastery map stay on this device unless you download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
                 <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href="/api/content-manifest" target="_blank" rel="noreferrer">view sources</a></small></footer>
               </div>
             </section>
           )}
 
+          {overlay === "Downloads" && (
+            <OfflineAudioPanel
+              chapters={chapters}
+              initialChapter={currentChapter?.id ?? 1}
+              wifiOnly={wifiOnlyDownloads}
+              onWifiOnlyChange={setWifiOnlyDownloads}
+              onClose={() => setOverlay(null)}
+              onNotice={setNotice}
+              onLibraryChanged={() => setOfflineAudioRevision((value) => value + 1)}
+              onPlayPack={playOfflinePack}
+            />
+          )}
+
+          {overlay === "Tafsir" && selectedVerse && (
+            <TafsirPanel
+              document={displayedTafsir}
+              loading={tafsirLoading || (!displayedTafsir && !tafsirError)}
+              error={tafsirError}
+              verseKey={selectedVerseKey}
+              arabic={selectedVerse.uthmani}
+              translation={selectedVerse.translation}
+              canMovePrevious={canStudyPrevious}
+              canMoveNext={canStudyNext}
+              onMove={moveStudyAyah}
+              onRetry={() => setTafsirRevision((value) => value + 1)}
+              onClose={() => setOverlay(null)}
+            />
+          )}
+
           {overlay === "Listen" && (
             <section className="panel-shell audio-sheet" role="dialog" aria-modal="true" aria-labelledby="audio-title">
               <div className="sheet-handle" aria-hidden="true" />
-              <header><div><span className="panel-kicker">{isSurahPlayback ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{isSurahPlayback ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
-              <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}</small></div></div>
+              <header><div><span className="panel-kicker">{isOfflinePackPlayback ? `OFFLINE PACK · ${offlinePackIndex + 1} OF ${offlinePackQueue.length}` : isSurahPlayback ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{isSurahPlayback && !isOfflinePackPlayback ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
+              <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}{audioSource?.offline ? " · Playing offline" : " · Streaming"}</small></div></div>
               <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
               <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
               <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={isSurahPlayback}><option value="off">{isSurahPlayback ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              <button type="button" className="open-downloads" onClick={openDownloads}><span>↓</span><span><strong>Offline audio library</strong><small>{offlineAudioStats.packCount ? `${offlineAudioStats.completePacks} packs ready · ${formatAudioBytes(offlineAudioStats.usedBytes)}` : "Download a sūrah or juz"}</small></span><span>›</span></button>
               {currentReciter.scope === "surah" && <p className="audio-scope-note">This recitation is provided as continuous sūrah audio. Ayah repeat remains available with the five verse-by-verse reciters.</p>}
               {surahPlaybackChapter !== null && currentReciter.scope === "ayah" && <p className="audio-scope-note">Complete sūrah mode is active. Each verified āyah file will continue in order until the end of this sūrah.</p>}
+              {isOfflinePackPlayback && <p className="audio-scope-note">Verified offline sequence is active. It will continue through every downloaded āyah even without Quran page-data access.</p>}
               {repeatMode === "range" && <div className="range-settings"><label>FROM<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><span>to</span><label>TO<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}
             </section>
           )}
