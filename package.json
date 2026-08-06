@@ -1,6 +1,6 @@
 {
   "name": "mushaf-companion",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -10,6 +10,7 @@
     "build": "vinext build",
     "start": "vinext start --port 5550",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "audit:content": "node scripts/audit-content.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .npm-cache --ignore-pattern .wrangler --ignore-pattern outputs --ignore-pattern build --ignore-pattern public --ignore-pattern github-pages --ignore-pattern android --ignore-pattern ios --ignore-pattern mobile-shell",
     "db:generate": "drizzle-kit generate",
     "mobile:sync": "cap sync",

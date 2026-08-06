@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   FALLBACK_PAGE,
   RECITERS,
@@ -13,14 +13,27 @@ import {
 import { TAJWEED_RULES, rulesForTajweedHtml, type TajweedRule } from "./tajweed-guide";
 import {
   DEFAULT_HIFZ_PROGRESS,
+  buildDailyPlan,
+  buildPageMasteryMap,
   calculateStreak,
+  dueReviewCount,
   normalizeHifzProgress,
   recordHifzActivity,
+  recordVerseReview,
   todaysMemorizedCount,
   toLocalDateKey,
   toggleMemorizedVerse,
+  type DailyPlanItem,
   type HifzProgress,
+  type ReviewGrade,
 } from "./hifz-state.mjs";
+import {
+  createPortableBackup,
+  loadPreferences,
+  restorePortableBackup,
+  savePreferences,
+  type MushafPreferences,
+} from "./preferences.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type Overlay = Exclude<NavItem, "Read"> | "Hifz" | null;
@@ -41,7 +54,7 @@ interface HifzLoop {
 }
 
 const TOTAL_PAGES = 604;
-const PAGE_DATA_REVISION = "2026-08-05-learning-contents";
+const PAGE_DATA_REVISION = "2026-08-06-phase-one";
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
   { id: "uthman-taha", label: "Uthman Taha" },
@@ -70,13 +83,20 @@ function clampPage(value: number) {
   return Math.min(TOTAL_PAGES, Math.max(1, Math.round(value)));
 }
 
-function safeBookmarks(value: string | null) {
-  try {
-    const parsed = JSON.parse(value ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)) : [];
-  } catch {
-    return [];
-  }
+function isVerifiedPage(value: unknown, expectedPage: number): value is QuranPage {
+  if (!value || typeof value !== "object") return false;
+  const page = value as Partial<QuranPage>;
+  return page.page === expectedPage
+    && Array.isArray(page.lines)
+    && page.lines.length === 15
+    && page.lines.every((line, index) => line.number === index + 1 && Array.isArray(line.words))
+    && Array.isArray(page.verses)
+    && page.verses.length > 0
+    && page.verses.every((verse) => /^\d{1,3}:\d{1,3}$/.test(verse.key))
+    && page.provenance?.verified === true
+    && page.provenance.manifestRevision === PAGE_DATA_REVISION
+    && page.provenance.mushafId === 1
+    && /^[a-f0-9]{64}$/.test(page.provenance.pageChecksum ?? "");
 }
 
 function audioUrl(reciter: ReciterId, verseKey: string) {
@@ -109,6 +129,7 @@ export default function Home() {
   const [turnDirection, setTurnDirection] = useState<"next" | "previous" | "">("");
   const [tajweed, setTajweed] = useState(true);
   const [transliteration, setTransliteration] = useState(false);
+  const [translation, setTranslation] = useState(false);
   const [dark, setDark] = useState(false);
   const [pageScale, setPageScale] = useState<PageScale>("comfortable");
   const [readingFont, setReadingFont] = useState<ReadingFont>("uthman-taha");
@@ -132,6 +153,8 @@ export default function Home() {
   const [revealedVerses, setRevealedVerses] = useState<string[]>([]);
   const [verseActionsOpen, setVerseActionsOpen] = useState(false);
   const [hifzLoop, setHifzLoop] = useState<HifzLoop | null>(null);
+  const [activePlan, setActivePlan] = useState<DailyPlanItem[]>([]);
+  const [activePlanIndex, setActivePlanIndex] = useState(0);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -155,6 +178,7 @@ export default function Home() {
   const pendingAutoplayRef = useRef(false);
   const surahPlaybackRef = useRef<number | null>(null);
   const hifzPauseTimerRef = useRef<number | null>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   const activeNav: NavItem = overlay === "Hifz" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
@@ -167,8 +191,13 @@ export default function Home() {
   const todayKey = toLocalDateKey();
   const hifzStreak = calculateStreak(hifzProgress.activityDates, todayKey);
   const todayMemorized = todaysMemorizedCount(hifzProgress, todayKey);
+  const dueReviews = dueReviewCount(hifzProgress, todayKey);
   const todayGoalPercent = Math.min(100, (todayMemorized / hifzProgress.dailyGoal) * 100);
   const memorizedVerseKeys = new Set(hifzProgress.memorized.map((item) => item.verseKey));
+  const pageMasteryMap = useMemo(() => buildPageMasteryMap(hifzProgress, todayKey), [hifzProgress, todayKey]);
+  const masteryCounts = useMemo(() => pageMasteryMap.reduce((counts, item) => ({ ...counts, [item.status]: counts[item.status] + 1 }), { "not-started": 0, learning: 0, due: 0, strong: 0 }), [pageMasteryMap]);
+  const dailyPlan = useMemo(() => buildDailyPlan(hifzProgress, pageData.verses.map((verse) => ({ verseKey: verse.key, page: pageData.page })), pageData.page, todayKey), [hifzProgress, pageData, todayKey]);
+  const currentPlanItem = activePlan[activePlanIndex];
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
   const fontReady = fontName === fontKey;
   const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
@@ -188,33 +217,27 @@ export default function Home() {
   });
 
   useEffect(() => {
+    const preferences = loadPreferences(localStorage);
     const urlPage = Number(new URL(window.location.href).searchParams.get("page"));
-    const savedPage = Number(localStorage.getItem("mushaf:last-page") ?? "1");
+    const savedPage = preferences.reader.lastPage;
     const initialPage = clampPage(Number.isInteger(urlPage) && urlPage >= 1 && urlPage <= TOTAL_PAGES ? urlPage : savedPage);
-    const savedVerse = localStorage.getItem("mushaf:last-verse");
-    const savedVersePage = Number(localStorage.getItem("mushaf:last-verse-page") ?? "0");
-    const savedReciter = localStorage.getItem("mushaf:reciter") as ReciterId | null;
-    const savedScale = localStorage.getItem("mushaf:page-scale") as PageScale | null;
-    const savedReadingFont = localStorage.getItem("mushaf:reading-font") as ReadingFont | null;
+    const savedVerse = preferences.reader.lastVerse;
+    const savedVersePage = preferences.reader.lastVersePage;
     pendingVerseRef.current = savedVersePage === initialPage ? savedVerse : null;
     // Browser-only persistence is intentionally hydrated after the server shell.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(initialPage);
     setJumpValue(String(initialPage));
-    setBookmarks(safeBookmarks(localStorage.getItem("mushaf:bookmarks-v2")));
-    try {
-      setHifzProgress(normalizeHifzProgress(JSON.parse(localStorage.getItem("mushaf:hifz-v1") ?? "null")));
-    } catch {
-      setHifzProgress(normalizeHifzProgress(null));
-    }
-    setDark(localStorage.getItem("mushaf:theme") === "dark");
-    setTajweed(localStorage.getItem("mushaf:tajweed") !== "false");
-    setTransliteration(localStorage.getItem("mushaf:transliteration") === "true");
-    if (RECITERS.some((item) => item.id === savedReciter)) setReciter(savedReciter as ReciterId);
-    if (["compact", "comfortable", "large"].includes(savedScale ?? "")) setPageScale(savedScale as PageScale);
-    if (READING_FONTS.some((item) => item.id === savedReadingFont)) setReadingFont(savedReadingFont as ReadingFont);
-    const savedSpeed = Number(localStorage.getItem("mushaf:speed") ?? "1");
-    if (PLAYBACK_SPEEDS.includes(savedSpeed as (typeof PLAYBACK_SPEEDS)[number])) setSpeed(savedSpeed);
+    setBookmarks(preferences.bookmarks);
+    setHifzProgress(preferences.hifz);
+    setDark(preferences.reader.theme === "dark");
+    setTajweed(preferences.reader.tajweed);
+    setTransliteration(preferences.reader.transliteration);
+    setTranslation(preferences.reader.translation);
+    setReciter(preferences.reader.reciter);
+    setPageScale(preferences.reader.pageScale);
+    setReadingFont(preferences.reader.readingFont);
+    setSpeed(preferences.reader.speed);
     setHydrated(true);
   }, []);
 
@@ -251,7 +274,6 @@ export default function Home() {
       setVerseActionsOpen(false);
       pendingVerseRef.current = null;
       pendingEdgeRef.current = null;
-      localStorage.setItem("mushaf:last-page", String(data.page));
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("page", String(data.page));
       window.history.replaceState(null, "", nextUrl);
@@ -265,14 +287,15 @@ export default function Home() {
     fetch(`/api/pages/${page}?v=${PAGE_DATA_REVISION}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Page unavailable");
-        return response.json() as Promise<QuranPage>;
+        return response.json() as Promise<unknown>;
       })
       .then((data) => {
+        if (!isVerifiedPage(data, page)) throw new Error("Page integrity check failed");
         pageCacheRef.current.set(page, data);
         applyPage(data);
         [page - 1, page + 1].filter((item) => item >= 1 && item <= TOTAL_PAGES && !pageCacheRef.current.has(item)).forEach((item) => {
-          fetch(`/api/pages/${item}?v=${PAGE_DATA_REVISION}`).then((response) => response.ok ? response.json() as Promise<QuranPage> : null).then((next) => {
-            if (next) pageCacheRef.current.set(item, next);
+          fetch(`/api/pages/${item}?v=${PAGE_DATA_REVISION}`).then((response) => response.ok ? response.json() as Promise<unknown> : null).then((next) => {
+            if (isVerifiedPage(next, item)) pageCacheRef.current.set(item, next);
           }).catch(() => undefined);
         });
       })
@@ -290,18 +313,25 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem("mushaf:last-verse", selectedVerseKey);
-    localStorage.setItem("mushaf:last-verse-page", String(pageData.page));
-    localStorage.setItem("mushaf:bookmarks-v2", JSON.stringify(bookmarks));
-    localStorage.setItem("mushaf:theme", dark ? "dark" : "light");
-    localStorage.setItem("mushaf:tajweed", String(tajweed));
-    localStorage.setItem("mushaf:transliteration", String(transliteration));
-    localStorage.setItem("mushaf:reciter", reciter);
-    localStorage.setItem("mushaf:speed", String(speed));
-    localStorage.setItem("mushaf:page-scale", pageScale);
-    localStorage.setItem("mushaf:reading-font", readingFont);
-    localStorage.setItem("mushaf:hifz-v1", JSON.stringify(hifzProgress));
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, readingFont, hifzProgress, hydrated]);
+    savePreferences(localStorage, {
+      version: 2,
+      reader: {
+        lastPage: pageData.page,
+        lastVerse: selectedVerseKey,
+        lastVersePage: pageData.page,
+        theme: dark ? "dark" : "light",
+        tajweed,
+        transliteration,
+        translation,
+        reciter,
+        speed,
+        pageScale,
+        readingFont,
+      },
+      bookmarks,
+      hifz: hifzProgress,
+    } satisfies MushafPreferences);
+  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -593,6 +623,105 @@ export default function Home() {
     setNotice(wasMemorized ? `Ayah ${selectedVerseKey} removed from memorized.` : `Ayah ${selectedVerseKey} marked memorized.`);
   }
 
+  function startDailyPlan() {
+    if (!dailyPlan.length) {
+      setNotice("Your review queue is clear. Mark an ayah memorized to begin building your map.");
+      return;
+    }
+    const first = dailyPlan[0];
+    setActivePlan(dailyPlan);
+    setActivePlanIndex(0);
+    setHifzHidden(true);
+    setRevealedVerses([]);
+    setOverlay(null);
+    goToPage(first.page, first.page > pageData.page ? "next" : first.page < pageData.page ? "previous" : undefined, first.verseKey);
+    setNotice(`Daily mastery · 1 of ${dailyPlan.length}`);
+  }
+
+  function rateDailyPlan(grade: ReviewGrade) {
+    const item = activePlan[activePlanIndex];
+    if (!item || !revealedVerses.includes(item.verseKey)) return;
+    setHifzProgress((current) => recordVerseReview(current, item, grade));
+    const nextIndex = activePlanIndex + 1;
+    const next = activePlan[nextIndex];
+    if (!next) {
+      setActivePlan([]);
+      setActivePlanIndex(0);
+      setHifzHidden(false);
+      setRevealedVerses([]);
+      setNotice(`Daily mastery complete · ${activePlan.length} ayat strengthened.`);
+      return;
+    }
+    setActivePlanIndex(nextIndex);
+    setRevealedVerses([]);
+    goToPage(next.page, next.page > pageData.page ? "next" : next.page < pageData.page ? "previous" : undefined, next.verseKey);
+    setNotice(`Daily mastery · ${nextIndex + 1} of ${activePlan.length}`);
+  }
+
+  function stopDailyPlan() {
+    setActivePlan([]);
+    setActivePlanIndex(0);
+    setHifzHidden(false);
+    setRevealedVerses([]);
+    setNotice("Daily mastery session saved for later.");
+  }
+
+  function preferenceSnapshot(): MushafPreferences {
+    return {
+      version: 2,
+      reader: {
+        lastPage: pageData.page,
+        lastVerse: selectedVerseKey,
+        lastVersePage: pageData.page,
+        theme: dark ? "dark" : "light",
+        tajweed,
+        transliteration,
+        translation,
+        reciter,
+        speed,
+        pageScale,
+        readingFont,
+      },
+      bookmarks,
+      hifz: hifzProgress,
+    };
+  }
+
+  function downloadBackup() {
+    const content = createPortableBackup(preferenceSnapshot());
+    const url = URL.createObjectURL(new Blob([content], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `mushaf-companion-backup-${todayKey}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setNotice("Private progress backup downloaded.");
+  }
+
+  async function importBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const restored = restorePortableBackup(await file.text());
+      savePreferences(localStorage, restored);
+      setBookmarks(restored.bookmarks);
+      setHifzProgress(restored.hifz);
+      setDark(restored.reader.theme === "dark");
+      setTajweed(restored.reader.tajweed);
+      setTransliteration(restored.reader.transliteration);
+      setTranslation(restored.reader.translation);
+      setReciter(restored.reader.reciter);
+      setSpeed(restored.reader.speed);
+      setPageScale(restored.reader.pageScale);
+      setReadingFont(restored.reader.readingFont);
+      goToPage(restored.reader.lastPage, undefined, restored.reader.lastVerse);
+      setNotice("Backup restored. Your mastery map and reading preferences are ready.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "This backup could not be restored.");
+    }
+  }
+
   function stopHifzLoop(showNotice = true) {
     if (hifzPauseTimerRef.current !== null) {
       window.clearTimeout(hifzPauseTimerRef.current);
@@ -823,6 +952,7 @@ export default function Home() {
           <div className="header-tools">
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
+            <button type="button" className={`toggle-control desktop-learning-toggle ${translation ? "active" : ""}`} onClick={() => setTranslation((value) => !value)} aria-label="Toggle Saheeh International translation"><span>Translation</span></button>
             <button type="button" className={`toggle-control hifz-shortcut ${hifzHidden || hifzLoop ? "active" : ""}`} onClick={() => setOverlay("Hifz")} aria-label="Open Hifz memorization mode"><span>Hifz</span></button>
             <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
             <button type="button" className={`icon-button ${bookmarks.includes(currentBookmark) ? "active" : ""}`} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
@@ -835,11 +965,12 @@ export default function Home() {
         <div className="mobile-layer-bar" aria-label="Reading assistance">
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
+          <button type="button" className={translation ? "active" : ""} onClick={() => setTranslation((value) => !value)} aria-pressed={translation}>Translation</button>
           <button type="button" className={hifzHidden || hifzLoop ? "active" : ""} onClick={() => setOverlay("Hifz")}>Hifz</button>
           <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
         </div>
 
-        {hifzHidden && <div className="hifz-reader-banner" role="status"><span>Hidden-text self-test</span><p>Tap any ayah to reveal it. Tap it again to hide it.</p><button type="button" onClick={() => { setHifzHidden(false); setRevealedVerses([]); }}>Show all text</button></div>}
+        {currentPlanItem ? <div className="hifz-reader-banner mastery-session-banner" aria-label="Daily mastery session"><div><span>DAILY MASTERY · {activePlanIndex + 1} OF {activePlan.length}</span><p>{currentPlanItem.reason} · Ayah {currentPlanItem.verseKey}</p></div>{revealedVerses.includes(currentPlanItem.verseKey) ? <div className="mastery-rating" aria-label="Rate this review">{(["again", "hard", "good", "easy"] as ReviewGrade[]).map((grade) => <button type="button" onClick={() => rateDailyPlan(grade)} key={grade}>{grade}</button>)}</div> : <button type="button" onClick={() => setRevealedVerses([currentPlanItem.verseKey])}>Reveal ayah</button>}<button type="button" className="mastery-stop" onClick={stopDailyPlan}>Stop</button></div> : hifzHidden && <div className="hifz-reader-banner" role="status"><span>Hidden-text self-test</span><p>Tap any ayah to reveal it. Tap it again to hide it.</p><button type="button" onClick={() => { setHifzHidden(false); setRevealedVerses([]); }}>Show all text</button></div>}
         {hifzLoop && <div className="hifz-reader-banner loop-banner" role="status"><span>Hifz loop</span><p>Pass {hifzLoop.pass} of {hifzLoop.totalPasses} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => stopHifzLoop()}>Stop</button></div>}
 
         <section className="reading-area" aria-label="Mushaf reader">
@@ -860,6 +991,7 @@ export default function Home() {
             </article>
             {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
+            {translation && selectedVerse && <aside className="learning-strip translation-strip" aria-live="polite"><span>SAHEEH INTERNATIONAL · AYAH {selectedVerse.key}</span><p>{selectedVerse.translation || "Translation is temporarily unavailable for this ayah."}</p></aside>}
             {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
@@ -902,17 +1034,18 @@ export default function Home() {
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
-              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>🔥</span><strong>Memorize</strong><small>{hifzProgress.memorized.length} ayāt · {hifzStreak} day streak</small></button></div>
+              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button></div>
             </section>
           )}
 
           {overlay === "Hifz" && (
             <section className="panel-shell hifz-panel" role="dialog" aria-modal="true" aria-labelledby="hifz-title">
-              <header><div><span className="panel-kicker">MEMORIZATION</span><h2 id="hifz-title">Hifz mode</h2></div>{closeButton}</header>
+              <header><div><span className="panel-kicker">PERSONAL MASTERY MAP</span><h2 id="hifz-title">My Mushaf</h2></div>{closeButton}</header>
               <div className="hifz-content">
                 <section className="hifz-summary" aria-label="Hifz progress">
-                  <div className="hifz-stat streak-stat"><span>🔥</span><strong>{hifzStreak}</strong><small>day streak</small></div>
-                  <div className="hifz-stat"><span>✓</span><strong>{hifzProgress.memorized.length}</strong><small>ayāt memorized</small></div>
+                  <div className="hifz-stat streak-stat"><span>◆</span><strong>{hifzStreak}</strong><small>day rhythm</small></div>
+                  <div className="hifz-stat"><span>✓</span><strong>{hifzProgress.memorized.length}</strong><small>ayāt mapped</small></div>
+                  <div className="hifz-stat due-stat"><span>↺</span><strong>{dueReviews}</strong><small>reviews due</small></div>
                   <div className="hifz-goal">
                     <div><span>TODAY&apos;S GOAL</span><strong>{todayMemorized} / {hifzProgress.dailyGoal} ayāt</strong></div>
                     <div className="hifz-goal-track" role="progressbar" aria-label="Today's memorization goal" aria-valuemin={0} aria-valuemax={hifzProgress.dailyGoal} aria-valuenow={todayMemorized}><span style={{ width: `${todayGoalPercent}%` }} /></div>
@@ -920,9 +1053,21 @@ export default function Home() {
                   </div>
                 </section>
 
+                <section className="mastery-plan-card" aria-labelledby="daily-plan-title">
+                  <div className="mastery-plan-copy"><span className="mastery-eyebrow">TODAY&apos;S PATH</span><h3 id="daily-plan-title">A focused {hifzProgress.sessionMinutes}-minute session</h3><p>Due reviews come first, followed by new ayāt from page {pageData.page}. Your ratings set the next review date.</p></div>
+                  <div className="mastery-duration" aria-label="Session length">{([5, 10, 20] as const).map((minutes) => <button type="button" className={hifzProgress.sessionMinutes === minutes ? "active" : ""} aria-pressed={hifzProgress.sessionMinutes === minutes} onClick={() => setHifzProgress((current) => ({ ...current, sessionMinutes: minutes }))} key={minutes}>{minutes} min</button>)}</div>
+                  <div className="mastery-plan-preview">{dailyPlan.map((item, index) => <span className={`plan-chip ${item.kind}`} key={item.verseKey}><i>{index + 1}</i><strong>{item.verseKey}</strong><small>{item.kind}</small></span>)}{!dailyPlan.length && <p>Your queue is clear. Select an ayah in the reader and mark it memorized to begin.</p>}</div>
+                  <button type="button" className="mastery-start" onClick={startDailyPlan} disabled={!dailyPlan.length}>Start today&apos;s session <span>→</span></button>
+                </section>
+
+                <section className="mastery-map-card" aria-labelledby="mastery-map-title">
+                  <header><div><span className="mastery-eyebrow">604-PAGE VIEW</span><h3 id="mastery-map-title">Your Mushaf at a glance</h3></div><div className="mastery-map-totals"><span><i className="strong" />{masteryCounts.strong} strong</span><span><i className="learning" />{masteryCounts.learning} learning</span><span><i className="due" />{masteryCounts.due} due</span></div></header>
+                  <div className="mastery-page-grid">{pageMasteryMap.map((item) => <button type="button" className={item.status} onClick={() => { goToPage(item.page); setOverlay(null); }} aria-label={`Page ${item.page}: ${item.status.replace("-", " ")}${item.memorized ? `, ${item.memorized} ayat memorized` : ""}${item.due ? `, ${item.due} due` : ""}`} title={`Page ${item.page} · ${item.status.replace("-", " ")}`} key={item.page}>{item.page}</button>)}</div>
+                </section>
+
                 <div className="hifz-grid">
                   <section className="hifz-card hifz-looper">
-                    <div className="hifz-card-heading"><span>01</span><div><h3>Verse looper</h3><p>Build a repetition set from the ayāt on page {pageData.page}.</p></div></div>
+                    <div className="hifz-card-heading"><span>02</span><div><h3>Verse looper</h3><p>Build a repetition set from the ayāt on page {pageData.page}.</p></div></div>
                     <div className="hifz-range">
                       <label>FROM<select value={hifzFrom} onChange={(event) => setHifzFrom(event.target.value)}>{pageData.verses.map((verse) => <option value={verse.key} key={verse.key}>Ayah {verse.key}</option>)}</select></label>
                       <span aria-hidden="true">→</span>
@@ -936,12 +1081,12 @@ export default function Home() {
 
                   <div className="hifz-side-column">
                     <section className="hifz-card self-test-card">
-                      <div className="hifz-card-heading"><span>02</span><div><h3>Hidden-text self-test</h3><p>Blur every ayah, then reveal only what you need.</p></div></div>
+                      <div className="hifz-card-heading"><span>03</span><div><h3>Hidden-text self-test</h3><p>Blur every ayah, then reveal only what you need.</p></div></div>
                       <button type="button" className={`self-test-toggle ${hifzHidden ? "active" : ""}`} onClick={() => { setHifzHidden((value) => !value); setRevealedVerses([]); setOverlay(null); }}><span><strong>{hifzHidden ? "Self-test is on" : "Hide this page"}</strong><small>{hifzHidden ? "Return to clear text" : "Tap an ayah to reveal it"}</small></span><i aria-hidden="true" /></button>
                     </section>
 
                     <section className="hifz-card memorized-card">
-                      <div className="hifz-card-heading"><span>03</span><div><h3>Memorized</h3><p>Your marked ayāt, newest first.</p></div></div>
+                      <div className="hifz-card-heading"><span>04</span><div><h3>Memorized</h3><p>Your marked ayāt, newest first.</p></div></div>
                       <div className="memorized-list">
                         {hifzProgress.memorized.map((item) => <button type="button" key={item.verseKey} onClick={() => { goToPage(item.page, undefined, item.verseKey); setVerseActionsOpen(true); setOverlay(null); }}><span className="memorized-rosette">✓</span><span><strong>Ayah {item.verseKey}</strong><small>Page {item.page} · marked {item.markedAt}</small></span><span aria-hidden="true">›</span></button>)}
                         {!hifzProgress.memorized.length && <p className="empty-state">Tap an ayah in the reader, then choose “Mark memorized.”</p>}
@@ -1002,9 +1147,10 @@ export default function Home() {
               <header><div><span className="panel-kicker">READER PREFERENCES</span><h2 id="settings-title">Settings</h2></div>{closeButton}</header>
               <div className="settings-content">
                 <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
-                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label></section>
+                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label><label className="setting-row"><span><strong>English translation</strong><small>Saheeh International · source resource 20.</small></span><input className="switch" type="checkbox" checked={translation} onChange={(event) => setTranslation(event.target.checked)} /></label></section>
                 <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
-                <footer className="edition-note"><span>TEXT EDITION</span><strong>Madani Mushaf · Hafs · 15-line page map</strong></footer>
+                <section className="settings-group data-portability"><h3>Private backup</h3><p>Your reading history and mastery map stay on this device unless you download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
+                <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href="/api/content-manifest" target="_blank" rel="noreferrer">view sources</a></small></footer>
               </div>
             </section>
           )}

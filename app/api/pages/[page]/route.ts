@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ChapterStart, PageChapter, PageLine, PageVerse, PageWord, QuranPage } from "../../../quran-data";
+import { CONTENT_MANIFEST } from "../../../content-manifest";
 
 const API_ROOT = "https://api.quran.com/api/v4";
 
@@ -22,7 +23,8 @@ interface ApiVerse {
   hizb_number: number;
   text_uthmani: string;
   words: ApiWord[];
-  translations?: Array<{ text: string }>;
+  sajdah_number?: number | null;
+  translations?: Array<{ resource_id?: number; text: string }>;
 }
 
 interface ApiChapter {
@@ -37,6 +39,34 @@ interface ApiChapter {
 function qcfGlyphFromWord(value?: string) {
   if (!value) return undefined;
   return /[\uFB50-\uFDFF\uFE70-\uFEFF]/u.test(value) ? value : undefined;
+}
+
+function cleanLearningText(value?: string) {
+  return (value ?? "")
+    .replace(/<sup[^>]*>.*?<\/sup>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function sha256Hex(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function assertVerifiedStructure(page: number, verses: ApiVerse[], lineMap: Map<number, PageWord[]>) {
+  if (!verses.length || !verses.every((verse) => /^\d{1,3}:\d{1,3}$/.test(verse.verse_key) && verse.words.length)) {
+    throw new Error("Verified verse identity coverage is incomplete.");
+  }
+  const mappedWords = Array.from(lineMap.entries()).flatMap(([lineNumber, words]) => words.map((word) => ({ lineNumber, word })));
+  if (!mappedWords.length || mappedWords.some(({ lineNumber, word }) => lineNumber < 1 || lineNumber > 15 || word.pageNumber !== page)) {
+    throw new Error("Verified page-line mapping is invalid.");
+  }
 }
 
 function splitTajweedWords(raw: string, expectedWords: number) {
@@ -92,8 +122,8 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
   const pageQuery = new URLSearchParams({
     mushaf: "1",
     words: "true",
-    translations: "57",
-    fields: "text_uthmani",
+    translations: "20,57",
+    fields: "text_uthmani,sajdah_number",
     word_fields: "line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4",
     per_page: "50",
   });
@@ -130,7 +160,9 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
         number: verse.verse_number,
         chapterId,
         uthmani: verse.text_uthmani,
-        transliteration: verse.translations?.[0]?.text ?? "",
+        transliteration: cleanLearningText(verse.translations?.find((item) => item.resource_id === CONTENT_MANIFEST.resources.transliteration.id)?.text ?? verse.translations?.[1]?.text),
+        translation: cleanLearningText(verse.translations?.find((item) => item.resource_id === CONTENT_MANIFEST.resources.translation.id)?.text ?? verse.translations?.[0]?.text),
+        sajdahNumber: verse.sajdah_number ?? undefined,
       });
 
       const contentWords = verse.words.filter((word) => word.char_type_name !== "end");
@@ -180,6 +212,13 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
       }));
     const lines: PageLine[] = Array.from({ length: 15 }, (_, index) => ({ number: index + 1, words: lineMap.get(index + 1) ?? [] }));
     const firstVerse = versePayload.verses[0];
+    assertVerifiedStructure(page, versePayload.verses, lineMap);
+    const normalizedForChecksum = {
+      page,
+      verses: verses.map((verse) => ({ key: verse.key, uthmani: verse.uthmani, translation: verse.translation, transliteration: verse.transliteration })),
+      lines: lines.map((line) => ({ number: line.number, words: line.words.map((word) => ({ id: word.id, verseKey: word.verseKey, text: word.text, isEnd: word.isEnd })) })),
+    };
+    const pageChecksum = await sha256Hex(JSON.stringify(normalizedForChecksum));
     const result: QuranPage = {
       page,
       juz: firstVerse.juz_number,
@@ -188,9 +227,23 @@ export async function GET(_request: Request, context: { params: Promise<{ page: 
       verses,
       chapters,
       chapterStarts,
+      provenance: {
+        verified: true,
+        manifestRevision: CONTENT_MANIFEST.revision,
+        mushafId: CONTENT_MANIFEST.edition.mushafId,
+        arabicResource: CONTENT_MANIFEST.resources.arabic.id,
+        tajweedResource: CONTENT_MANIFEST.resources.tajweed.id,
+        translationResource: CONTENT_MANIFEST.resources.translation.id,
+        transliterationResource: CONTENT_MANIFEST.resources.transliteration.id,
+        pageChecksum,
+      },
     };
 
-    return NextResponse.json(result, { headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800" } });
+    return NextResponse.json(result, { headers: {
+      "Cache-Control": "public, max-age=86400, s-maxage=604800",
+      "ETag": `"${pageChecksum}"`,
+      "X-Quran-Content-Revision": CONTENT_MANIFEST.revision,
+    } });
   } catch {
     return NextResponse.json({ error: "Verified Quran page data is temporarily unavailable." }, { status: 502 });
   }

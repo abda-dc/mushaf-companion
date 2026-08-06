@@ -45,21 +45,26 @@ Install or open the public app:
 
 - Tajweed display toggle.
 - Verse transliteration toggle.
+- Selected-ayah Saheeh International translation toggle with source attribution and no Arabic-page reflow.
 - Selected-ayah state.
 - Light and night themes.
 - Reading-font picker with Uthman Taha, Amiri, Lateef, and Scheherazade.
 - Explicit mobile Tajweed and Transliteration controls.
-- Responsive settings panel with persisted display, learning, reciter, and speed preferences.
+- Responsive settings panel with versioned display, learning, reciter, speed, bookmark, and Hifz preferences.
 - A front-matter Tajweed guide covering all 17 markup categories used by the reader, with five linked Quran examples for each rule.
 - Tap a Tajweed-marked word to see its rule name, timing, and reading instruction without leaving the page.
 
 ### Memorization (Hifz)
 
-- Hifz dashboard opened from the reader toolbar or Home, with no additional bottom navigation tab.
+- “My Mushaf” dashboard opened from the reader toolbar or Home, with no additional bottom navigation tab.
 - Calendar-safe day streak, total memorized ayāt, adjustable daily goal, and today-progress bar stored locally on the device.
+- A 604-page mastery map with not-started, learning, due, and strong states.
+- Adaptive 5, 10, or 20-minute daily plans that prioritize due reviews before new current-page ayāt.
+- Again, Hard, Good, and Easy review ratings with calendar-safe next-review scheduling.
 - From/to verse loops for the current page with 3, 5, 7, or 10 passes; optional memory pauses; and 0.75×, 1×, or 1.25× pace.
 - Hidden-text page self-test with tap-to-reveal and tap-again-to-hide behavior.
 - Selected-ayah actions for marking verses memorized, green rosette rings, and a jumpable memorized list.
+- Local JSON export and restore for reading progress, bookmarks, preferences, and Hifz history.
 
 ### Audio
 
@@ -132,6 +137,7 @@ npm run build    # Create a production build
 npm run start    # Run the production build on port 5550
 npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint
+npm run audit:content        # Verify all 604 pages and 6,236 verse keys against the source API
 npm run mobile:sync           # Sync both native projects
 npm run mobile:android:debug  # Build an Android debug APK on Windows
 npm run mobile:android:bundle # Build an unsigned Android release AAB on Windows
@@ -144,6 +150,7 @@ No application environment variables are required for the current read-only Qura
 | Route | Purpose | Important behavior |
 | --- | --- | --- |
 | `GET /api/pages/:page` | Load one Madani mushaf page | Accepts pages 1–604 and fails closed on incomplete upstream content. |
+| `GET /api/content-manifest` | Inspect Quran source and integrity metadata | Identifies edition, resource IDs, revision, audit status, and checksum policy. |
 | `GET /api/search?q=` | Search pages, ayat, surahs, and text | Falls back to direct page and ayah matching if broad search is unavailable. |
 | `GET /api/lookup?verse=` | Resolve an ayah key to its page | Accepts keys such as `2:255`. |
 | `GET /api/chapters` | Load the 114-sūrah contents index | Includes page ranges, juz coverage, revelation metadata, and āyah counts. |
@@ -182,15 +189,17 @@ Before a content source or edition is enabled in production, it must have:
 - Sanitization for any markup returned by a content provider.
 - Human review of representative page, surah-boundary, sajdah, and long-ayah cases.
 
+The current Phase One gate records a passed 604-page/6,236-ayah audit in [`docs/content-audit.json`](./docs/content-audit.json) and locks fourteen reviewed screenshots for pages 1, 2, 3, 187, 293, 416, and 604 under [`tests/fixtures/page-fidelity`](./tests/fixtures/page-fidelity/README.md).
+
 The bundled Al-Fatihah model is only a fail-safe initial shell while the selected verified page loads. It is not a substitute for successful page retrieval.
 
 ## Current limitations
 
-- Translation and tafsir panels are not implemented yet.
+- Translation is currently one vetted selected-ayah English layer; translation comparison and tafsir are not implemented yet.
 - Audio requires a network connection and cannot be downloaded yet.
 - Offline reading is not supported.
-- The QCF page geometry still needs representative screenshot regression coverage before it should be described as pixel-identical on every supported browser and device.
-- Bookmarks and preferences are local to the current browser.
+- Representative desktop and responsive screenshots are locked, but the reader is not claimed to be pixel-identical on every browser and device.
+- Bookmarks and preferences remain local by default; users can export and restore a private JSON backup.
 - Native packages currently load the deployed server-backed reader over HTTPS; a fully bundled offline reader remains a future phase.
 - The PWA caches its application/offline shell, but Quran page verification and recitation still require a network connection.
 - A signed iOS `.ipa` requires macOS, Xcode 26+, and an Apple Developer signing team.

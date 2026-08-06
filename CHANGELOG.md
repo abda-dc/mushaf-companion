@@ -2,6 +2,29 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.8.0 — 2026-08-06
+
+### Added
+
+- A versioned Quran content manifest identifying the Madani Mushaf edition, Hafs riwayah, Arabic, Tajweed, transliteration, and Saheeh International resources.
+- SHA-256 provenance on every verified page response, plus manifest revision and source headers.
+- A full-corpus audit covering all 604 pages and all 6,236 stable verse keys, with per-page and corpus checksums.
+- Fourteen reviewed page-fidelity baselines across desktop and responsive viewports for seven representative pages.
+- A selected-ayah Saheeh International translation layer that never reflows the Arabic page.
+- “My Mushaf,” with a 604-page mastery map, due-review counts, adaptive 5/10/20-minute plans, and Again/Hard/Good/Easy scheduling.
+- Private JSON backup and restore for bookmarks, reading preferences, and memorization progress.
+
+### Changed
+
+- Consolidated legacy local-storage values into a versioned preference document with lossless migration.
+- Made unverified or structurally invalid page responses fail closed before they can enter the reader cache.
+- Added visible edition, revision, and checksum attribution in Settings.
+
+### Reliability
+
+- Locked sparse, dense, surah-boundary, At-Tawbah, sajdah, and final-page geometry to official fixture data.
+- Added regression coverage for preference migration, backup round trips, review scheduling, mastery status, provenance, screenshots, and the stored corpus audit.
+
 ## 0.7.0 — 2026-08-06
 
 ### Added

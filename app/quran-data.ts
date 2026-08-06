@@ -24,6 +24,19 @@ export interface PageVerse {
   chapterId: number;
   uthmani: string;
   transliteration: string;
+  translation: string;
+  sajdahNumber?: number;
+}
+
+export interface PageProvenance {
+  verified: boolean;
+  manifestRevision: string;
+  mushafId: number;
+  arabicResource: string;
+  tajweedResource: string;
+  translationResource: number;
+  transliterationResource: number;
+  pageChecksum: string;
 }
 
 export interface PageChapter {
@@ -48,6 +61,7 @@ export interface QuranPage {
   verses: PageVerse[];
   chapters: PageChapter[];
   chapterStarts: ChapterStart[];
+  provenance: PageProvenance;
 }
 
 export interface SearchResult {
@@ -85,13 +99,13 @@ export const RECITERS: Array<{ id: ReciterId; name: string; initials: string; sc
 ];
 
 const FATIHAH_VERSES: PageVerse[] = [
-  { key: "1:1", number: 1, chapterId: 1, uthmani: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Bismi Allahi arrahmani arraheem" },
-  { key: "1:2", number: 2, chapterId: 1, uthmani: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ", transliteration: "Alhamdu lillahi rabbi alAAalameen" },
-  { key: "1:3", number: 3, chapterId: 1, uthmani: "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Arrahmani arraheem" },
-  { key: "1:4", number: 4, chapterId: 1, uthmani: "مَـٰلِكِ يَوْمِ ٱلدِّينِ", transliteration: "Maliki yawmi addeen" },
-  { key: "1:5", number: 5, chapterId: 1, uthmani: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", transliteration: "Iyyaka naAAbudu wa-iyyaka nastaAAeen" },
-  { key: "1:6", number: 6, chapterId: 1, uthmani: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ", transliteration: "Ihdina assirata almustaqeem" },
-  { key: "1:7", number: 7, chapterId: 1, uthmani: "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ", transliteration: "Sirata allatheena anAAamta AAalayhim ghayri almaghdoobi AAalayhim wala addalleen" },
+  { key: "1:1", number: 1, chapterId: 1, uthmani: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Bismi Allahi arrahmani arraheem", translation: "In the name of Allah, the Entirely Merciful, the Especially Merciful." },
+  { key: "1:2", number: 2, chapterId: 1, uthmani: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ", transliteration: "Alhamdu lillahi rabbi alAAalameen", translation: "All praise is due to Allah, Lord of the worlds." },
+  { key: "1:3", number: 3, chapterId: 1, uthmani: "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Arrahmani arraheem", translation: "The Entirely Merciful, the Especially Merciful." },
+  { key: "1:4", number: 4, chapterId: 1, uthmani: "مَـٰلِكِ يَوْمِ ٱلدِّينِ", transliteration: "Maliki yawmi addeen", translation: "Sovereign of the Day of Recompense." },
+  { key: "1:5", number: 5, chapterId: 1, uthmani: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", transliteration: "Iyyaka naAAbudu wa-iyyaka nastaAAeen", translation: "It is You we worship and You we ask for help." },
+  { key: "1:6", number: 6, chapterId: 1, uthmani: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ", transliteration: "Ihdina assirata almustaqeem", translation: "Guide us to the straight path." },
+  { key: "1:7", number: 7, chapterId: 1, uthmani: "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ", transliteration: "Sirata allatheena anAAamta AAalayhim ghayri almaghdoobi AAalayhim wala addalleen", translation: "The path of those upon whom You have bestowed favor, not of those who have evoked anger or gone astray." },
 ];
 
 function fallbackLine(number: number, verse?: PageVerse): PageLine {
@@ -115,4 +129,14 @@ export const FALLBACK_PAGE: QuranPage = {
   chapters: [{ id: 1, name: "Al-Fātiḥah", translatedName: "The Opener", arabicName: "الفاتحة", revelationPlace: "makkah" }],
   chapterStarts: [{ chapterId: 1, headerLine: 1, bismillahLine: null }],
   lines: Array.from({ length: 15 }, (_, index) => fallbackLine(index + 1, index > 0 && index < 8 ? FATIHAH_VERSES[index - 1] : undefined)),
+  provenance: {
+    verified: false,
+    manifestRevision: "fallback-shell",
+    mushafId: 1,
+    arabicResource: "bundled-fail-safe",
+    tajweedResource: "bundled-fail-safe",
+    translationResource: 20,
+    transliterationResource: 57,
+    pageChecksum: "fallback-shell",
+  },
 };

@@ -1,6 +1,6 @@
 # V2 product roadmap
 
-> Foundation update — 2026-08-05: the responsive Settings surface, QCF page-font geometry, persistent core preferences, and consistent desktop/mobile destinations shipped in version 0.3.0. Representative visual fixtures and the versioned preference migration remain in the Phase 0 trust gate.
+> Foundation update — 2026-08-06: Phase 0 is complete in version 0.8.0. The gate now includes a versioned content manifest, fail-closed page checksums, preference migration, a 604-page/6,236-ayah source audit, and fourteen reviewed desktop/responsive baselines for seven representative pages.
 
 This roadmap covers translations, tafsir, and offline audio without compromising the page-first reading experience.
 
@@ -31,7 +31,7 @@ Estimates assume one product engineer with part-time design and qualified conten
 
 ## Phase 0 — foundation and trust gate
 
-Target: one sprint.
+Status: completed 2026-08-06.
 
 ### Deliverables
 
@@ -51,6 +51,8 @@ Target: one sprint.
 - No optional layer can change Arabic page line breaks or page dimensions.
 - Content responses identify their source edition and revision.
 - Existing reader preferences migrate without data loss.
+
+Evidence: [`content-audit.json`](./content-audit.json), [`page-fidelity.json`](../tests/fixtures/page-fidelity.json), and the [reviewed screenshot baselines](../tests/fixtures/page-fidelity/README.md).
 
 ## Phase 1 — translation MVP
 

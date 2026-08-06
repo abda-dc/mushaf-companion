@@ -59,7 +59,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   ]);
 
   assert.match(page, /TOTAL_PAGES = 604/);
-  assert.match(page, /mushaf:last-page/);
+  assert.match(page, /loadPreferences\(localStorage\)/);
+  assert.match(page, /savePreferences\(localStorage/);
   assert.match(page, /new URL\(window\.location\.href\)\.searchParams\.get\("page"\)/);
   assert.match(page, /event\.key === "ArrowRight"/);
   assert.match(page, /event\.key === "ArrowLeft"/);
@@ -73,6 +74,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(pageRoute, /qcfGlyphFromWord\(word\.text\)/);
   assert.match(pageRoute, /uthmani_tajweed\?page_number/);
   assert.match(pageRoute, /Array\.from\(\{ length: 15 \}/);
+  assert.match(pageRoute, /sha256Hex/);
+  assert.match(pageRoute, /CONTENT_MANIFEST/);
+  assert.match(pageRoute, /translations: "20,57"/);
   assert.match(page, /new FontFace/);
   assert.match(page, /qcfTajweedCode/);
   assert.match(styles, /grid-template-rows: repeat\(15/);
@@ -86,7 +90,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(styles, /\.ayah-rosette::before/);
   assert.match(styles, /\.ayah-rosette::after/);
   assert.match(page, /aria-label="Reading font"/);
-  assert.match(page, /mushaf:reading-font/);
+  assert.match(page, /readingFont/);
   assert.match(styles, /reading-font-amiri/);
   assert.match(styles, /reading-font-lateef/);
   assert.match(styles, /reading-font-scheherazade/);
@@ -126,6 +130,11 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(searchRoute, /chapters\?language=en/);
   assert.match(searchRoute, /type: "page"/);
   assert.match(data, /FALLBACK_PAGE/);
+  assert.match(page, /My Mushaf/);
+  assert.match(page, /buildPageMasteryMap/);
+  assert.match(page, /Start today&apos;s session/);
+  assert.match(page, /createPortableBackup/);
+  assert.match(page, /Saheeh International/);
   assert.match(layout, /all 604 Quran pages/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", import.meta.url)));
@@ -182,6 +191,9 @@ test("maps verified API words into the 15-line Madani page structure", async () 
     assert.equal(page.lines[2].words[1].qcfCode, "ﱂ");
     assert.equal(page.lines[2].words[1].qcfTajweedCode, "ﱂ");
     assert.deepEqual(page.chapterStarts[0], { chapterId: 2, headerLine: 1, bismillahLine: 2 });
+    assert.equal(page.provenance.verified, true);
+    assert.equal(page.provenance.mushafId, 1);
+    assert.match(page.provenance.pageChecksum, /^[a-f0-9]{64}$/);
   } finally {
     globalThis.fetch = originalFetch;
   }
