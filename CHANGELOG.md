@@ -2,6 +2,20 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.6.0 — 2026-08-05
+
+### Added
+
+- Installable PWA metadata, app shortcuts, update registration, a branded app icon, and an offline shell.
+- A GitHub Pages PWA entry point and automated Pages deployment workflow.
+- An MIT software license, contributing guide, and private security-reporting policy.
+- An unsigned Android release App Bundle artifact alongside the existing debug APK.
+
+### Changed
+
+- The existing Sites reader is now the public server-backed runtime for both the GitHub Pages PWA and Capacitor shells.
+- Corrected the Android instrumented-test package assertion to the production app ID.
+
 ## 0.5.0 — 2026-08-05
 
 ### Added

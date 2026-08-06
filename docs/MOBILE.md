@@ -28,11 +28,19 @@ npm run mobile:android:debug
 
 The APK is written under `android/app/build/outputs/apk/debug/`.
 
+An unsigned release App Bundle can be produced with:
+
+```powershell
+npm run mobile:android:bundle
+```
+
+The `.aab` is written under `android/app/build/outputs/bundle/release/`. Configure a release keystore outside source control before uploading a signed bundle to Google Play.
+
 ## iOS
 
 Open `ios/App/App.xcodeproj` on macOS with Xcode 26 or newer. Run `npm run mobile:ios` before opening Xcode after web or native dependency changes.
 
-An App Store `.ipa` requires an Apple Developer team, bundle signing, and a macOS/Xcode build. Those credentials are intentionally not stored in this repository.
+An App Store `.ipa` requires an Apple Developer team, bundle signing, and a macOS/Xcode build. Those credentials are intentionally not stored in this repository. The native packaging workflow produces an unsigned simulator `.app` so the Xcode scaffold is continuously verified without storing signing credentials.
 
 ## Release checklist
 

@@ -1,0 +1,41 @@
+{
+  "id": "/",
+  "name": "Mushaf Companion",
+  "short_name": "Mushaf",
+  "description": "A calm, page-faithful Quran reader with all 604 Madani mushaf pages, tajweed guidance, transliteration, bookmarks, search, and recitation.",
+  "lang": "en",
+  "dir": "auto",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0f3028",
+  "theme_color": "#0f3028",
+  "categories": ["books", "education", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Continue reading",
+      "short_name": "Read",
+      "url": "/?source=pwa"
+    },
+    {
+      "name": "Open Al-Fatihah",
+      "short_name": "Al-Fatihah",
+      "url": "/?page=1&source=pwa"
+    },
+    {
+      "name": "Open Ayat al-Kursi",
+      "short_name": "Ayat al-Kursi",
+      "url": "/?page=42&source=pwa"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Mushaf Companion</title>
+  <rect width="512" height="512" rx="112" fill="#0f3028"/>
+  <path d="M42 96V58h38M432 58h38v38M42 416v38h38M432 454h38v-38" fill="none" stroke="#b8955e" stroke-width="8" stroke-linecap="round"/>
+  <path d="M256 162c-38-37-91-52-150-42v226c60-10 112 5 150 42 38-37 90-52 150-42V120c-59-10-112 5-150 42Z" fill="#f7eddc" stroke="#d1ad72" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M256 162v226M124 150c49-4 88 8 116 35M388 150c-49-4-88 8-116 35M124 320c49-4 88 8 116 35M388 320c-49-4-88 8-116 35" fill="none" stroke="#b8955e" stroke-width="8" stroke-linecap="round"/>
+  <path d="M164 227h56M164 258h56M164 289h56M292 227h56M292 258h56M292 289h56" stroke="#0f3028" stroke-width="10" stroke-linecap="round" opacity=".82"/>
+</svg>

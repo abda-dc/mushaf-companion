@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "com.mushafcompanion.reader",
   appName: "Mushaf Companion",
   webDir: "mobile-shell",
-  appendUserAgent: " MushafCompanionNative/0.5",
+  appendUserAgent: " MushafCompanionNative/0.6",
   server: {
     url: "https://mushaf-companion.abda-dc.chatgpt.site",
     cleartext: false,

@@ -1,5 +1,9 @@
 # Mushaf Companion
 
+[![GitHub Pages](https://github.com/abda-dc/mushaf-companion/actions/workflows/pages.yml/badge.svg)](https://github.com/abda-dc/mushaf-companion/actions/workflows/pages.yml)
+[![Native packages](https://github.com/abda-dc/mushaf-companion/actions/workflows/native-packages.yml/badge.svg)](https://github.com/abda-dc/mushaf-companion/actions/workflows/native-packages.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-c8a86b.svg)](./LICENSE)
+
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
 The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, direct page navigation, verse and sūrah playback, transliteration, bookmarks, search, night mode, and last-read resume behavior.
@@ -8,9 +12,10 @@ The current implementation supports all 604 Quran pages, a verified 114-sūrah c
 
 ## Live application
 
-The current production deployment is private:
+Install or open the public app:
 
-- [Mushaf Companion](https://mushaf-companion.abda-dc.chatgpt.site/)
+- [GitHub Pages PWA](https://abda-dc.github.io/mushaf-companion/) — the public, installable entry point.
+- [Direct reader](https://mushaf-companion.abda-dc.chatgpt.site/) — the server-backed application used by the PWA and native shells.
 
 ## Product principles
 
@@ -71,6 +76,13 @@ The current production deployment is private:
 - Ayah bookmarks.
 - Resume from the last confirmed page and ayah.
 
+### Installable applications
+
+- Installable PWA with standalone display metadata, app shortcuts, update handling, and a branded offline screen.
+- GitHub Pages PWA entry point with an install prompt on supported browsers.
+- Capacitor 8 Android and iOS projects using `com.mushafcompanion.reader`.
+- Automated Android debug APK, unsigned release AAB, and unsigned iOS simulator package builds.
+
 ## Architecture
 
 Mushaf Companion is a full-stack React application built with Next-compatible App Router conventions through vinext and Vite. Client and API routes are served by one process.
@@ -114,6 +126,7 @@ npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint
 npm run mobile:sync           # Sync both native projects
 npm run mobile:android:debug  # Build an Android debug APK on Windows
+npm run mobile:android:bundle # Build an unsigned Android release AAB on Windows
 ```
 
 No application environment variables are required for the current read-only Quran API integration.
@@ -138,6 +151,7 @@ app/
   tajweed-guide.ts     Tajweed taxonomy, teaching copy, and 85 linked examples
 android/               Capacitor Android Studio project
 ios/                   Capacitor Xcode project
+github-pages/          Static installable PWA shell deployed by GitHub Actions
 docs/
   ANALYTICS.md         Future analytics and event contract
   ROADMAP.md           Prioritized translations, tafsir, and offline roadmap
@@ -170,6 +184,7 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 - The QCF page geometry still needs representative screenshot regression coverage before it should be described as pixel-identical on every supported browser and device.
 - Bookmarks and preferences are local to the current browser.
 - Native packages currently load the deployed server-backed reader over HTTPS; a fully bundled offline reader remains a future phase.
+- The PWA caches its application/offline shell, but Quran page verification and recitation still require a network connection.
 - A signed iOS `.ipa` requires macOS, Xcode 26+, and an Apple Developer signing team.
 
 ## Product planning
@@ -181,10 +196,14 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 
 ## Deployment
 
-The application is designed for a server-capable deployment because page, search, and lookup endpoints run on the server. A static-only host such as GitHub Pages cannot run the complete application without replacing those routes with another backend.
+The public entry point is deployed to GitHub Pages by [`.github/workflows/pages.yml`](./.github/workflows/pages.yml). GitHub Pages serves the installable PWA shell and loads the public server-backed reader full-screen.
 
-The current production deployment uses a private OpenAI Sites project backed by a Cloudflare-compatible vinext build.
+The reader itself remains a Cloudflare-compatible vinext application because page, search, chapter, and lookup endpoints execute on the server. Keeping those endpoints on the existing Sites deployment avoids shipping an incomplete static build while preserving a public GitHub Pages URL for installation and discovery.
+
+Pushes to `main` build and test the full reader before publishing the Pages shell. Version tags beginning with `v` also build downloadable native artifacts.
 
 ## License
 
-No software license file is currently included. Quran text, translations, tafsir, typography, and recitation assets must retain the terms and attribution required by their respective providers.
+The application source is available under the [MIT License](./LICENSE). See [CONTRIBUTING.md](./CONTRIBUTING.md) before proposing changes.
+
+Quran text, typography, translations, tafsir, recitation recordings, and data returned by third-party services are not relicensed by the MIT License. They retain the terms and attribution required by their respective providers, including the [Quran.com API](https://api-docs.quran.com/), [EveryAyah](https://everyayah.com/), and other sources documented in the code.

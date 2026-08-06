@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   android:
-    name: Android debug APK
+    name: Android APK and store bundle
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,11 +25,15 @@ jobs:
           java-version: 21
       - run: npm ci
       - run: npm run mobile:android
-      - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
+      - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug bundleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: Mushaf-Companion-Android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mushaf-Companion-Android-release-bundle-unsigned
+          path: android/app/build/outputs/bundle/release/app-release.aab
 
   ios:
     name: iOS simulator package

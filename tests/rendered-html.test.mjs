@@ -32,11 +32,14 @@ test("server-renders a complete page-navigation reader shell", async () => {
   assert.match(html, />Transliteration</);
   assert.match(html, /aria-label="Audio mini player"/);
   assert.match(html, /translate="no"/);
+  assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
+  assert.match(html, /name="theme-color" content="#0f3028"/);
+  assert.match(html, /name="mobile-web-app-capable" content="yes"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
 test("implements dynamic Madani pages and every requested navigation path", async () => {
-  const [page, styles, data, guide, pageRoute, searchRoute, chaptersRoute, layout, packageJson, capacitorConfig, mobileWorkflow] = await Promise.all([
+  const [page, styles, data, guide, pageRoute, searchRoute, chaptersRoute, layout, packageJson, capacitorConfig, mobileWorkflow, pagesWorkflow, manifest, serviceWorker, pagesShell, license] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/quran-data.ts", import.meta.url), "utf8"),
@@ -48,6 +51,11 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/native-packages.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    readFile(new URL("../github-pages/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../LICENSE", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /TOTAL_PAGES = 604/);
@@ -103,7 +111,18 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(capacitorConfig, /com\.mushafcompanion\.reader/);
   assert.match(capacitorConfig, /mushaf-companion\.abda-dc\.chatgpt\.site/);
   assert.match(mobileWorkflow, /assembleDebug/);
+  assert.match(mobileWorkflow, /bundleRelease/);
   assert.match(mobileWorkflow, /iphonesimulator/);
+  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layout, /PwaRegister/);
+  assert.match(manifest, /"display": "standalone"/);
+  assert.match(manifest, /"purpose": "any maskable"/);
+  assert.match(serviceWorker, /mushaf-companion-v1/);
+  assert.match(pagesShell, /mushaf-companion\.abda-dc\.chatgpt\.site/);
+  assert.match(pagesShell, /beforeinstallprompt/);
+  assert.match(pagesWorkflow, /actions\/deploy-pages@v5/);
+  assert.match(pagesWorkflow, /npm test/);
+  assert.match(license, /^MIT License/);
   assert.match(searchRoute, /chapters\?language=en/);
   assert.match(searchRoute, /type: "page"/);
   assert.match(data, /FALLBACK_PAGE/);
