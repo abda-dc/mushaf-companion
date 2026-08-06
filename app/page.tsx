@@ -11,13 +11,34 @@ import {
   type SearchResult,
 } from "./quran-data";
 import { TAJWEED_RULES, rulesForTajweedHtml, type TajweedRule } from "./tajweed-guide";
+import {
+  DEFAULT_HIFZ_PROGRESS,
+  calculateStreak,
+  normalizeHifzProgress,
+  recordHifzActivity,
+  todaysMemorizedCount,
+  toLocalDateKey,
+  toggleMemorizedVerse,
+  type HifzProgress,
+} from "./hifz-state.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
-type Overlay = Exclude<NavItem, "Read"> | null;
+type Overlay = Exclude<NavItem, "Read"> | "Hifz" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
 type ReadingFont = "amiri" | "lateef" | "scheherazade" | "uthman-taha";
+type HifzRepeatCount = 3 | 5 | 7 | 10;
+type HifzPauseMs = 0 | 1500 | 3000 | 5000;
+type HifzPace = 0.75 | 1 | 1.25;
+
+interface HifzLoop {
+  active: boolean;
+  verseKeys: string[];
+  pass: number;
+  totalPasses: HifzRepeatCount;
+  pauseMs: HifzPauseMs;
+}
 
 const TOTAL_PAGES = 604;
 const PAGE_DATA_REVISION = "2026-08-05-learning-contents";
@@ -101,6 +122,16 @@ export default function Home() {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [rangeStart, setRangeStart] = useState("1:1");
   const [rangeEnd, setRangeEnd] = useState("1:7");
+  const [hifzProgress, setHifzProgress] = useState<HifzProgress>(() => normalizeHifzProgress(DEFAULT_HIFZ_PROGRESS));
+  const [hifzFrom, setHifzFrom] = useState("1:1");
+  const [hifzTo, setHifzTo] = useState("1:7");
+  const [hifzRepeatCount, setHifzRepeatCount] = useState<HifzRepeatCount>(5);
+  const [hifzPauseMs, setHifzPauseMs] = useState<HifzPauseMs>(1500);
+  const [hifzPace, setHifzPace] = useState<HifzPace>(1);
+  const [hifzHidden, setHifzHidden] = useState(false);
+  const [revealedVerses, setRevealedVerses] = useState<string[]>([]);
+  const [verseActionsOpen, setVerseActionsOpen] = useState(false);
+  const [hifzLoop, setHifzLoop] = useState<HifzLoop | null>(null);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -123,8 +154,9 @@ export default function Home() {
   const pendingEdgeRef = useRef<PageEdge>(null);
   const pendingAutoplayRef = useRef(false);
   const surahPlaybackRef = useRef<number | null>(null);
+  const hifzPauseTimerRef = useRef<number | null>(null);
 
-  const activeNav: NavItem = overlay ?? "Read";
+  const activeNav: NavItem = overlay === "Hifz" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -132,6 +164,11 @@ export default function Home() {
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
   const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
+  const todayKey = toLocalDateKey();
+  const hifzStreak = calculateStreak(hifzProgress.activityDates, todayKey);
+  const todayMemorized = todaysMemorizedCount(hifzProgress, todayKey);
+  const todayGoalPercent = Math.min(100, (todayMemorized / hifzProgress.dailyGoal) * 100);
+  const memorizedVerseKeys = new Set(hifzProgress.memorized.map((item) => item.verseKey));
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
   const fontReady = fontName === fontKey;
   const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
@@ -165,6 +202,11 @@ export default function Home() {
     setPage(initialPage);
     setJumpValue(String(initialPage));
     setBookmarks(safeBookmarks(localStorage.getItem("mushaf:bookmarks-v2")));
+    try {
+      setHifzProgress(normalizeHifzProgress(JSON.parse(localStorage.getItem("mushaf:hifz-v1") ?? "null")));
+    } catch {
+      setHifzProgress(normalizeHifzProgress(null));
+    }
     setDark(localStorage.getItem("mushaf:theme") === "dark");
     setTajweed(localStorage.getItem("mushaf:tajweed") !== "false");
     setTransliteration(localStorage.getItem("mushaf:transliteration") === "true");
@@ -203,6 +245,10 @@ export default function Home() {
       }
       setRangeStart(data.verses[0]?.key ?? "");
       setRangeEnd(data.verses.at(-1)?.key ?? "");
+      setHifzFrom(data.verses[0]?.key ?? "");
+      setHifzTo(data.verses.at(-1)?.key ?? "");
+      setRevealedVerses([]);
+      setVerseActionsOpen(false);
       pendingVerseRef.current = null;
       pendingEdgeRef.current = null;
       localStorage.setItem("mushaf:last-page", String(data.page));
@@ -254,7 +300,8 @@ export default function Home() {
     localStorage.setItem("mushaf:speed", String(speed));
     localStorage.setItem("mushaf:page-scale", pageScale);
     localStorage.setItem("mushaf:reading-font", readingFont);
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, readingFont, hydrated]);
+    localStorage.setItem("mushaf:hifz-v1", JSON.stringify(hifzProgress));
+  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, reciter, speed, pageScale, readingFont, hifzProgress, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -358,6 +405,10 @@ export default function Home() {
     return () => { document.body.style.overflow = ""; };
   }, [overlay, tajweedGuideOpen]);
 
+  useEffect(() => () => {
+    if (hifzPauseTimerRef.current !== null) window.clearTimeout(hifzPauseTimerRef.current);
+  }, []);
+
   function updatePlaying(value: boolean) {
     playingRef.current = value;
     setPlaying(value);
@@ -376,6 +427,7 @@ export default function Home() {
   function goToPage(target: number, direction?: "next" | "previous", verseKey?: string, keepPlaying = false) {
     const next = clampPage(target);
     if (next === pageData.page && !verseKey) return;
+    if (hifzLoop && next !== pageData.page) stopHifzLoop(false);
     audioRef.current?.pause();
     if (!keepPlaying) updatePlaying(false);
     if (next === pageData.page && verseKey) {
@@ -453,6 +505,44 @@ export default function Home() {
   function handleEnded() {
     const audio = audioRef.current;
     if (!audio) return;
+    if (hifzLoop?.active) {
+      const loopIndex = hifzLoop.verseKeys.indexOf(selectedVerseKey);
+      const nextVerseKey = hifzLoop.verseKeys[loopIndex + 1];
+      if (nextVerseKey) {
+        pendingAutoplayRef.current = true;
+        setSelectedVerseKey(nextVerseKey);
+        return;
+      }
+      if (hifzLoop.pass >= hifzLoop.totalPasses) {
+        setHifzLoop(null);
+        updatePlaying(false);
+        setNotice(`Hifz loop complete · ${hifzLoop.totalPasses} passes finished.`);
+        return;
+      }
+      const nextPass = hifzLoop.pass + 1;
+      setHifzLoop({ ...hifzLoop, pass: nextPass });
+      const beginNextPass = () => {
+        hifzPauseTimerRef.current = null;
+        const firstVerseKey = hifzLoop.verseKeys[0];
+        pendingAutoplayRef.current = true;
+        if (firstVerseKey === selectedVerseKey) {
+          pendingAutoplayRef.current = false;
+          audio.currentTime = 0;
+          audio.play().then(() => updatePlaying(true)).catch(() => updatePlaying(false));
+        } else {
+          setSelectedVerseKey(firstVerseKey);
+        }
+        setNotice(`Hifz loop · pass ${nextPass} of ${hifzLoop.totalPasses}`);
+      };
+      if (hifzLoop.pauseMs) {
+        updatePlaying(false);
+        setNotice(`Recite from memory · pass ${nextPass} begins shortly`);
+        hifzPauseTimerRef.current = window.setTimeout(beginNextPass, hifzLoop.pauseMs);
+      } else {
+        beginNextPass();
+      }
+      return;
+    }
     if (surahPlaybackRef.current !== null) {
       if (currentReciter.scope === "surah") {
         updateSurahPlayback(null);
@@ -496,6 +586,65 @@ export default function Home() {
     setNotice(exists ? "Bookmark removed" : `Bookmarked page ${pageData.page}, ayah ${selectedVerseKey}`);
   }
 
+  function toggleMemorized() {
+    if (!selectedVerseKey) return;
+    const wasMemorized = memorizedVerseKeys.has(selectedVerseKey);
+    setHifzProgress((current) => toggleMemorizedVerse(current, { verseKey: selectedVerseKey, page: pageData.page }));
+    setNotice(wasMemorized ? `Ayah ${selectedVerseKey} removed from memorized.` : `Ayah ${selectedVerseKey} marked memorized.`);
+  }
+
+  function stopHifzLoop(showNotice = true) {
+    if (hifzPauseTimerRef.current !== null) {
+      window.clearTimeout(hifzPauseTimerRef.current);
+      hifzPauseTimerRef.current = null;
+    }
+    audioRef.current?.pause();
+    pendingAutoplayRef.current = false;
+    setHifzLoop(null);
+    updatePlaying(false);
+    if (showNotice) setNotice("Hifz loop stopped.");
+  }
+
+  function startHifzLoop() {
+    const fromIndex = pageData.verses.findIndex((verse) => verse.key === hifzFrom);
+    const toIndex = pageData.verses.findIndex((verse) => verse.key === hifzTo);
+    if (fromIndex < 0 || toIndex < 0) {
+      setNotice("Choose a valid ayah range from this page.");
+      return;
+    }
+    const firstIndex = Math.min(fromIndex, toIndex);
+    const lastIndex = Math.max(fromIndex, toIndex);
+    const verseKeys = pageData.verses.slice(firstIndex, lastIndex + 1).map((verse) => verse.key);
+    const firstVerseKey = verseKeys[0];
+    if (!firstVerseKey) return;
+
+    if (hifzPauseTimerRef.current !== null) window.clearTimeout(hifzPauseTimerRef.current);
+    audioRef.current?.pause();
+    updatePlaying(false);
+    updateSurahPlayback(null);
+    setRepeatMode("off");
+    setSpeed(hifzPace);
+    setHifzLoop({ active: true, verseKeys, pass: 1, totalPasses: hifzRepeatCount, pauseMs: hifzPauseMs });
+    setHifzProgress((current) => recordHifzActivity(current));
+    setOverlay(null);
+    setNotice(`Hifz loop · pass 1 of ${hifzRepeatCount}`);
+
+    const reciterChanges = currentReciter.scope === "surah";
+    if (reciterChanges) setReciter("alafasy");
+    pendingAutoplayRef.current = true;
+    if (firstVerseKey !== selectedVerseKey || reciterChanges) {
+      setSelectedVerseKey(firstVerseKey);
+    } else {
+      pendingAutoplayRef.current = false;
+      window.setTimeout(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = 0;
+        audio.play().then(() => updatePlaying(true)).catch(() => setNotice("The Hifz loop is ready. Tap play to begin."));
+      }, 0);
+    }
+  }
+
   function chooseNav(item: NavItem) {
     if (item === "Contents") {
       openContents();
@@ -520,6 +669,12 @@ export default function Home() {
 
   function selectMushafWord(word: PageWord) {
     setSelectedVerseKey(word.verseKey);
+    setVerseActionsOpen(true);
+    if (hifzHidden) {
+      setRevealedVerses((current) => current.includes(word.verseKey) ? current.filter((key) => key !== word.verseKey) : [...current, word.verseKey]);
+      setTajweedFocus(null);
+      return;
+    }
     if (!tajweed || word.isEnd) {
       setTajweedFocus(null);
       return;
@@ -619,9 +774,9 @@ export default function Home() {
             <button
               type="button"
               key={word.id}
-              className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}`}
+              className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}${memorizedVerseKeys.has(word.verseKey) ? " memorized" : ""}${revealedVerses.includes(word.verseKey) ? " hifz-revealed" : ""}${hifzLoop?.active && selectedVerseKey === word.verseKey ? " hifz-playing" : ""}`}
               onClick={() => selectMushafWord(word)}
-              aria-label={`${tajweed && rulesForTajweedHtml(word.tajweedHtml).length ? "Explain Tajweed in" : "Select"} ayah ${word.verseKey}`}
+              aria-label={hifzHidden ? `${revealedVerses.includes(word.verseKey) ? "Hide" : "Reveal"} ayah ${word.verseKey}` : `${tajweed && rulesForTajweedHtml(word.tajweedHtml).length ? "Explain Tajweed in" : "Select"} ayah ${word.verseKey}`}
               tabIndex={word.isEnd ? 0 : -1}
             >
               {useQcfGlyph
@@ -630,7 +785,7 @@ export default function Home() {
                   ? <span className="ayah-rosette"><span>{word.text}</span></span>
                   : tajweed
                     ? <span dangerouslySetInnerHTML={{ __html: word.tajweedHtml }} />
-                    : word.text}
+                    : <span>{word.text}</span>}
             </button>
           );
         })}
@@ -668,6 +823,7 @@ export default function Home() {
           <div className="header-tools">
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
+            <button type="button" className={`toggle-control hifz-shortcut ${hifzHidden || hifzLoop ? "active" : ""}`} onClick={() => setOverlay("Hifz")} aria-label="Open Hifz memorization mode"><span>Hifz</span></button>
             <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
             <button type="button" className={`icon-button ${bookmarks.includes(currentBookmark) ? "active" : ""}`} onClick={toggleBookmark} aria-label="Bookmark selected ayah">◇</button>
             <button type="button" className="icon-button" onClick={() => setOverlay("Search")} aria-label="Search Quran">⌕</button>
@@ -679,15 +835,19 @@ export default function Home() {
         <div className="mobile-layer-bar" aria-label="Reading assistance">
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
+          <button type="button" className={hifzHidden || hifzLoop ? "active" : ""} onClick={() => setOverlay("Hifz")}>Hifz</button>
           <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
         </div>
+
+        {hifzHidden && <div className="hifz-reader-banner" role="status"><span>Hidden-text self-test</span><p>Tap any ayah to reveal it. Tap it again to hide it.</p><button type="button" onClick={() => { setHifzHidden(false); setRevealedVerses([]); }}>Show all text</button></div>}
+        {hifzLoop && <div className="hifz-reader-banner loop-banner" role="status"><span>Hifz loop</span><p>Pass {hifzLoop.pass} of {hifzLoop.totalPasses} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => stopHifzLoop()}>Stop</button></div>}
 
         <section className="reading-area" aria-label="Mushaf reader">
           <button type="button" className="page-turn-control previous" onClick={previousPage} disabled={loadingPage} aria-label={pageData.page === 1 ? "Open Tajweed guide before page one" : "Previous page"}><span>‹</span><small>{pageData.page === 1 ? "GUIDE" : "PREVIOUS"}</small></button>
           <div className="book-stage">
             <div className="book-meta"><span>JUZ {pageData.juz}</span>{currentChapter ? <button type="button" onClick={() => setNotice(`Double-click Sūrah ${currentChapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(currentChapter.id)} aria-label={`Sūrah ${currentChapter.id}, ${currentChapter.name}. Double-click to play from the beginning`}>{currentChapter.id} · {currentChapter.name}</button> : <span>Quran</span>}<span>HIZB {pageData.hizb}</span></div>
             <article
-              className={`mushaf-page reading-font-${readingFont} ${turnDirection ? `turn-${turnDirection}` : ""}`}
+              className={`mushaf-page reading-font-${readingFont}${hifzHidden ? " hifz-hidden" : ""} ${turnDirection ? `turn-${turnDirection}` : ""}`}
               aria-label={`Quran page ${pageData.page}`}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
@@ -700,6 +860,7 @@ export default function Home() {
             </article>
             {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
+            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
               <form onSubmit={submitJump}><label className="sr-only" htmlFor="mobile-page-jump">Jump to page</label><input id="mobile-page-jump" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form>
@@ -741,7 +902,54 @@ export default function Home() {
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
-              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button></div>
+              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>🔥</span><strong>Memorize</strong><small>{hifzProgress.memorized.length} ayāt · {hifzStreak} day streak</small></button></div>
+            </section>
+          )}
+
+          {overlay === "Hifz" && (
+            <section className="panel-shell hifz-panel" role="dialog" aria-modal="true" aria-labelledby="hifz-title">
+              <header><div><span className="panel-kicker">MEMORIZATION</span><h2 id="hifz-title">Hifz mode</h2></div>{closeButton}</header>
+              <div className="hifz-content">
+                <section className="hifz-summary" aria-label="Hifz progress">
+                  <div className="hifz-stat streak-stat"><span>🔥</span><strong>{hifzStreak}</strong><small>day streak</small></div>
+                  <div className="hifz-stat"><span>✓</span><strong>{hifzProgress.memorized.length}</strong><small>ayāt memorized</small></div>
+                  <div className="hifz-goal">
+                    <div><span>TODAY&apos;S GOAL</span><strong>{todayMemorized} / {hifzProgress.dailyGoal} ayāt</strong></div>
+                    <div className="hifz-goal-track" role="progressbar" aria-label="Today's memorization goal" aria-valuemin={0} aria-valuemax={hifzProgress.dailyGoal} aria-valuenow={todayMemorized}><span style={{ width: `${todayGoalPercent}%` }} /></div>
+                    <label>Daily goal<select value={hifzProgress.dailyGoal} onChange={(event) => setHifzProgress((current) => ({ ...current, dailyGoal: Number(event.target.value) }))} aria-label="Daily ayah goal">{[1, 3, 5, 7, 10].map((goal) => <option value={goal} key={goal}>{goal} ayāt</option>)}</select></label>
+                  </div>
+                </section>
+
+                <div className="hifz-grid">
+                  <section className="hifz-card hifz-looper">
+                    <div className="hifz-card-heading"><span>01</span><div><h3>Verse looper</h3><p>Build a repetition set from the ayāt on page {pageData.page}.</p></div></div>
+                    <div className="hifz-range">
+                      <label>FROM<select value={hifzFrom} onChange={(event) => setHifzFrom(event.target.value)}>{pageData.verses.map((verse) => <option value={verse.key} key={verse.key}>Ayah {verse.key}</option>)}</select></label>
+                      <span aria-hidden="true">→</span>
+                      <label>TO<select value={hifzTo} onChange={(event) => setHifzTo(event.target.value)}>{pageData.verses.map((verse) => <option value={verse.key} key={verse.key}>Ayah {verse.key}</option>)}</select></label>
+                    </div>
+                    <fieldset><legend>REPEAT COUNT</legend><div className="hifz-options">{([3, 5, 7, 10] as HifzRepeatCount[]).map((count) => <button type="button" className={hifzRepeatCount === count ? "active" : ""} aria-pressed={hifzRepeatCount === count} onClick={() => setHifzRepeatCount(count)} key={count}>×{count}</button>)}</div></fieldset>
+                    <fieldset><legend>PAUSE BETWEEN PASSES</legend><div className="hifz-options pause-options">{([{ value: 0, label: "None" }, { value: 1500, label: "1.5s" }, { value: 3000, label: "3s" }, { value: 5000, label: "5s" }] as Array<{ value: HifzPauseMs; label: string }>).map((item) => <button type="button" className={hifzPauseMs === item.value ? "active" : ""} aria-pressed={hifzPauseMs === item.value} onClick={() => setHifzPauseMs(item.value)} key={item.value}>{item.label}</button>)}</div></fieldset>
+                    <fieldset><legend>PACE</legend><div className="hifz-options">{([0.75, 1, 1.25] as HifzPace[]).map((pace) => <button type="button" className={hifzPace === pace ? "active" : ""} aria-pressed={hifzPace === pace} onClick={() => setHifzPace(pace)} key={pace}>{pace}×</button>)}</div></fieldset>
+                    {hifzLoop ? <div className="active-loop"><span>Pass {hifzLoop.pass} of {hifzLoop.totalPasses}</span><button type="button" onClick={() => { stopHifzLoop(); setOverlay(null); }}>Stop loop</button></div> : <button type="button" className="hifz-primary" onClick={startHifzLoop}>Start looping <span>→</span></button>}
+                  </section>
+
+                  <div className="hifz-side-column">
+                    <section className="hifz-card self-test-card">
+                      <div className="hifz-card-heading"><span>02</span><div><h3>Hidden-text self-test</h3><p>Blur every ayah, then reveal only what you need.</p></div></div>
+                      <button type="button" className={`self-test-toggle ${hifzHidden ? "active" : ""}`} onClick={() => { setHifzHidden((value) => !value); setRevealedVerses([]); setOverlay(null); }}><span><strong>{hifzHidden ? "Self-test is on" : "Hide this page"}</strong><small>{hifzHidden ? "Return to clear text" : "Tap an ayah to reveal it"}</small></span><i aria-hidden="true" /></button>
+                    </section>
+
+                    <section className="hifz-card memorized-card">
+                      <div className="hifz-card-heading"><span>03</span><div><h3>Memorized</h3><p>Your marked ayāt, newest first.</p></div></div>
+                      <div className="memorized-list">
+                        {hifzProgress.memorized.map((item) => <button type="button" key={item.verseKey} onClick={() => { goToPage(item.page, undefined, item.verseKey); setVerseActionsOpen(true); setOverlay(null); }}><span className="memorized-rosette">✓</span><span><strong>Ayah {item.verseKey}</strong><small>Page {item.page} · marked {item.markedAt}</small></span><span aria-hidden="true">›</span></button>)}
+                        {!hifzProgress.memorized.length && <p className="empty-state">Tap an ayah in the reader, then choose “Mark memorized.”</p>}
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
             </section>
           )}
 
