@@ -2,6 +2,20 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 0.7.0 — 2026-08-06
+
+### Added
+
+- A dedicated Hifz surface reachable from the reader toolbar and Home without adding another bottom navigation tab.
+- Local day-streak, total memorized-ayah, adjustable daily-goal, and today-progress tracking.
+- Current-page verse loops with range selection, 3/5/7/10 passes, memory pauses, and 0.75×/1×/1.25× pace controls.
+- A hidden-text self-test that blurs every ayah until it is tapped, with page-level mode guidance.
+- Selected-ayah actions for marking verses memorized, green memorized rosette rings, and a jumpable memorized list.
+
+### Reliability
+
+- Calendar-day streak tests cover missed days, same-day activity, leap day, month changes, and year changes without relying on 24-hour timestamp arithmetic.
+
 ## 0.6.0 — 2026-08-05
 
 ### Added

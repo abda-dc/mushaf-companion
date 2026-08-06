@@ -6,7 +6,7 @@
 
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
-The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, direct page navigation, verse and sūrah playback, transliteration, bookmarks, search, night mode, and last-read resume behavior.
+The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, transliteration, bookmarks, search, night mode, and last-read resume behavior.
 
 ![Mushaf Companion preview](./public/og.png)
 
@@ -52,6 +52,14 @@ Install or open the public app:
 - Responsive settings panel with persisted display, learning, reciter, and speed preferences.
 - A front-matter Tajweed guide covering all 17 markup categories used by the reader, with five linked Quran examples for each rule.
 - Tap a Tajweed-marked word to see its rule name, timing, and reading instruction without leaving the page.
+
+### Memorization (Hifz)
+
+- Hifz dashboard opened from the reader toolbar or Home, with no additional bottom navigation tab.
+- Calendar-safe day streak, total memorized ayāt, adjustable daily goal, and today-progress bar stored locally on the device.
+- From/to verse loops for the current page with 3, 5, 7, or 10 passes; optional memory pauses; and 0.75×, 1×, or 1.25× pace.
+- Hidden-text page self-test with tap-to-reveal and tap-again-to-hide behavior.
+- Selected-ayah actions for marking verses memorized, green rosette rings, and a jumpable memorized list.
 
 ### Audio
 
