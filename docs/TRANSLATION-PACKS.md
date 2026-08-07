@@ -1,6 +1,6 @@
 # Verified Translation Packs
 
-This storage foundation installs only the verified QuranEnc Amharic source `quranenc:amharic_zain`. It does not add a translation selector, change reader rendering, or enable any source in the source registry. The existing online Saheeh International resource 20 and Ibn Kathir tafsir remain outside this subsystem.
+This storage foundation installs only the verified QuranEnc Amharic source `quranenc:amharic_zain`. The Ayah Context Lens is its only reader access point and is documented in `docs/AYAH-CONTEXT-LENS.md`; the registry entry itself remains disabled and Amharic is gated by the active verified pack. The existing online Saheeh International resource 20 and Ibn Kathir tafsir remain outside this storage subsystem.
 
 ## Pinned Amharic pack
 
@@ -48,6 +48,8 @@ There is no API that updates a stored pack or verse in place. Repair removes a c
 8. In one IndexedDB transaction, add immutable pack metadata, move the current active pointer to `previousPackKey`, point `activePackKey` to the new version, and remove the staging journal.
 9. Write a small `localStorage` sentinel after activation. IndexedDB remains authoritative; the sentinel exists only to detect later browser storage reclamation.
 
+Browser acquisition uses the same-origin `/api/translation-packs/amharic` endpoint because QuranEnc does not advertise browser CORS access for the package download. The endpoint is restricted to the pinned Amharic registry entry, uses `no-store`, enforces the package size limit, and verifies the pinned raw SHA-256 before returning unchanged XML. The client repeats raw verification, normalizes all records, verifies the normalized checksum, and only then performs staged activation.
+
 Any download, validation, quota, staging, or readback failure removes the staging journal and staged records. Because activation is only the final pointer transaction, the previous active version remains readable after failure or interruption.
 
 ## Updates and rollback
@@ -72,7 +74,7 @@ Each successful activation retains the former active version as `previousPackKey
 - `getByVerseKey(verseKey)` for one canonical `chapter:verse` key.
 - `getByPageVerseKeys(verseKeys)` for the reader page's ordered verse keys, preserving order and duplicates and returning `null` for every key when no pack is active.
 
-These are storage APIs only. They are not wired into reader UI in this milestone.
+The Ayah Context Lens uses these APIs only after opening for the selected verse. It preserves the existing English translation path and never changes the Mushaf page payload or geometry.
 
 ## Sources that remain blocked
 

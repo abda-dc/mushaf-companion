@@ -41,6 +41,18 @@ export interface TranslationPackUpdateNotice {
   checkedAt: string;
 }
 
+export interface TranslationPackProgress {
+  phase: "preparing" | "downloading" | "normalizing" | "validating" | "staging" | "verifying" | "activating" | "complete";
+  percent: number;
+  message: string;
+  completedRecords: number;
+  totalRecords: 6236;
+}
+
+export interface TranslationPackOperationOptions {
+  onProgress?: (progress: TranslationPackProgress) => void;
+}
+
 export interface TranslationPackState {
   sourceId: string;
   activePackKey: string | null;
@@ -109,6 +121,7 @@ export interface TranslationPackServiceOptions {
   markerStore?: TranslationPackMarkerStore;
   sourceResolver?: (sourceId: string) => TranslationSourceRegistryEntry | null;
   adapterFactory?: (source: TranslationSourceRegistryEntry) => TranslationProviderAdapter;
+  fetchImpl?: typeof globalThis.fetch;
   storageEstimate?: () => Promise<{ usage?: number; quota?: number }>;
   now?: () => number;
   operationId?: () => string;
@@ -195,11 +208,11 @@ export class MemoryTranslationPackMarkerStore implements TranslationPackMarkerSt
 
 export class TranslationPackService {
   constructor(options?: TranslationPackServiceOptions);
-  install(sourceId?: string): Promise<{ status: "installed" | "already_installed"; pack: TranslationPackMetadata }>;
+  install(sourceId?: string, options?: TranslationPackOperationOptions): Promise<{ status: "installed" | "already_installed"; pack: TranslationPackMetadata }>;
   checkForUpdate(sourceId?: string): Promise<{ updateAvailable: boolean; observedRevision: string | null; activePackKey: string | null; replacementPerformed: false }>;
   verifyPack(packKey: string): Promise<{ valid: true; pack: TranslationPackMetadata; records: number }>;
   verifyActive(sourceId?: string): Promise<{ valid: true; pack: TranslationPackMetadata; records: number }>;
-  repair(sourceId?: string): Promise<{ status: "healthy" | "repaired"; pack: TranslationPackMetadata }>;
+  repair(sourceId?: string, options?: TranslationPackOperationOptions): Promise<{ status: "healthy" | "repaired"; pack: TranslationPackMetadata }>;
   rollback(sourceId?: string): Promise<TranslationPackMetadata>;
   deleteVersion(packKey: string, sourceId?: string): Promise<boolean>;
   deleteSource(sourceId?: string): Promise<number>;

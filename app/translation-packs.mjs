@@ -932,12 +932,27 @@ function defaultStorageEstimate() {
   return globalThis.navigator?.storage?.estimate?.() ?? Promise.resolve({ usage: undefined, quota: undefined });
 }
 
+function emitPackProgress(options, phase, percent, message, completedRecords = 0) {
+  try {
+    options?.onProgress?.(Object.freeze({
+      phase,
+      percent,
+      message,
+      completedRecords,
+      totalRecords: EXPECTED_AYAH_COUNT,
+    }));
+  } catch {
+    // Progress reporting is advisory and must never affect pack integrity.
+  }
+}
+
 export class TranslationPackService {
   constructor({
     repository = new IndexedDbTranslationPackRepository(),
     markerStore = new LocalStorageTranslationPackMarkerStore(),
     sourceResolver = findTranslationSource,
     adapterFactory = defaultAdapterFactory,
+    fetchImpl,
     storageEstimate = defaultStorageEstimate,
     now = Date.now,
     operationId = randomOperationId,
@@ -948,6 +963,7 @@ export class TranslationPackService {
     this.markerStore = markerStore;
     this.sourceResolver = sourceResolver;
     this.adapterFactory = adapterFactory;
+    this.fetchImpl = fetchImpl;
     this.storageEstimate = storageEstimate;
     this.now = now;
     this.operationId = operationId;
@@ -956,17 +972,21 @@ export class TranslationPackService {
     this.ownerId = operationId();
   }
 
-  async install(sourceId = AMHARIC_TRANSLATION_SOURCE_ID) {
+  async install(sourceId = AMHARIC_TRANSLATION_SOURCE_ID, options) {
     const source = assertSupportedSource(this.sourceResolver(sourceId));
-    return this.#withLock(sourceId, "install", (lock) => this.#installLocked(source, lock));
+    emitPackProgress(options, "preparing", 2, "Preparing the pinned Amharic source.");
+    return this.#withLock(sourceId, "install", (lock) => this.#installLocked(source, lock, options));
   }
 
-  async #installLocked(source, lock) {
+  async #installLocked(source, lock, options) {
     await this.repository.cleanupInterruptedInstalls(this.now());
     const adapter = this.adapterFactory(source);
-    const acquired = await adapter.acquire({ providerName: source.provider.name, providerId: source.provider.id });
+    emitPackProgress(options, "downloading", 8, "Downloading the exact QuranEnc package.");
+    const acquired = await adapter.acquire({ providerName: source.provider.name, providerId: source.provider.id, fetchImpl: this.fetchImpl });
     await this.#refresh(lock);
+    emitPackProgress(options, "normalizing", 28, "Normalizing the provider package without changing its text.");
     const records = await adapter.normalize(acquired);
+    emitPackProgress(options, "validating", 44, "Checking 114 surahs, 6,236 ayat, and both SHA-256 pins.", records.length);
     const providerPack = await adapter.buildPack(acquired, records);
     const pack = { ...providerPack, normalizationVersion: source.integrity.normalizationVersion };
     await assertVerifiedPack(source, acquired, pack);
@@ -976,9 +996,11 @@ export class TranslationPackService {
       await this.verifyPack(packKey);
       const activated = await this.repository.activatePack(source.sourceId, packKey, nowIso(this.now));
       this.#writeMarker(activated);
+      emitPackProgress(options, "complete", 100, "The verified Amharic pack is ready.", EXPECTED_AYAH_COUNT);
       return { status: "already_installed", pack: activated };
     }
 
+    emitPackProgress(options, "staging", 58, "Staging verified ayat without changing the active translation.", records.length);
     const canonicalBytes = new TextEncoder().encode(canonicalizeTranslationRecords(pack.records)).byteLength;
     await this.#assertQuota(canonicalBytes);
     const installedAt = nowIso(this.now);
@@ -999,11 +1021,14 @@ export class TranslationPackService {
       staged = true;
       await this.repository.stageRecords(install, pack.records, lock);
       await this.#refresh(lock);
+      emitPackProgress(options, "verifying", 82, "Reading the staged pack back and verifying its normalized checksum.", EXPECTED_AYAH_COUNT);
       const readback = await this.repository.getRecords(packKey);
       await assertVerifiedRecords(readback, pack.normalizedChecksum, source.language.script);
+      emitPackProgress(options, "activating", 96, "Activating the complete pack atomically.", EXPECTED_AYAH_COUNT);
       const activated = await this.repository.commitInstall(install, metadata, lock);
       staged = false;
       this.#writeMarker(activated);
+      emitPackProgress(options, "complete", 100, "The verified Amharic pack is ready.", EXPECTED_AYAH_COUNT);
       return { status: "installed", pack: activated };
     } catch (error) {
       if (staged) await this.repository.cleanupInstall(install.installId, this.now(), true).catch(() => {});
@@ -1015,7 +1040,7 @@ export class TranslationPackService {
     const source = assertSupportedSource(this.sourceResolver(sourceId));
     return this.#withLock(sourceId, "update-check", async () => {
       const adapter = this.adapterFactory(source);
-      const result = await adapter.checkForUpdate({ providerName: source.provider.name, providerId: source.provider.id });
+      const result = await adapter.checkForUpdate({ providerName: source.provider.name, providerId: source.provider.id, fetchImpl: this.fetchImpl });
       const notice = result.updateAvailable ? {
         observedRevision: result.observedRevision,
         registryRevision: source.edition.revision,
@@ -1049,21 +1074,23 @@ export class TranslationPackService {
     return this.verifyPack(state.activePackKey);
   }
 
-  async repair(sourceId = AMHARIC_TRANSLATION_SOURCE_ID) {
+  async repair(sourceId = AMHARIC_TRANSLATION_SOURCE_ID, options) {
     const source = assertSupportedSource(this.sourceResolver(sourceId));
     return this.#withLock(sourceId, "repair", async (lock) => {
+      emitPackProgress(options, "validating", 8, "Checking the installed Amharic pack.");
       await this.repository.cleanupInterruptedInstalls(this.now());
       const state = await this.repository.getState(sourceId);
       if (state?.activePackKey) {
         try {
           const verified = await this.verifyPack(state.activePackKey);
+          emitPackProgress(options, "complete", 100, "The installed Amharic pack is healthy.", EXPECTED_AYAH_COUNT);
           return { status: "healthy", pack: verified.pack };
         } catch (error) {
           if (!(error instanceof TranslationPackCorruptionError) && error?.code !== "translation_pack_missing") throw error;
           await this.repository.deletePack(sourceId, state.activePackKey);
         }
       }
-      return this.#installLocked(source, lock).then((result) => ({ ...result, status: "repaired" }));
+      return this.#installLocked(source, lock, options).then((result) => ({ ...result, status: "repaired" }));
     });
   }
 

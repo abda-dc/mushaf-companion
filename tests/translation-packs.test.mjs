@@ -110,8 +110,9 @@ function harness(initialFixture, options = {}) {
 test("verified Amharic install stages and atomically exposes exactly 114 surahs and 6,236 ayat", async () => {
   const v1 = await fixture("1.0.1-xml.1", "ትርጉም");
   const { repository, service } = harness(v1);
+  const progress = [];
 
-  const result = await service.install();
+  const result = await service.install(undefined, { onProgress: (item) => progress.push(item) });
   assert.equal(result.status, "installed");
   assert.equal(result.pack.sourceId, AMHARIC_TRANSLATION_SOURCE_ID);
   assert.equal(result.pack.surahCount, 114);
@@ -134,6 +135,9 @@ test("verified Amharic install stages and atomically exposes exactly 114 surahs 
   ]);
   assert.equal((await service.verifyActive()).records, 6236);
   assert.equal(repository.snapshot().installs.length, 0);
+  assert.deepEqual(progress.map((item) => item.phase), ["preparing", "downloading", "normalizing", "validating", "staging", "verifying", "activating", "complete"]);
+  assert.equal(progress.at(-1).percent, 100);
+  assert.equal(progress.at(-1).completedRecords, 6236);
 });
 
 test("raw, normalized, coverage, and stored-record corruption fail closed and repair is explicit", async () => {
