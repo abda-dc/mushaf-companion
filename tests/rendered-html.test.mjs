@@ -74,6 +74,12 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /handlePointerDown/);
   assert.match(page, /handlePointerUp/);
   assert.match(page, /type="number" min="1" max=\{TOTAL_PAGES\}/);
+  assert.match(page, /Open page jump\. Current page/);
+  assert.match(page, /Jump in the mushaf/);
+  assert.match(page, /JUZ_START_PAGES/);
+  assert.match(page, /Recent pages/);
+  assert.match(page, /Saved places/);
+  assert.match(page, /setRecentPages/);
   assert.match(page, /fetch\(`\/api\/pages\/\$\{page\}\?v=\$\{PAGE_DATA_REVISION\}`\)/);
   assert.match(page, /pageCacheRef/);
   assert.match(pageRoute, /mushaf: "1"/);
@@ -92,6 +98,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /className="panel-shell audio-sheet"/);
   assert.match(page, /event\.key === "Escape"/);
   assert.match(styles, /\.mobile-layer-bar/);
+  assert.match(styles, /\.mobile-jump-trigger/);
+  assert.match(styles, /\.jump-page-form/);
   assert.match(styles, /grid-template-columns: repeat\(7,1fr\)/);
   assert.match(styles, /grid-template-columns: repeat\(6,1fr\)/);
   assert.match(styles, /\.audio-sheet/);

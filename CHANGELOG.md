@@ -2,6 +2,19 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## 1.1.0 — 2026-08-07
+
+### Added
+
+- A dedicated mobile page-jump sheet with a visible page-number field and Go action.
+- Direct sūrah and juz navigation from the jump sheet using verified chapter metadata and the Madani juz page map.
+- Six recent-page shortcuts stored only on the device, plus quick access to bookmarked ayat.
+
+### Changed
+
+- The compact mobile header page indicator and lower page number now open the same accessible navigation sheet.
+- Reading backups and the versioned preference store now preserve recent-page history.
+
 ## 1.0.0 — 2026-08-06
 
 ### Added

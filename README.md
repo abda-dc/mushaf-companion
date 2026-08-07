@@ -36,7 +36,7 @@ Install or open the public app:
 - Previous and next page controls.
 - Touch swipe navigation.
 - Arrow, Page Up/Page Down, Home, and End keyboard navigation.
-- Direct page-jump input.
+- Direct desktop page-jump input plus a mobile jump sheet with page, sūrah, juz, recent-page, and saved-place shortcuts.
 - URL-addressable pages through `?page=<number>`.
 - Adjacent-page prefetching.
 - Last-read page and ayah persistence in local storage.
@@ -101,6 +101,7 @@ Install or open the public app:
 - Page and ayah search results.
 - Ayah bookmarks.
 - Resume from the last confirmed page and ayah.
+- Six device-local recent-page shortcuts for quickly returning to earlier reading positions.
 
 ### Installable applications
 

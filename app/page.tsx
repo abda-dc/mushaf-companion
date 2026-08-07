@@ -41,7 +41,7 @@ import {
 } from "./preferences.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
-type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | null;
+type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Jump" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -60,6 +60,7 @@ interface HifzLoop {
 
 const TOTAL_PAGES = 604;
 const PAGE_DATA_REVISION = "2026-08-06-phase-three";
+const JUZ_START_PAGES = [1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 201, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582] as const;
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
   { id: "uthman-taha", label: "Uthman Taha" },
@@ -134,6 +135,10 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState<QuranPage>(FALLBACK_PAGE);
   const [jumpValue, setJumpValue] = useState("1");
+  const [jumpChapterId, setJumpChapterId] = useState(1);
+  const [jumpJuz, setJumpJuz] = useState(1);
+  const [jumpError, setJumpError] = useState("");
+  const [recentPages, setRecentPages] = useState<number[]>([1]);
   const [loadingPage, setLoadingPage] = useState(false);
   const [turnDirection, setTurnDirection] = useState<"next" | "previous" | "">("");
   const [tajweed, setTajweed] = useState(true);
@@ -200,7 +205,7 @@ export default function Home() {
   const backupInputRef = useRef<HTMLInputElement>(null);
   const tafsirCacheRef = useRef(new Map<string, TafsirDocument>());
 
-  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" ? "Read" : overlay ?? "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Jump" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -240,6 +245,10 @@ export default function Home() {
     const matchesJuz = contentsJuz === 0 || chapter.juzs.includes(contentsJuz);
     return matchesQuery && matchesJuz;
   });
+  const savedPageShortcuts = [...new Map(bookmarks.map((bookmark) => {
+    const [savedPage, verseKey] = bookmark.split("|");
+    return [Number(savedPage), { page: Number(savedPage), verseKey }];
+  })).values()].slice(0, 6);
 
   useEffect(() => {
     const preferences = loadPreferences(localStorage);
@@ -253,6 +262,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(initialPage);
     setJumpValue(String(initialPage));
+    setRecentPages(preferences.reader.recentPages);
     setBookmarks(preferences.bookmarks);
     setHifzProgress(preferences.hifz);
     setDark(preferences.reader.theme === "dark");
@@ -275,6 +285,7 @@ export default function Home() {
       if (cancelled) return;
       lastGoodPageRef.current = data;
       setPageData(data);
+      setRecentPages((pages) => [data.page, ...pages.filter((item) => item !== data.page)].slice(0, 6));
       setTajweedFocus(null);
       setLoadingPage(false);
       setJumpValue(String(data.page));
@@ -340,11 +351,12 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     savePreferences(localStorage, {
-      version: 3,
+      version: 4,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
         lastVersePage: pageData.page,
+        recentPages,
         theme: dark ? "dark" : "light",
         tajweed,
         transliteration,
@@ -358,7 +370,7 @@ export default function Home() {
       hifz: hifzProgress,
       downloads: { wifiOnly: wifiOnlyDownloads },
     } satisfies MushafPreferences);
-  }, [selectedVerseKey, pageData.page, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, wifiOnlyDownloads, hydrated]);
+  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, wifiOnlyDownloads, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -576,11 +588,12 @@ export default function Home() {
     event.preventDefault();
     const target = Number(jumpValue);
     if (!Number.isFinite(target) || target < 1 || target > TOTAL_PAGES) {
-      setJumpValue(String(pageData.page));
-      setNotice("Enter a page number from 1 to 604.");
+      setJumpError("Enter a page number from 1 to 604.");
       return;
     }
+    setJumpError("");
     goToPage(target);
+    if (overlay === "Jump") setOverlay(null);
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
@@ -800,11 +813,12 @@ export default function Home() {
 
   function preferenceSnapshot(): MushafPreferences {
     return {
-      version: 3,
+      version: 4,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
         lastVersePage: pageData.page,
+        recentPages,
         theme: dark ? "dark" : "light",
         tajweed,
         transliteration,
@@ -848,6 +862,7 @@ export default function Home() {
       setSpeed(restored.reader.speed);
       setPageScale(restored.reader.pageScale);
       setReadingFont(restored.reader.readingFont);
+      setRecentPages(restored.reader.recentPages);
       setWifiOnlyDownloads(restored.downloads.wifiOnly);
       goToPage(restored.reader.lastPage, undefined, restored.reader.lastVerse);
       setNotice("Backup restored. Your mastery map and reading preferences are ready.");
@@ -947,6 +962,36 @@ export default function Home() {
   function openContents() {
     setOverlay("Contents");
     loadChapters();
+  }
+
+  function openJump() {
+    setJumpValue(String(pageData.page));
+    setJumpChapterId(currentChapter?.id ?? 1);
+    setJumpJuz(pageData.juz);
+    setJumpError("");
+    setOverlay("Jump");
+    loadChapters();
+  }
+
+  function openSelectedChapter() {
+    const chapter = chapters.find((item) => item.id === jumpChapterId);
+    if (!chapter) {
+      setJumpError("The sūrah index is still loading. Try again in a moment.");
+      return;
+    }
+    setJumpError("");
+    openChapter(chapter);
+  }
+
+  function openSelectedJuz() {
+    const startPage = JUZ_START_PAGES[jumpJuz - 1];
+    if (!startPage) {
+      setJumpError("Choose a juz from 1 to 30.");
+      return;
+    }
+    setJumpError("");
+    goToPage(startPage);
+    setOverlay(null);
   }
 
   function openDownloads() {
@@ -1142,11 +1187,12 @@ export default function Home() {
             <span className="eyebrow">NOW READING</span>
             <div className="title-row"><h1>{currentChapter?.name ?? "The Quran"}</h1><span>{currentChapter?.translatedName}</span></div>
           </div>
-          <form className="header-page-jump" onSubmit={submitJump} aria-label="Jump to Quran page">
+          <form className="header-page-jump desktop-page-jump" onSubmit={submitJump} aria-label="Jump to Quran page" noValidate>
             <label htmlFor="page-jump">PAGE</label>
-            <input id="page-jump" type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} aria-label="Page number" />
+            <input id="page-jump" type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-label="Page number" />
             <span>/ {TOTAL_PAGES}</span><button type="submit">Go</button>
           </form>
+          <button type="button" className="mobile-jump-trigger" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><small>PAGE</small><strong>{pageData.page}</strong><span>⌄</span></button>
           <div className="header-tools">
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
@@ -1195,7 +1241,7 @@ export default function Home() {
             {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
-              <form onSubmit={submitJump}><label className="sr-only" htmlFor="mobile-page-jump">Jump to page</label><input id="mobile-page-jump" type="number" min="1" max={TOTAL_PAGES} value={jumpValue} onChange={(event) => setJumpValue(event.target.value)} /><span>/ {TOTAL_PAGES}</span></form>
+              <button type="button" className="mobile-jump-button" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><strong>{pageData.page}</strong><span>/ {TOTAL_PAGES}</span></button>
               <button type="button" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES}>Next ›</button>
             </div>
           </div>
@@ -1299,6 +1345,35 @@ export default function Home() {
                     </section>
                   </div>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {overlay === "Jump" && (
+            <section className="panel-shell jump-panel" role="dialog" aria-modal="true" aria-labelledby="jump-title">
+              <header><div><span className="panel-kicker">GO TO A PLACE</span><h2 id="jump-title">Jump in the mushaf</h2></div>{closeButton}</header>
+              <div className="jump-content">
+                <form className="jump-page-form" onSubmit={submitJump} noValidate>
+                  <label htmlFor="jump-sheet-page"><span>PAGE NUMBER</span><strong>1–604</strong></label>
+                  <div><input id="jump-sheet-page" autoFocus type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-describedby={jumpError ? "jump-error" : undefined} /><span>/ {TOTAL_PAGES}</span><button type="submit">Go</button></div>
+                </form>
+
+                <div className="jump-selectors">
+                  <label><span>SŪRAH</span><select value={jumpChapterId} onChange={(event) => { setJumpChapterId(Number(event.target.value)); setJumpError(""); }} disabled={contentsLoading || !chapters.length} aria-label="Choose sūrah">{chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.id}. {chapter.name} · page {chapter.startPage}</option>)}</select><button type="button" onClick={openSelectedChapter} disabled={contentsLoading || !chapters.length}>Open</button></label>
+                  <label><span>JUZ</span><select value={jumpJuz} onChange={(event) => { setJumpJuz(Number(event.target.value)); setJumpError(""); }} aria-label="Choose juz">{JUZ_START_PAGES.map((startPage, index) => <option key={startPage} value={index + 1}>Juz {index + 1} · page {startPage}</option>)}</select><button type="button" onClick={openSelectedJuz}>Open</button></label>
+                </div>
+
+                {jumpError && <p className="jump-error" id="jump-error" role="alert">{jumpError}</p>}
+
+                <section className="jump-shortcuts" aria-labelledby="recent-pages-title">
+                  <div><h3 id="recent-pages-title">Recent pages</h3><small>Stored only on this device</small></div>
+                  <div className="jump-chip-list">{recentPages.map((recentPage) => <button type="button" key={recentPage} className={recentPage === pageData.page ? "current" : ""} onClick={() => { goToPage(recentPage); setOverlay(null); }}><span>PAGE</span><strong>{recentPage}</strong></button>)}</div>
+                </section>
+
+                <section className="jump-shortcuts" aria-labelledby="saved-places-title">
+                  <div><h3 id="saved-places-title">Saved places</h3><button type="button" onClick={() => setOverlay("Bookmarks")}>View all</button></div>
+                  {savedPageShortcuts.length ? <div className="jump-saved-list">{savedPageShortcuts.map((saved) => <button type="button" key={`${saved.page}|${saved.verseKey}`} onClick={() => { goToPage(saved.page, undefined, saved.verseKey); setOverlay(null); }}><span>PAGE {saved.page}</span><strong>Ayah {saved.verseKey}</strong><span aria-hidden="true">›</span></button>)}</div> : <p className="jump-empty">Bookmark an ayah to keep a shortcut here.</p>}
+                </section>
               </div>
             </section>
           )}

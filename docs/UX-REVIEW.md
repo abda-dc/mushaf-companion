@@ -1,6 +1,6 @@
 # Current reader UX review
 
-> Implementation update — 2026-08-05: the focused 0.3.0 polish pass resolved the P0 page-geometry issue and the P1 Settings, mobile learning-control, mobile audio, and navigation-consistency findings. The remaining P2 findings and visual-regression coverage are retained below as the next polish backlog.
+> Implementation update — 2026-08-07: version 1.1.0 resolves the mobile page-jump finding with one responsive sheet for page, sūrah, juz, recent pages, and saved places. The remaining P2 findings are retained below as the next polish backlog.
 
 Reviewed against the deployed 604-page reader on August 5, 2026 at desktop (`1440 × 1000`) and mobile (`390 × 844`) sizes. Page 2, the collapsed and expanded audio player, page navigation, and the Settings entry point were inspected.
 
@@ -19,6 +19,12 @@ The original review identified page fidelity, placeholder Settings, hidden mobil
 - Home, Read, Listen, Bookmarks, Search, and Settings have consistent selected states and responsive destinations.
 - Backdrop click, explicit Close, and Escape dismiss the active layer consistently.
 
+## Implemented in 1.1.0
+
+- The mobile page indicator and lower page control open one clearly labeled jump sheet.
+- The sheet supports direct page entry with an inline validation message and visible Go action.
+- Sūrah, juz, six recent pages, and saved-place shortcuts provide fast navigation without keyboard submission.
+
 ## Priority findings
 
 | Priority | Area | Current evidence | Recommended change | Acceptance check |
@@ -29,7 +35,6 @@ The original review identified page fidelity, placeholder Settings, hidden mobil
 | P1 | Mobile audio expansion | The expanded player grows upward over the reading surface, moves the primary Play control below configuration fields, and leaves only a small amount of Quran visible. | Use a three-state audio sheet: mini player, transport player, and settings sheet. Keep reciter/ayah and play controls in the top row at every state. | Expanding settings never reorders the primary transport; collapse is obvious; the sheet respects bottom safe areas and keyboard focus. |
 | P1 | Navigation semantics | Side navigation mixes destinations and actions: Read/Listen change mode, Search/Bookmarks open modals, and Home/Settings show notices. | Separate destinations from reader actions. Use actual views or sheets with consistent selected state and browser-history behavior. | Each navigation item has a predictable destination, Back closes or returns correctly, and active state always matches visible content. |
 | P1 | Page-turn model | Desktop arrows are visually clear but sit far from the page. Swipe uses a conventional left-to-next gesture even though a physical Arabic mushaf has right-to-left book logic. | Expand invisible page-edge hit targets, label destination page numbers, and establish an explicit swipe-direction preference with a sensible mushaf default. | First-use guidance explains gestures; page turns work with touch, keyboard, and controls; direction is consistent with the configured reading model. |
-| P2 | Mobile page jump | The compact header shows an unlabeled page number, while the lower page input relies on keyboard submission and has no visible Go action. | Make the page indicator a button that opens a jump sheet with page, surah, juz, recent pages, and a clear Go action. | A new user can identify and complete a page jump without relying on the keyboard’s submit affordance. |
 | P2 | Ayah selection | Individual words are interactive, but the selected ayah and available actions are not visually obvious. Bookmarking depends on the implicit selected ayah. | Highlight the full selected ayah, use a stable ayah action popover, and reserve word-level interaction for future word tools. | Tap anywhere in an ayah to select it; Bookmark/Play/Repeat/Study actions identify the exact ayah before executing. |
 | P2 | Audio repeat | The repeat button cycles Off → Ayah → Range, and range selectors are hidden in the expanded player. The current range is limited to verses loaded on the page. | Replace cycling with an explicit menu. Show the active range in the mini player and state whether it is current-page only. Later support cross-page ranges. | Users can predict the next repeat state, see the active range, and stop repeating in one action. |
 | P2 | Reciter discovery | The current reciter is visible, but changing reciter is hidden behind an unlabeled ellipsis/audio-settings action. | Make the reciter name itself a button with a chevron and use a focused reciter sheet with voice, style, download state, and preview. | Reciter change is discoverable without opening generic settings and preserves the selected ayah. |

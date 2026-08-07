@@ -1,8 +1,8 @@
 import { DEFAULT_HIFZ_PROGRESS, normalizeHifzProgress } from "./hifz-state.mjs";
 
-export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v3";
-export const PREFERENCE_SCHEMA_VERSION = 3;
-const PREVIOUS_PREFERENCE_STORAGE_KEY = "mushaf:preferences-v2";
+export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v4";
+export const PREFERENCE_SCHEMA_VERSION = 4;
+const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v3", "mushaf:preferences-v2"];
 
 const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
@@ -16,6 +16,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     lastPage: 1,
     lastVerse: "1:1",
     lastVersePage: 1,
+    recentPages: [1],
     theme: "light",
     tajweed: true,
     transliteration: false,
@@ -43,6 +44,11 @@ function normalizeBookmarks(value) {
   return [...new Set(value.filter((item) => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)))].slice(0, 5000);
 }
 
+function normalizeRecentPages(value, lastPage) {
+  const pages = Array.isArray(value) ? value : [];
+  return [...new Set([lastPage, ...pages].filter((page) => Number.isInteger(page) && page >= 1 && page <= 604))].slice(0, 6);
+}
+
 export function normalizePreferences(value) {
   const source = value && typeof value === "object" ? value : {};
   const reader = source.reader && typeof source.reader === "object" ? source.reader : {};
@@ -55,6 +61,7 @@ export function normalizePreferences(value) {
       lastPage,
       lastVerse,
       lastVersePage,
+      recentPages: normalizeRecentPages(reader.recentPages, lastPage),
       theme: reader.theme === "dark" ? "dark" : "light",
       tajweed: reader.tajweed !== false,
       transliteration: reader.transliteration === true,
@@ -94,7 +101,7 @@ export function migrateLegacyPreferences(storage) {
 
 export function loadPreferences(storage) {
   const current = parseJson(storage.getItem(PREFERENCE_STORAGE_KEY));
-  const previous = parseJson(storage.getItem(PREVIOUS_PREFERENCE_STORAGE_KEY));
+  const previous = PREVIOUS_PREFERENCE_STORAGE_KEYS.map((key) => parseJson(storage.getItem(key))).find(Boolean);
   const preferences = current ? normalizePreferences(current) : previous ? normalizePreferences(previous) : migrateLegacyPreferences(storage);
   if (!current) storage.setItem(PREFERENCE_STORAGE_KEY, JSON.stringify(preferences));
   return preferences;
