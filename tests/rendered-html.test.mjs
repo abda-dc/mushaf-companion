@@ -137,7 +137,16 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(layout, /PwaRegister/);
   assert.match(manifest, /"display": "standalone"/);
   assert.match(manifest, /"purpose": "any maskable"/);
-  assert.match(serviceWorker, /mushaf-companion-v3-tafsir/);
+  assert.match(page, /className="brand-logo"/);
+  assert.match(styles, /background: url\("\/logo\.png"\)/);
+  assert.match(layout, /\/favicon\.ico/);
+  assert.match(layout, /\/apple-touch-icon\.png/);
+  assert.match(manifest, /web-app-manifest-192x192\.png/);
+  assert.match(manifest, /web-app-manifest-512x512\.png/);
+  assert.match(serviceWorker, /mushaf-companion-v4-branding/);
+  assert.match(serviceWorker, /\/logo\.png/);
+  assert.match(pagesShell, /\.\/favicon\.ico/);
+  assert.match(pagesShell, /\.\/logo\.png/);
   assert.match(pagesShell, /mushaf-companion\.abda-dc\.chatgpt\.site/);
   assert.match(pagesShell, /beforeinstallprompt/);
   assert.match(pagesWorkflow, /actions\/deploy-pages@v5/);

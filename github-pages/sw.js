@@ -1,6 +1,6 @@
-const CACHE_NAME = "mushaf-pages-v1";
+const CACHE_NAME = "mushaf-pages-v2-branding";
 const asset = (path) => new URL(path, self.registration.scope).href;
-const SHELL = ["./", "./index.html", "./offline.html", "./icon.svg", "./manifest.webmanifest"].map(asset);
+const SHELL = ["./", "./index.html", "./offline.html", "./logo.png", "./favicon.ico", "./favicon-96x96.png", "./apple-touch-icon.png", "./web-app-manifest-192x192.png", "./web-app-manifest-512x512.png", "./manifest.webmanifest"].map(asset);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
