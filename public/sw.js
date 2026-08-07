@@ -1,5 +1,5 @@
-const CACHE_NAME = "mushaf-companion-v3-tafsir";
-const SHELL = ["/", "/offline.html", "/icon.svg", "/og.png", "/manifest.webmanifest"];
+const CACHE_NAME = "mushaf-companion-v4-branding";
+const SHELL = ["/", "/offline.html", "/logo.png", "/favicon.ico", "/favicon-96x96.png", "/apple-touch-icon.png", "/web-app-manifest-192x192.png", "/web-app-manifest-512x512.png", "/og.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

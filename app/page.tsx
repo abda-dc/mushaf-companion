@@ -1170,7 +1170,7 @@ export default function Home() {
   return (
     <main className={`app-shell ${dark ? "dark" : ""} page-scale-${pageScale}`}>
       <aside className="side-rail" aria-label="Primary navigation">
-        <div className="brand-mark" aria-label="Mushaf Companion"><span>م</span></div>
+        <div className="brand-mark" aria-label="Mushaf Companion"><span className="brand-logo" aria-hidden="true" /></div>
         <nav>
           {NAV_ITEMS.map((item) => (
             <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}>
