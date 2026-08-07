@@ -1,4 +1,5 @@
 import { TAFSIR_RESOURCE } from "./tafsir-source.mjs";
+import { TRANSLATION_SOURCE_REGISTRY_MANIFEST } from "./content/source-registry.ts";
 
 export const CONTENT_MANIFEST = {
   schemaVersion: 1,
@@ -65,6 +66,7 @@ export const CONTENT_MANIFEST = {
     },
     tafsir: TAFSIR_RESOURCE,
   },
+  translationSources: TRANSLATION_SOURCE_REGISTRY_MANIFEST,
   integrity: {
     algorithm: "SHA-256",
     scope: "Normalized page number, verse keys, Arabic text, line mapping, and optional learning layers",

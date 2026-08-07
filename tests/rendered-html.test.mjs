@@ -36,6 +36,7 @@ test("server-renders a complete page-navigation reader shell", async () => {
   assert.match(html, /name="theme-color" content="#0f3028"/);
   assert.match(html, /name="mobile-web-app-capable" content="yes"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+  assert.doesNotMatch(html, /Amharic|Somali|Afaan Oromoo/);
 });
 
 test("implements dynamic Madani pages and every requested navigation path", async () => {
