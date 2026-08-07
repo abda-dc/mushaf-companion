@@ -1,6 +1,6 @@
 # Multilingual Quran Translation Sources
 
-This document records the Milestone 1 source-registry foundation. It does not enable a translation selector, expose a new translation in the reader, or create an offline pack. All registry entries are disabled by default. The existing Saheeh International translation continues through the legacy singular resource in `app/content-manifest.ts`; Ibn Kathir resource 169 is unchanged.
+This document records the source-registry foundation. It does not enable a translation selector or expose a new translation in the reader. All registry entries remain disabled by default. The approved Amharic source now has a separate verified storage foundation documented in `docs/TRANSLATION-PACKS.md`; no reader UI consumes it. The existing Saheeh International translation continues through the legacy singular resource in `app/content-manifest.ts`; Ibn Kathir resource 169 is unchanged.
 
 ## Activation policy
 
@@ -24,7 +24,7 @@ All checksums below were calculated from the exact provider responses retrieved 
 
 | Source ID | Language / script | Translator; organization; publisher | Status | Edition / revision | Coverage | Offline status |
 | --- | --- | --- | --- | --- | --- | --- |
-| `quranenc:amharic_zain` | Amharic (`am`, `amh`), Ethiopic, LTR | Muhammad Zain Zahruddin; Africa Academy; publisher: Africa Academy | Approved candidate; registry disabled; not exposed in the reader | `1.0.1`; `1.0.1-xml.1`; published 2024-06-11; updated 2026-01-20 | 114 surahs, 6,236 ayat; no missing, duplicate, empty, invalid, or wrong-script records | QuranEnc permits download and republication under its conditions; no pack is created in Milestone 1 |
+| `quranenc:amharic_zain` | Amharic (`am`, `amh`), Ethiopic, LTR | Muhammad Zain Zahruddin; Africa Academy; publisher: Africa Academy | Approved candidate; registry disabled; storage-only pack foundation; not exposed in the reader | `1.0.1`; `1.0.1-xml.1`; published 2024-06-11; updated 2026-01-20 | 114 surahs, 6,236 ayat; no missing, duplicate, empty, invalid, or wrong-script records | QuranEnc permits download and republication under its conditions; explicit verified installation is supported by `app/translation-packs.mjs` |
 | `quranenc:somali_yacob` | Somali (`so`, `som`), Latin, LTR | Abdullah Hasan Yaqoub; responsible organization not confirmed; publisher not confirmed | Blocked | `1.0.26`; `1.0.26-xml.1`; published/updated 2025-09-04 | 114 surahs, 6,236 ayat; no missing, duplicate, empty, invalid, or wrong-script records | Technically permitted by QuranEnc terms, but activation and pack creation are blocked until publisher/responsible-organization attribution is confirmed |
 | `quranenc:oromo_ababor` | Afaan Oromoo (`om`, `orm`), Latin, LTR | Gali Ababor Abaghona; publisher not confirmed | Blocked | `1.0.3`; `1.0.3-xml.1`; published/updated 2025-07-13 | 114 surahs, 6,236 ayat; no missing, duplicate, empty, invalid, or wrong-script records | Technically permitted by QuranEnc terms, but activation and pack creation are blocked until original publisher attribution is confirmed |
 | `quran-foundation:translation:20` | English (`en`, `eng`), Latin, LTR | Saheeh International; Quran Foundation content services; publisher: Saheeh International | Existing online legacy source; new registry disabled | Quran.com resource `20`; registry revision `2026-08-06-resource-20-legacy-online`; upstream publication date not supplied | 114 surahs and 6,236 non-empty exact-resource records in the audit response | Permanent storage prohibited by registry policy without express Quran Foundation permission; no permanent pack URL is registered |
@@ -92,4 +92,4 @@ The audit rejects provider-ID or revision mismatches, DTD/entity-bearing or over
 6. Verify 114 surahs, 6,236 canonical verse keys, non-empty values, script, raw SHA-256, and normalized SHA-256.
 7. Obtain human review of the attribution and permission record. Resolve every blocker in the registry and documentation.
 8. Run lint, the full test suite, the production build, and `npm run audit:translations`.
-9. Enable the source only in a later, separately reviewed milestone. Pack creation and UI exposure must not be combined with source discovery.
+9. Enable the source and expose it in the reader only in a later, separately reviewed milestone. Storage foundations and UI exposure must remain independently reviewable.
