@@ -8,7 +8,7 @@ Mushaf Companion is a calm, page-first Quran reader designed to preserve the vis
 
 The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior.
 
-![Mushaf Companion preview](./public/og.png)
+![Mushaf Companion cover](./public/mushaf-companion-cover.jpg)
 
 ## Live application
 
