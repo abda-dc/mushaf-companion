@@ -129,6 +129,8 @@ Browser reader
 
 The page API obtains content from the Quran Foundation/Quran.com Content API, validates required payloads, aligns tajweed markup to words, and returns a normalized page model. Content-fetch failures return an error response; they are not silently presented as verified Quran text.
 
+A disabled-by-default multilingual source registry now records candidate identity, attribution, rights, edition, coverage, and integrity metadata independently of the reader. Provider adapters require exact resource identifiers and can audit candidate packages without enabling or exposing them in the UI. See [`docs/MULTILINGUAL-SOURCES.md`](./docs/MULTILINGUAL-SOURCES.md).
+
 ## Local development
 
 ### Prerequisites
@@ -156,6 +158,7 @@ npm run start    # Run the production build on port 5550
 npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint
 npm run audit:content        # Verify all 604 pages and 6,236 verse keys against the source API
+npm run audit:translations   # Verify registered translation identities, coverage, script, and checksums
 npm run mobile:sync           # Sync both native projects
 npm run mobile:android:debug  # Build an Android debug APK on Windows
 npm run mobile:android:bundle # Build an unsigned Android release AAB on Windows
@@ -192,6 +195,7 @@ github-pages/          Static installable PWA shell deployed by GitHub Actions
 docs/
   ANALYTICS.md         Future analytics and event contract
   OFFLINE-AUDIO.md     Offline pack integrity, recovery, and platform limits
+  MULTILINGUAL-SOURCES.md Candidate translation registry, rights, coverage, checksums, and approval process
   TAFSIR.md            Tafsir source, safety, mapping, and reader behavior
   ROADMAP.md           Prioritized translations, tafsir, and offline roadmap
   UX-REVIEW.md         Current reader UX findings and acceptance checks

@@ -28,6 +28,8 @@ test("page delivery enforces provenance, checksum, and fixed line slots", async 
   assert.match(manifest, /Hafs 'an Asim/);
   assert.match(manifest, /Saheeh International/);
   assert.match(manifest, /TAFSIR_RESOURCE/);
+  assert.match(manifest, /TRANSLATION_SOURCE_REGISTRY_MANIFEST/);
+  assert.match(manifest, /translationSources:/);
   assert.match(manifest, /attribution:/);
   assert.match(manifest, /license:/);
 });
