@@ -102,7 +102,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(styles, /\.mobile-jump-trigger/);
   assert.match(styles, /\.jump-page-form/);
   assert.match(styles, /grid-template-columns: repeat\(7,1fr\)/);
-  assert.match(styles, /grid-template-columns: repeat\(6,1fr\)/);
+  assert.equal((styles.match(/grid-template-columns: repeat\(7,1fr\)/g) ?? []).length, 2);
   assert.match(styles, /\.audio-sheet/);
   assert.match(styles, /\.ayah-rosette::before/);
   assert.match(styles, /\.ayah-rosette::after/);

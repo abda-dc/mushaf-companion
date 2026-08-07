@@ -16,6 +16,9 @@ import { OfflineAudioPanel } from "./offline-audio-panel";
 import { formatAudioBytes, getOfflineAudioStats, getVerifiedAudioBlob, type OfflineAudioPack } from "./offline-audio.mjs";
 import { TafsirPanel } from "./tafsir-panel";
 import type { TafsirDocument } from "./tafsir-source.mjs";
+import { AyahContextLens } from "./ayah-context-lens";
+import { findTranslationSource } from "./content/source-registry";
+import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
 import {
   DEFAULT_HIFZ_PROGRESS,
   buildDailyPlan,
@@ -41,7 +44,7 @@ import {
 } from "./preferences.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
-type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Jump" | null;
+type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -78,6 +81,18 @@ const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Settings", glyph: "⚙" },
 ];
 const FONT_LOADS = new Map<string, Promise<string>>();
+const AMHARIC_PACK_SOURCE = findTranslationSource("quranenc:amharic_zain");
+
+function fetchTranslationPackSource(input: RequestInfo | URL, init?: RequestInit) {
+  const url = input instanceof Request ? input.url : String(input);
+  if (url === AMHARIC_PACK_SOURCE?.provider.packageUrl) {
+    return fetch("/api/translation-packs/amharic", init);
+  }
+  if (url === AMHARIC_PACK_SOURCE?.provider.checkForUpdatesUrl) {
+    return fetch("/api/translation-packs/amharic?operation=update", init);
+  }
+  return Promise.reject(new Error("The requested translation-pack source is not enabled in this reader."));
+}
 
 interface TajweedFocus {
   word: string;
@@ -204,8 +219,10 @@ export default function Home() {
   const hifzPauseTimerRef = useRef<number | null>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const tafsirCacheRef = useRef(new Map<string, TafsirDocument>());
+  const translationPackServiceRef = useRef<TranslationPackService | null>(null);
+  const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Jump" ? "Read" : overlay ?? "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -466,7 +483,7 @@ export default function Home() {
   }, [search, overlay]);
 
   useEffect(() => {
-    if (overlay !== "Tafsir" || !selectedVerseKey) return;
+    if ((overlay !== "Tafsir" && overlay !== "Context") || !selectedVerseKey) return;
     let cancelled = false;
     const controller = new AbortController();
     const cached = tafsirCacheRef.current.get(selectedVerseKey);
@@ -509,8 +526,10 @@ export default function Home() {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && (overlay || tajweedGuideOpen)) {
         event.preventDefault();
+        const restoreContextFocus = overlay === "Context";
         setOverlay(null);
         setTajweedGuideOpen(false);
+        if (restoreContextFocus) queueMicrotask(() => contextTriggerRef.current?.focus());
         return;
       }
       if (overlay || tajweedGuideOpen || loadingPage) return;
@@ -943,6 +962,23 @@ export default function Home() {
     setOverlay("Tafsir");
   }
 
+  function openContextLens(trigger: HTMLButtonElement) {
+    if (!pageData.verses.some((verse) => verse.key === selectedVerseKey)) {
+      setNotice("Select an ayah on its Quran page before opening context.");
+      return;
+    }
+    contextTriggerRef.current = trigger;
+    translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: fetchTranslationPackSource });
+    setVerseActionsOpen(false);
+    setTajweedFocus(null);
+    setOverlay("Context");
+  }
+
+  function closeContextLens() {
+    setOverlay(null);
+    queueMicrotask(() => contextTriggerRef.current?.focus());
+  }
+
   function moveStudyAyah(direction: -1 | 1) {
     const nextIndex = currentVerseIndex + direction;
     const nextVerse = pageData.verses[nextIndex];
@@ -1197,6 +1233,7 @@ export default function Home() {
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${translation ? "active" : ""}`} onClick={() => setTranslation((value) => !value)} aria-label="Toggle Saheeh International translation"><span>Translation</span></button>
+            <button type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Context" ? "active" : ""}`} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Context Lens for selected ayah"><span>Context</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Tafsir" ? "active" : ""}`} onClick={openTafsir} aria-label="Open tafsir for selected ayah"><span>Tafsir</span></button>
             <button type="button" className={`toggle-control hifz-shortcut ${hifzHidden || hifzLoop ? "active" : ""}`} onClick={() => setOverlay("Hifz")} aria-label="Open Hifz memorization mode"><span>Hifz</span></button>
             <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
@@ -1211,6 +1248,7 @@ export default function Home() {
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
           <button type="button" className={translation ? "active" : ""} onClick={() => setTranslation((value) => !value)} aria-pressed={translation}>Translation</button>
+          <button type="button" className={overlay === "Context" ? "active" : ""} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Context Lens for selected ayah">Context</button>
           <button type="button" className={overlay === "Tafsir" ? "active" : ""} onClick={openTafsir}>Tafsir</button>
           <button type="button" className={hifzHidden || hifzLoop ? "active" : ""} onClick={() => setOverlay("Hifz")}>Hifz</button>
           <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
@@ -1238,7 +1276,7 @@ export default function Home() {
             {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
             {translation && selectedVerse && <aside className="learning-strip translation-strip" aria-live="polite"><span>SAHEEH INTERNATIONAL · AYAH {selectedVerse.key}</span><p>{selectedVerse.translation || "Translation is temporarily unavailable for this ayah."}</p></aside>}
-            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
+            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="context-action" onClick={(event) => openContextLens(event.currentTarget)}>Context lens</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
               <button type="button" className="mobile-jump-button" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><strong>{pageData.page}</strong><span>/ {TOTAL_PAGES}</span></button>
@@ -1280,7 +1318,7 @@ export default function Home() {
       </nav>
 
       {overlay && (
-        <div className={`layer-backdrop ${overlay === "Listen" ? "audio-layer" : ""}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setOverlay(null); }}>
+        <div className={`layer-backdrop ${overlay === "Listen" ? "audio-layer" : ""} ${overlay === "Context" ? "context-lens-layer" : ""}`} onMouseDown={(event) => { if (event.target === event.currentTarget) { if (overlay === "Context") closeContextLens(); else setOverlay(null); } }}>
           {overlay === "Home" && (
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
@@ -1462,6 +1500,29 @@ export default function Home() {
               onMove={moveStudyAyah}
               onRetry={() => setTafsirRevision((value) => value + 1)}
               onClose={() => setOverlay(null)}
+            />
+          )}
+
+          {overlay === "Context" && selectedVerse && translationPackServiceRef.current && (
+            <AyahContextLens
+              service={translationPackServiceRef.current}
+              verseKey={selectedVerseKey}
+              surahNumber={currentChapter?.id ?? Number(selectedVerseKey.split(":")[0])}
+              surahName={currentChapter?.name ?? "Quran"}
+              surahMeaning={currentChapter?.translatedName ?? ""}
+              page={pageData.page}
+              juz={pageData.juz}
+              hizb={pageData.hizb}
+              arabic={selectedVerse.uthmani}
+              englishTranslation={selectedVerse.translation}
+              tafsirDocument={displayedTafsir}
+              tafsirLoading={tafsirLoading || (!displayedTafsir && !tafsirError)}
+              tafsirError={tafsirError}
+              canMovePrevious={canStudyPrevious}
+              canMoveNext={canStudyNext}
+              onMoveTafsir={moveStudyAyah}
+              onRetryTafsir={() => setTafsirRevision((value) => value + 1)}
+              onClose={closeContextLens}
             />
           )}
 
