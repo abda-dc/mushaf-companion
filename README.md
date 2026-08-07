@@ -4,6 +4,8 @@
 [![Native packages](https://github.com/abda-dc/mushaf-companion/actions/workflows/native-packages.yml/badge.svg)](https://github.com/abda-dc/mushaf-companion/actions/workflows/native-packages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-c8a86b.svg)](./LICENSE)
 
+**Mushaf Companion** is a product of **M7SK Technologies**.
+
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
 The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior.
@@ -246,8 +248,13 @@ The reader itself remains a Cloudflare-compatible vinext application because pag
 
 Pushes to `main` build and test the full reader before publishing the Pages shell. Version tags beginning with `v` also build downloadable native artifacts.
 
-## License
+## Contact and ownership
 
+For product questions and support, contact [hello@aptopsagency.com](mailto:hello@aptopsagency.com).
+
+Copyright © 2026 **M7SK Technologies**. Source code is licensed under the MIT License; Quran text, typography, translations, tafsir, recitation recordings, and third-party data retain their respective rights and licenses.
+
+## License
 The application source is available under the [MIT License](./LICENSE). See [CONTRIBUTING.md](./CONTRIBUTING.md) before proposing changes.
 
 Quran text, typography, translations, tafsir, recitation recordings, and data returned by third-party services are not relicensed by the MIT License. They retain the terms and attribution required by their respective providers, including the [Quran.com API](https://api-docs.quran.com/), [EveryAyah](https://everyayah.com/), and other sources documented in the code.
