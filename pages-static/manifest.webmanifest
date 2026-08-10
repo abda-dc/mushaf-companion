@@ -1,0 +1,35 @@
+{
+  "id": "/mushaf-companion/",
+  "name": "Mushaf Companion",
+  "short_name": "Mushaf",
+  "description": "A calm, page-faithful Quran reader with all 604 Madani mushaf pages, memorization guidance, offline recitation packs, translation, Context Lens, and source-attributed tafsir.",
+  "lang": "en",
+  "dir": "auto",
+  "start_url": "/mushaf-companion/?source=pwa",
+  "scope": "/mushaf-companion/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0f3028",
+  "theme_color": "#0f3028",
+  "categories": ["books", "education", "lifestyle"],
+  "icons": [
+    {
+      "src": "/mushaf-companion/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/mushaf-companion/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Continue reading", "short_name": "Read", "url": "/mushaf-companion/?source=pwa" },
+    { "name": "Open Al-Fatihah", "short_name": "Al-Fatihah", "url": "/mushaf-companion/?page=1&source=pwa" },
+    { "name": "Open Ayat al-Kursi", "short_name": "Ayat al-Kursi", "url": "/mushaf-companion/?page=42&source=pwa" }
+  ]
+}

@@ -17,7 +17,8 @@ import { formatAudioBytes, getOfflineAudioStats, getVerifiedAudioBlob, type Offl
 import { TafsirPanel } from "./tafsir-panel";
 import type { TafsirDocument } from "./tafsir-source.mjs";
 import { AyahContextLens } from "./ayah-context-lens";
-import { findTranslationSource } from "./content/source-registry";
+import { getReaderTransport } from "./content/runtime-transport";
+import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
 import {
   DEFAULT_HIFZ_PROGRESS,
@@ -81,18 +82,6 @@ const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Settings", glyph: "⚙" },
 ];
 const FONT_LOADS = new Map<string, Promise<string>>();
-const AMHARIC_PACK_SOURCE = findTranslationSource("quranenc:amharic_zain");
-
-function fetchTranslationPackSource(input: RequestInfo | URL, init?: RequestInit) {
-  const url = input instanceof Request ? input.url : String(input);
-  if (url === AMHARIC_PACK_SOURCE?.provider.packageUrl) {
-    return fetch("/api/translation-packs/amharic", init);
-  }
-  if (url === AMHARIC_PACK_SOURCE?.provider.checkForUpdatesUrl) {
-    return fetch("/api/translation-packs/amharic?operation=update", init);
-  }
-  return Promise.reject(new Error("The requested translation-pack source is not enabled in this reader."));
-}
 
 interface TajweedFocus {
   word: string;
@@ -146,6 +135,7 @@ function chapterForVerse(pageData: QuranPage, verseKey: string) {
 }
 
 export default function Home() {
+  const contentTransport = getReaderTransport();
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState<QuranPage>(FALLBACK_PAGE);
@@ -338,17 +328,13 @@ export default function Home() {
       return () => { cancelled = true; };
     }
     setLoadingPage(true);
-    fetch(`/api/pages/${page}?v=${PAGE_DATA_REVISION}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Page unavailable");
-        return response.json() as Promise<unknown>;
-      })
+    contentTransport.loadPage(page)
       .then((data) => {
         if (!isVerifiedPage(data, page)) throw new Error("Page integrity check failed");
         pageCacheRef.current.set(page, data);
         applyPage(data);
         [page - 1, page + 1].filter((item) => item >= 1 && item <= TOTAL_PAGES && !pageCacheRef.current.has(item)).forEach((item) => {
-          fetch(`/api/pages/${item}?v=${PAGE_DATA_REVISION}`).then((response) => response.ok ? response.json() as Promise<unknown> : null).then((next) => {
+          contentTransport.loadPage(item).then((next) => {
             if (isVerifiedPage(next, item)) pageCacheRef.current.set(item, next);
           }).catch(() => undefined);
         });
@@ -363,7 +349,7 @@ export default function Home() {
         setNotice("Verified page data is temporarily unavailable. Your last confirmed page is still open.");
       });
     return () => { cancelled = true; };
-  }, [page, hydrated]);
+  }, [page, hydrated, contentTransport]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -470,17 +456,13 @@ export default function Home() {
     if (!search.trim()) return;
     const timer = window.setTimeout(() => {
       setSearching(true);
-      fetch(`/api/search?q=${encodeURIComponent(search)}`)
-        .then(async (response) => {
-          if (!response.ok) throw new Error("Search unavailable");
-          return response.json() as Promise<{ results: SearchResult[] }>;
-        })
+      contentTransport.search(search)
         .then((payload) => setSearchResults(payload.results))
         .catch(() => setSearchResults([]))
         .finally(() => setSearching(false));
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [search, overlay]);
+  }, [search, overlay, contentTransport]);
 
   useEffect(() => {
     if ((overlay !== "Tafsir" && overlay !== "Context") || !selectedVerseKey) return;
@@ -498,10 +480,8 @@ export default function Home() {
       }
     });
     if (!cached) {
-      fetch(`/api/tafsir?verse=${encodeURIComponent(selectedVerseKey)}`, { signal: controller.signal })
-        .then(async (response) => {
-          const payload = await response.json() as unknown;
-          if (!response.ok) throw new Error((payload as { error?: string })?.error ?? "Tafsir is unavailable.");
+      contentTransport.loadTafsir(selectedVerseKey, controller.signal)
+        .then((payload) => {
           if (!isVerifiedTafsir(payload, selectedVerseKey)) throw new Error("Tafsir integrity verification failed.");
           return payload;
         })
@@ -520,7 +500,7 @@ export default function Home() {
       cancelled = true;
       controller.abort();
     };
-  }, [overlay, selectedVerseKey, tafsirRevision]);
+  }, [overlay, selectedVerseKey, tafsirRevision, contentTransport]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -968,7 +948,7 @@ export default function Home() {
       return;
     }
     contextTriggerRef.current = trigger;
-    translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: fetchTranslationPackSource });
+    translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: contentTransport.fetchTranslationPackSource });
     setVerseActionsOpen(false);
     setTajweedFocus(null);
     setOverlay("Context");
@@ -1059,12 +1039,8 @@ export default function Home() {
   function loadChapters() {
     if (chapters.length || contentsLoading) return;
     setContentsLoading(true);
-    fetch("/api/chapters")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Contents unavailable");
-        return response.json() as Promise<{ chapters: QuranChapterInfo[] }>;
-      })
-      .then((payload) => setChapters(payload.chapters))
+    contentTransport.loadChapters()
+      .then((items) => setChapters(items))
       .catch(() => setNotice("The verified sūrah index could not be opened. Please try again."))
       .finally(() => setContentsLoading(false));
   }
@@ -1104,9 +1080,7 @@ export default function Home() {
       setSelectedVerseKey(verseKey);
     } else {
       try {
-        const response = await fetch(`/api/lookup?verse=${encodeURIComponent(verseKey)}`);
-        if (!response.ok) throw new Error("Lookup failed");
-        const target = await response.json() as { page: number; verseKey: string };
+        const target = await contentTransport.lookupVerse(verseKey);
         goToPage(target.page, undefined, target.verseKey);
       } catch {
         pendingAutoplayRef.current = false;
@@ -1127,9 +1101,7 @@ export default function Home() {
 
   async function openVerse(verseKey: string, closeGuide = false) {
     try {
-      const response = await fetch(`/api/lookup?verse=${encodeURIComponent(verseKey)}`);
-      if (!response.ok) throw new Error("Lookup failed");
-      const target = await response.json() as { page: number; verseKey: string };
+      const target = await contentTransport.lookupVerse(verseKey);
       goToPage(target.page, undefined, target.verseKey);
       setOverlay(null);
       if (closeGuide) setTajweedGuideOpen(false);
@@ -1151,9 +1123,7 @@ export default function Home() {
     }
     if (!result.verseKey) return;
     try {
-      const response = await fetch(`/api/lookup?verse=${encodeURIComponent(result.verseKey)}`);
-      if (!response.ok) throw new Error("Lookup failed");
-      const target = await response.json() as { page: number; verseKey: string };
+      const target = await contentTransport.lookupVerse(result.verseKey);
       goToPage(target.page, undefined, target.verseKey);
       setOverlay(null);
     } catch {
@@ -1206,7 +1176,7 @@ export default function Home() {
   return (
     <main className={`app-shell ${dark ? "dark" : ""} page-scale-${pageScale}`}>
       <aside className="side-rail" aria-label="Primary navigation">
-        <div className="brand-mark" aria-label="Mushaf Companion"><span className="brand-logo" aria-hidden="true" /></div>
+        <div className="brand-mark" aria-label="Mushaf Companion"><span className="brand-logo" style={{ backgroundImage: `url("${appPath("logo.png")}")` }} aria-hidden="true" /></div>
         <nav>
           {NAV_ITEMS.map((item) => (
             <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}>
@@ -1469,7 +1439,7 @@ export default function Home() {
                 <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
                 <section className="settings-group offline-settings"><h3>Offline audio</h3><p>{offlineAudioStats.completePacks} verified packs · {formatAudioBytes(offlineAudioStats.usedBytes)} on this device.</p><button type="button" onClick={openDownloads}>Manage downloads <span>→</span></button><small>Surah and juz packs are stored privately in this browser.</small></section>
                 <section className="settings-group data-portability"><h3>Private backup</h3><p>Your reading history and mastery map stay on this device unless you download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
-                <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href="/api/content-manifest" target="_blank" rel="noreferrer">view sources</a></small></footer>
+                <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href={contentTransport.contentManifestUrl} target="_blank" rel="noreferrer">view sources</a></small></footer>
               </div>
             </section>
           )}
