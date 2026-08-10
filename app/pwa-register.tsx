@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { appPath } from "./runtime-config";
 
 export function PwaRegister() {
   useEffect(() => {
@@ -14,7 +15,7 @@ export function PwaRegister() {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
+    navigator.serviceWorker.register(appPath("sw.js"), { scope: appPath(), updateViaCache: "none" }).catch((error) => {
       console.warn("Mushaf Companion service worker registration failed", error);
     });
 

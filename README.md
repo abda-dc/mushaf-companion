@@ -16,8 +16,7 @@ The current implementation supports all 604 Quran pages, a verified 114-sūrah c
 
 Install or open the public app:
 
-- [GitHub Pages PWA](https://abda-dc.github.io/mushaf-companion/) — the public, installable entry point.
-- [Direct reader](https://mushaf-companion.abda-dc.chatgpt.site/) — the server-backed application used by the PWA and native shells.
+- [GitHub Pages PWA](https://abda-dc.github.io/mushaf-companion/) — the complete standalone reader and installable public application.
 
 ## Product principles
 
@@ -62,7 +61,7 @@ Install or open the public app:
 - Open from the desktop toolbar, mobile assistance controls, Settings, or selected-ayah actions.
 - Responsive long-form study panel with fixed ayah context and previous/next ayah navigation across page boundaries.
 - Explicit source, author, edition, revision, licensing, single/multi-ayah section boundaries, and SHA-256 provenance.
-- Server-side structured-text normalization; raw provider HTML is never inserted into the browser DOM.
+- Shared structured-text normalization; raw provider HTML is never inserted into the browser DOM.
 - In-session and HTTP caching with clear loading, unavailable, retry, and multi-verse-section states.
 
 ### Memorization (Hifz)
@@ -108,26 +107,26 @@ Install or open the public app:
 ### Installable applications
 
 - Installable PWA with standalone display metadata, app shortcuts, update handling, and a branded offline screen.
-- GitHub Pages PWA entry point with an install prompt on supported browsers.
+- Standalone GitHub Pages PWA containing the real React reader, with repository-base-safe assets and service-worker scope.
 - Capacitor 8 Android and iOS projects using `com.mushafcompanion.reader`.
 - Automated Android debug APK, unsigned release AAB, and unsigned iOS simulator package builds.
 
 ## Architecture
 
-Mushaf Companion is a full-stack React application built with Next-compatible App Router conventions through vinext and Vite. Client and API routes are served by one process.
+Mushaf Companion uses one React reader with two content transports. Local/server builds use the vinext API routes. The GitHub Pages build uses browser-safe Quran Foundation requests plus build-produced, rights-compatible static metadata and Amharic package assets. Both modes share the same page, chapter, search, audio-manifest, and tafsir normalization and integrity code.
 
 ```text
-Browser reader
-  ├─ /api/pages/:page  ── verified page, line, tajweed and transliteration data
-  ├─ /api/audio-manifest ── versioned sūrah/juz download plans and provider attribution
-  ├─ /api/tafsir        ── sanitized, checksummed Ibn Kathir sections by verse key
-  ├─ /api/search       ── page, surah and verse search
-  ├─ /api/lookup       ── verse-to-page mapping
-  ├─ /api/chapters     ── verified chapter, juz and revelation index
-  └─ audio providers   ── verse-level recitation files
+Shared React reader
+  ├─ server transport → same-origin /api/* routes
+  ├─ Pages transport  → CORS-safe Quran Foundation Content API
+  ├─ shared source normalization and SHA-256 provenance
+  ├─ build-verified Amharic package → browser re-verification → IndexedDB
+  └─ audio providers → streaming and verified offline packs
 ```
 
-The page API obtains content from the Quran Foundation/Quran.com Content API, validates required payloads, aligns tajweed markup to words, and returns a normalized page model. Content-fetch failures return an error response; they are not silently presented as verified Quran text.
+The shared page source obtains content from the Quran Foundation/Quran.com Content API, validates required payloads, aligns tajweed markup to words, computes page provenance, and returns a normalized page model. Content-fetch failures are not silently presented as verified Quran text.
+
+See [`docs/STANDALONE-PAGES.md`](./docs/STANDALONE-PAGES.md) for the complete static transport, source-rights, PWA, and independent verification design.
 
 A disabled-by-default multilingual source registry now records candidate identity, attribution, rights, edition, coverage, and integrity metadata independently of the reader. Provider adapters require exact resource identifiers and can audit candidate packages without enabling or exposing them in the UI. See [`docs/MULTILINGUAL-SOURCES.md`](./docs/MULTILINGUAL-SOURCES.md).
 
@@ -154,6 +153,8 @@ The frontend and all `/api/*` routes use the same full-stack server on port `555
 ```bash
 npm run dev      # Start the development server on port 5550
 npm run build    # Create a production build
+npm run build:pages   # Create the standalone GitHub Pages reader in _site/
+npm run verify:pages  # Reject wrappers, server API paths, bad base paths, and invalid PWA scope
 npm run start    # Run the production build on port 5550
 npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint
@@ -182,7 +183,8 @@ No application environment variables are required for the current read-only Qura
 
 ```text
 app/
-  api/                 Server-side Quran data adapters
+  api/                 Server-mode route adapters
+  content/             Shared verified sources plus server/Pages transports
   globals.css          Reader, audio, modal, mobile, and theme styling
   page.tsx             Mushaf reader and interaction state
   quran-data.ts        Shared page, verse, reciter, and search types
@@ -191,7 +193,7 @@ app/
   tajweed-guide.ts     Tajweed taxonomy, teaching copy, and 85 linked examples
 android/               Capacitor Android Studio project
 ios/                   Capacitor Xcode project
-github-pages/          Static installable PWA shell deployed by GitHub Actions
+pages-static/          Standalone Pages entry, manifest, offline page, and service worker
 docs/
   ANALYTICS.md         Future analytics and event contract
   OFFLINE-AUDIO.md     Offline pack integrity, recovery, and platform limits
@@ -200,6 +202,7 @@ docs/
   ROADMAP.md           Prioritized translations, tafsir, and offline roadmap
   UX-REVIEW.md         Current reader UX findings and acceptance checks
   MOBILE.md            Android/iOS packaging and signing guide
+  STANDALONE-PAGES.md  GitHub Pages runtime, source, PWA, and verification architecture
 tests/
   rendered-html.test.mjs
 worker/
@@ -246,9 +249,9 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 
 ## Deployment
 
-The public entry point is deployed to GitHub Pages by [`.github/workflows/pages.yml`](./.github/workflows/pages.yml). GitHub Pages serves the installable PWA shell and loads the public server-backed reader full-screen.
+The public application is built and deployed to GitHub Pages by [`.github/workflows/pages.yml`](./.github/workflows/pages.yml). The workflow runs lint, the complete tests, the translation audit, `npm run build:pages`, and artifact verification before uploading `_site/`. The artifact is the React reader itself; it contains no iframe, redirect, or ChatGPT Site runtime dependency.
 
-The reader itself remains a Cloudflare-compatible vinext application because page, search, chapter, and lookup endpoints execute on the server. Keeping those endpoints on the existing Sites deployment avoids shipping an incomplete static build while preserving a public GitHub Pages URL for installation and discovery.
+The local/server reader remains a Cloudflare-compatible vinext application and continues to expose the documented `/api/*` routes. GitHub Pages does not claim or emulate those server routes; its dedicated transport reaches verified browser-safe sources directly and uses base path `/mushaf-companion/` throughout.
 
 Pushes to `main` build and test the full reader before publishing the Pages shell. Version tags beginning with `v` also build downloadable native artifacts.
 

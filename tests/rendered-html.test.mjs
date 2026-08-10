@@ -40,12 +40,13 @@ test("server-renders a complete page-navigation reader shell", async () => {
 });
 
 test("implements dynamic Madani pages and every requested navigation path", async () => {
-  const [page, styles, data, guide, pageRoute, searchRoute, chaptersRoute, audioManifestRoute, audioManifest, offlineAudio, offlinePanel, tafsirRoute, tafsirSource, tafsirPanel, layout, packageJson, capacitorConfig, mobileWorkflow, pagesWorkflow, manifest, serviceWorker, pagesShell, license] = await Promise.all([
+  const [page, styles, data, guide, pageRoute, runtimeSource, searchRoute, chaptersRoute, audioManifestRoute, audioManifest, offlineAudio, offlinePanel, tafsirRoute, tafsirSource, tafsirPanel, layout, packageJson, capacitorConfig, mobileWorkflow, pagesWorkflow, manifest, serviceWorker, pagesShell, license] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/quran-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/tajweed-guide.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/pages/[page]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/content/quran-runtime-source.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/search/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/chapters/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/audio-manifest/route.ts", import.meta.url), "utf8"),
@@ -62,7 +63,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8"),
     readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
-    readFile(new URL("../github-pages/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../pages-static/index.html", import.meta.url), "utf8"),
     readFile(new URL("../LICENSE", import.meta.url), "utf8"),
   ]);
 
@@ -81,16 +82,16 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /Recent pages/);
   assert.match(page, /Saved places/);
   assert.match(page, /setRecentPages/);
-  assert.match(page, /fetch\(`\/api\/pages\/\$\{page\}\?v=\$\{PAGE_DATA_REVISION\}`\)/);
+  assert.match(page, /contentTransport\.loadPage\(page\)/);
   assert.match(page, /pageCacheRef/);
-  assert.match(pageRoute, /mushaf: "1"/);
-  assert.match(pageRoute, /line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4/);
-  assert.match(pageRoute, /qcfGlyphFromWord\(word\.text\)/);
-  assert.match(pageRoute, /uthmani_tajweed\?page_number/);
-  assert.match(pageRoute, /Array\.from\(\{ length: 15 \}/);
-  assert.match(pageRoute, /sha256Hex/);
+  assert.match(runtimeSource, /mushaf: "1"/);
+  assert.match(runtimeSource, /line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4/);
+  assert.match(runtimeSource, /qcfGlyphFromWord\(word\.text\)/);
+  assert.match(runtimeSource, /uthmani_tajweed\?page_number/);
+  assert.match(runtimeSource, /Array\.from\(\{ length: 15 \}/);
+  assert.match(runtimeSource, /sha256Hex/);
   assert.match(pageRoute, /CONTENT_MANIFEST/);
-  assert.match(pageRoute, /translations: "20,57"/);
+  assert.match(runtimeSource, /translations: "20,57"/);
   assert.match(page, /new FontFace/);
   assert.match(page, /qcfTajweedCode/);
   assert.match(styles, /grid-template-rows: repeat\(15/);
@@ -126,9 +127,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.equal((guide.match(/\["[^"]+", "\d+:\d+"\]/g) ?? []).length, 85);
   assert.match(guide, /idgham_mutajanisayn/);
   assert.match(guide, /idgham_mutaqaribayn/);
-  assert.match(chaptersRoute, /fetch\(`\$\{API_ROOT\}\/juzs`\)/);
-  assert.match(chaptersRoute, /revelationOrder/);
-  assert.match(chaptersRoute, /versesCount/);
+  assert.match(runtimeSource, /fetchImpl\(`\$\{QURAN_API_ROOT\}\/juzs`/);
+  assert.match(runtimeSource, /revelationOrder/);
+  assert.match(runtimeSource, /versesCount/);
   assert.match(capacitorConfig, /com\.mushafcompanion\.reader/);
   assert.match(capacitorConfig, /mushaf-companion\.abda-dc\.chatgpt\.site/);
   assert.match(mobileWorkflow, /assembleDebug/);
@@ -139,22 +140,25 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(manifest, /"display": "standalone"/);
   assert.match(manifest, /"purpose": "any maskable"/);
   assert.match(page, /className="brand-logo"/);
-  assert.match(styles, /background: url\("\/logo\.png"\)/);
+  assert.match(page, /appPath\("logo\.png"\)/);
   assert.match(layout, /\/favicon\.ico/);
   assert.match(layout, /\/apple-touch-icon\.png/);
   assert.match(manifest, /web-app-manifest-192x192\.png/);
   assert.match(manifest, /web-app-manifest-512x512\.png/);
   assert.match(serviceWorker, /mushaf-companion-v4-branding/);
   assert.match(serviceWorker, /\/logo\.png/);
-  assert.match(pagesShell, /\.\/favicon\.ico/);
-  assert.match(pagesShell, /\.\/logo\.png/);
-  assert.match(pagesShell, /mushaf-companion\.abda-dc\.chatgpt\.site/);
-  assert.match(pagesShell, /beforeinstallprompt/);
+  assert.match(pagesShell, /id="root"/);
+  assert.match(pagesShell, /\/mushaf-companion\/manifest\.webmanifest/);
+  assert.doesNotMatch(pagesShell, /iframe|chatgpt\.site/i);
   assert.match(pagesWorkflow, /actions\/deploy-pages@v5/);
   assert.match(pagesWorkflow, /npm test/);
+  assert.match(pagesWorkflow, /npm run build:pages/);
+  assert.match(pagesWorkflow, /npm run verify:pages/);
   assert.match(license, /^MIT License/);
-  assert.match(searchRoute, /chapters\?language=en/);
-  assert.match(searchRoute, /type: "page"/);
+  assert.match(runtimeSource, /chapters\?language=en/);
+  assert.match(runtimeSource, /type: "page"/);
+  assert.match(searchRoute, /searchQuranSource/);
+  assert.match(chaptersRoute, /fetchChaptersFromSource/);
   assert.match(data, /FALLBACK_PAGE/);
   assert.match(page, /My Mushaf/);
   assert.match(page, /buildPageMasteryMap/);
@@ -163,7 +167,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /Saheeh International/);
   assert.match(page, /getVerifiedAudioBlob/);
   assert.match(page, /OfflineAudioPanel/);
-  assert.match(audioManifestRoute, /verses\/by_juz/);
+  assert.match(runtimeSource, /verses\/by_juz/);
   assert.match(audioManifestRoute, /X-Audio-Manifest-Revision/);
   assert.match(offlineAudio, /crypto\.subtle\.digest\("SHA-256"/);
   assert.match(offlineAudio, /indexedDB\.open/);
@@ -174,9 +178,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /openTafsir/);
   assert.match(page, /Study tafsir/);
   assert.match(page, /isVerifiedTafsir/);
-  assert.match(tafsirRoute, /tafsirs\/\$\{TAFSIR_RESOURCE\.id\}\/by_ayah/);
+  assert.match(runtimeSource, /tafsirs\/\$\{TAFSIR_RESOURCE\.id\}\/by_ayah/);
   assert.match(tafsirRoute, /X-Tafsir-Revision/);
-  assert.match(tafsirRoute, /contentChecksum/);
+  assert.match(runtimeSource, /contentChecksum/);
   assert.match(tafsirSource, /Ibn Kathir \(Abridged\)/);
   assert.match(tafsirSource, /UNSAFE_BLOCKS/);
   assert.match(tafsirPanel, /SOURCE &amp; EDITION/);

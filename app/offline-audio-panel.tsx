@@ -20,6 +20,7 @@ import {
   type OfflineAudioPack,
 } from "./offline-audio.mjs";
 import type { QuranChapterInfo } from "./quran-data";
+import { getReaderTransport } from "./content/runtime-transport";
 
 interface OfflineAudioPanelProps {
   chapters: QuranChapterInfo[];
@@ -86,6 +87,7 @@ function replacePack(items: OfflineAudioPack[], pack: OfflineAudioPack) {
 }
 
 export function OfflineAudioPanel({ chapters, initialChapter, wifiOnly, onWifiOnlyChange, onClose, onNotice, onLibraryChanged, onPlayPack }: OfflineAudioPanelProps) {
+  const contentTransport = getReaderTransport();
   const [packType, setPackType] = useState<AudioPackType>("surah");
   const [packNumber, setPackNumber] = useState(initialChapter);
   const [manifest, setManifest] = useState<AudioPackManifest | null>(null);
@@ -145,16 +147,12 @@ export function OfflineAudioPanel({ chapters, initialChapter, wifiOnly, onWifiOn
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setManifestLoading(true);
     const label = packType === "surah" && selectedChapter ? `Sūrah ${selectedChapter.name}` : `Juz ${packNumber}`;
-    fetch(`/api/audio-manifest?type=${packType}&id=${packNumber}&reciter=alafasy`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Manifest unavailable");
-        return response.json() as Promise<AudioPackManifest>;
-      })
+    contentTransport.loadAudioManifest(packType, packNumber, "alafasy", controller.signal)
       .then((nextManifest) => setManifest({ ...nextManifest, pack: { ...nextManifest.pack, label } }))
       .catch((error) => { if (error instanceof DOMException && error.name === "AbortError") return; setManifest(null); })
       .finally(() => { if (!controller.signal.aborted) setManifestLoading(false); });
     return () => controller.abort();
-  }, [packType, packNumber, selectedChapter]);
+  }, [packType, packNumber, selectedChapter, contentTransport]);
 
   const packTotals = useMemo(() => ({
     complete: packs.filter((pack) => pack.status === "complete").length,

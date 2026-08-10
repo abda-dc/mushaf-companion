@@ -17,7 +17,7 @@ No AI-generated explanation, synthetic source mixing, or unattributed excerpt is
 
 ## Delivery and integrity
 
-1. `GET /api/tafsir?verse=2:255` validates the requested stable verse key.
+1. Server mode uses `GET /api/tafsir?verse=2:255`; Pages mode calls the same CORS-enabled Quran Foundation resource directly. Both validate the requested stable verse key through the shared source module.
 2. The server requests Quran Foundation resource 169 and rejects any mismatched resource or verse mapping.
 3. Provider HTML is reduced to headings, paragraphs, quotations, and list items. Scripts, embedded objects, attributes, links, and all remaining tags are removed.
 4. The browser receives structured text rather than HTML, and React escapes every displayed block.
