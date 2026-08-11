@@ -61,3 +61,30 @@ test("Stop still cancels pending autoplay intent", async () => {
   assert.match(stopBlock, /pendingAutoplayRef\.current = false;/);
   assert.match(stopBlock, /audio\.pause\(\);/);
 });
+test("page-load failure clears pending autoplay and edge navigation before restoring the last confirmed page", async () => {
+  const page = await readFile(PAGE_URL, "utf8");
+
+  const failureNotice = page.indexOf("Verified page data is temporarily unavailable. Your last confirmed page is still open.");
+  assert.ok(failureNotice >= 0, "verified page-load failure handler must exist");
+
+  const catchStart = page.lastIndexOf(".catch(() => {", failureNotice);
+  const catchEnd = page.indexOf("});", failureNotice);
+
+  assert.ok(catchStart >= 0, "page-load failure catch block must exist");
+  assert.ok(catchEnd > failureNotice, "page-load failure catch block must close");
+
+  const failureBlock = page.slice(catchStart, catchEnd);
+
+  assert.match(failureBlock, /pendingAutoplayRef\.current = false;/);
+  assert.match(failureBlock, /pendingEdgeRef\.current = null;/);
+  assert.match(failureBlock, /updatePlaying\(false\);/);
+
+  const autoplayClear = failureBlock.indexOf("pendingAutoplayRef.current = false;");
+  const edgeClear = failureBlock.indexOf("pendingEdgeRef.current = null;");
+  const stopPlaying = failureBlock.indexOf("updatePlaying(false);");
+  const restorePage = failureBlock.indexOf("const previous = lastGoodPageRef.current;");
+
+  assert.ok(autoplayClear >= 0 && autoplayClear < restorePage, "autoplay intent must clear before restoring the page");
+  assert.ok(edgeClear >= 0 && edgeClear < restorePage, "page-edge intent must clear before restoring the page");
+  assert.ok(stopPlaying >= 0 && stopPlaying < restorePage, "playing state must stop before restoring the page");
+});

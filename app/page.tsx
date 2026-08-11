@@ -451,6 +451,9 @@ export default function Home() {
       })
       .catch(() => {
         if (cancelled) return;
+        pendingAutoplayRef.current = false;
+        pendingEdgeRef.current = null;
+        updatePlaying(false);
         const previous = lastGoodPageRef.current;
         setPage(previous.page);
         setJumpValue(String(previous.page));
