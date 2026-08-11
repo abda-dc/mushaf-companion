@@ -876,6 +876,7 @@ export default function Home() {
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio || !audioSource || audioSource.key !== targetAudioKey) {
+      pendingAutoplayRef.current = true;
       setNotice("Preparing this recitation…");
       return;
     }
@@ -980,12 +981,16 @@ export default function Home() {
       }
       const nextVerse = pageData.verses[currentVerseIndex + 1];
       if (nextVerse) {
-        if (nextVerse.chapterId === surahPlaybackRef.current) selectAyah(nextVerse.key);
+        if (nextVerse.chapterId === surahPlaybackRef.current) {
+          pendingAutoplayRef.current = true;
+          selectAyah(nextVerse.key);
+        }
         else {
           updateSurahPlayback(null);
           updatePlaying(false);
         }
       } else if (pageData.page < TOTAL_PAGES) {
+        pendingAutoplayRef.current = true;
         pendingEdgeRef.current = "first";
         goToPage(pageData.page + 1, "next", undefined, true);
       } else {
@@ -1002,8 +1007,14 @@ export default function Home() {
     if (repeatMode === "range") {
       const startIndex = pageData.verses.findIndex((verse) => verse.key === rangeStart);
       const endIndex = pageData.verses.findIndex((verse) => verse.key === rangeEnd);
-      if (currentVerseIndex >= 0 && currentVerseIndex < endIndex) selectAyah(pageData.verses[currentVerseIndex + 1].key);
-      else if (startIndex >= 0) selectAyah(pageData.verses[startIndex].key);
+      if (currentVerseIndex >= 0 && currentVerseIndex < endIndex) {
+        pendingAutoplayRef.current = true;
+        selectAyah(pageData.verses[currentVerseIndex + 1].key);
+      }
+      else if (startIndex >= 0) {
+        pendingAutoplayRef.current = true;
+        selectAyah(pageData.verses[startIndex].key);
+      }
       return;
     }
     if (currentReciter.scope === "ayah") {
