@@ -1,6 +1,6 @@
 # Verified Translation Packs
 
-This storage foundation installs only the verified QuranEnc Amharic source `quranenc:amharic_zain`. The Ayah Context Lens is its only reader access point and is documented in `docs/AYAH-CONTEXT-LENS.md`; the registry entry itself remains disabled and Amharic is gated by the active verified pack. The existing online Saheeh International resource 20 and Ibn Kathir tafsir remain outside this storage subsystem.
+This storage foundation installs only the verified QuranEnc Amharic source `quranenc:amharic_zain`. The Ayah Study Lens is its only reader access point and is documented in `docs/AYAH-CONTEXT-LENS.md`; the registry entry itself remains disabled and Amharic is gated by the active verified pack. The existing online Saheeh International resource 20 and Ibn Kathir tafsir remain outside this storage subsystem.
 
 ## Pinned Amharic pack
 
@@ -74,7 +74,7 @@ Each successful activation retains the former active version as `previousPackKey
 - `getByVerseKey(verseKey)` for one canonical `chapter:verse` key.
 - `getByPageVerseKeys(verseKeys)` for the reader page's ordered verse keys, preserving order and duplicates and returning `null` for every key when no pack is active.
 
-The Ayah Context Lens uses these APIs only after opening for the selected verse. It preserves the existing English translation path and never changes the Mushaf page payload or geometry.
+The Ayah Study Lens uses these APIs only after opening for the selected verse. It preserves the existing English translation path and never changes the Mushaf page payload or geometry.
 
 ## Sources that remain blocked
 

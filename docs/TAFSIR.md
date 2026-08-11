@@ -46,4 +46,4 @@ The study panel always labels the complete provider section. A missing or mismat
 - Closing the panel returns directly to the selected ayah on the unchanged mushaf page.
 - Recently opened sections use in-session memory caching plus ordinary HTTP cache headers. Full offline tafsir is not claimed.
 
-The Ayah Context Lens also exposes this exact document and normalized block model in its Ibn Kathir tab. The standalone tafsir panel, resource 169 identity, source revision, normalization, attribution, and checksum verification remain unchanged. The lens does not translate tafsir.
+The Ayah Study Lens also exposes this exact document and normalized block model in its Tafsir tab. The standalone tafsir panel, resource 169 identity, source revision, normalization, attribution, and checksum verification remain unchanged. The Lens does not translate tafsir.

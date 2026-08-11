@@ -107,7 +107,7 @@ test("standalone source, PWA scope, navigation fallback, and workflow remove the
   assert.match(entry, /configureReaderRuntime\(\{ mode: "pages", basePath: "\/mushaf-companion\/" \}\)/);
   assert.match(entry, /<Home \/>/);
   assert.match(page, /AyahContextLens/);
-  assert.match(page, />Context</);
+  assert.match(page, />Study</);
   assert.match(page, />Hifz</);
 
   const manifest = JSON.parse(manifestText);

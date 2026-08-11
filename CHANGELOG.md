@@ -2,6 +2,22 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## Unreleased — local changes
+
+### Added
+
+- A single Ayah Study Lens with Overview, Words, Tafsir, and Practice tabs, shared selected-ayah navigation, responsive drawer/sheet behavior, and reused translation, Ibn Kathir, audio, Tajweed, and Hifz systems.
+- A source-neutral Quran word-study contract with deterministic Mushaf coordinates, provider approval/provenance gates, dataset and runtime audits, and a disabled Quranic Arabic Corpus reference descriptor.
+- Tap-a-word study context, trusted occurrence navigation, and separate lemma/root exploration that remain unavailable when no approved provider is active.
+- A gated Foundation 125 curriculum loader, device-local vocabulary progress, shared Again/Hard/Good/Easy interval semantics, and preference backup/restore support.
+- A unified Today’s Study plan for due Hifz, approved vocabulary, and reading, with deterministic 5/10/20-minute budgets, resumable local sessions, skip/exit controls, and calendar-safe activity.
+
+### Reliability
+
+- Word-study and curriculum content fail closed on disabled sources, malformed records, duplicate or mismatched coordinates, incomplete provenance, and source-revision changes.
+- Production vocabulary, morphology, root, lemma, and occurrence content remains disabled pending explicit source and rights approval; automated tests use synthetic fixtures only.
+- Preference schema v6 migrates earlier reader, Hifz, vocabulary, and download settings without replacing existing Hifz state.
+
 ## 1.1.0 — 2026-08-07
 
 ### Added

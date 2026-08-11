@@ -1,6 +1,6 @@
 import type { TranslationPackMetadata, TranslationPackProgress } from "./translation-packs.mjs";
 
-export type ContextLensTab = "translation" | "tafsir";
+export type ContextLensTab = "overview" | "words" | "tafsir" | "practice";
 export type ContextTranslationId = "english-saheeh" | "amharic-zain";
 export type ContextPackStatus = "checking" | "not-installed" | "installed" | "working" | "failed" | "reclaimed";
 export type ContextPackAction = "install" | "verify" | "repair" | "delete";
@@ -39,9 +39,9 @@ export type ContextLensEvent =
   | { type: "ARM_DELETE" }
   | { type: "CANCEL_DELETE" };
 
-export function createContextLensState(): ContextLensState {
+export function createContextLensState(activeTab: ContextLensTab = "overview"): ContextLensState {
   return {
-    activeTab: "translation",
+    activeTab,
     activeTranslation: "english-saheeh",
     packStatus: "checking",
     pack: null,

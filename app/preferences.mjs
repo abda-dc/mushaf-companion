@@ -1,14 +1,17 @@
 import { DEFAULT_HIFZ_PROGRESS, normalizeHifzProgress } from "./hifz-state.mjs";
+import { DEFAULT_VOCABULARY_PROGRESS, normalizeVocabularyProgress } from "./vocabulary-state.mjs";
+import { DEFAULT_TODAY_STUDY_PROGRESS, normalizeTodayStudyProgress } from "./today-study.mjs";
 
-export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v4";
-export const PREFERENCE_SCHEMA_VERSION = 4;
-const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v3", "mushaf:preferences-v2"];
+export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v6";
+export const PREFERENCE_SCHEMA_VERSION = 6;
+const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
 
 const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
 const READING_FONTS = new Set(["uthman-taha", "amiri", "lateef", "scheherazade"]);
 const SPEEDS = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
 const VERSE_KEY = /^\d{1,3}:\d{1,3}$/;
+const MAX_PREFERENCE_JSON_LENGTH = 5_000_000;
 
 export const DEFAULT_PREFERENCES = Object.freeze({
   version: PREFERENCE_SCHEMA_VERSION,
@@ -28,10 +31,13 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   },
   bookmarks: [],
   hifz: DEFAULT_HIFZ_PROGRESS,
+  vocabulary: DEFAULT_VOCABULARY_PROGRESS,
+  study: DEFAULT_TODAY_STUDY_PROGRESS,
   downloads: { wifiOnly: true },
 });
 
 function parseJson(value, fallback = null) {
+  if (typeof value === "string" && value.length > MAX_PREFERENCE_JSON_LENGTH) return fallback;
   try {
     return JSON.parse(value ?? "null") ?? fallback;
   } catch {
@@ -41,7 +47,7 @@ function parseJson(value, fallback = null) {
 
 function normalizeBookmarks(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.filter((item) => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)))].slice(0, 5000);
+  return [...new Set(value.slice(0, 10_000).filter((item) => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)))].slice(0, 5000);
 }
 
 function normalizeRecentPages(value, lastPage) {
@@ -73,6 +79,8 @@ export function normalizePreferences(value) {
     },
     bookmarks: normalizeBookmarks(source.bookmarks),
     hifz: normalizeHifzProgress(source.hifz),
+    vocabulary: normalizeVocabularyProgress(source.vocabulary),
+    study: normalizeTodayStudyProgress(source.study),
     downloads: { wifiOnly: source.downloads?.wifiOnly !== false },
   };
 }

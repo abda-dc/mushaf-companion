@@ -17,12 +17,12 @@ import { formatAudioBytes, getOfflineAudioStats, getVerifiedAudioBlob, type Offl
 import { TafsirPanel } from "./tafsir-panel";
 import type { TafsirDocument } from "./tafsir-source.mjs";
 import { AyahContextLens } from "./ayah-context-lens";
+import type { ContextLensTab } from "./ayah-context-lens-state";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
 import {
   DEFAULT_HIFZ_PROGRESS,
-  buildDailyPlan,
   buildPageMasteryMap,
   calculateStreak,
   dueReviewCount,
@@ -43,6 +43,34 @@ import {
   savePreferences,
   type MushafPreferences,
 } from "./preferences.mjs";
+import {
+  WORD_STUDY_PROVIDER_REGISTRY,
+  LatestWordStudyRequestGate,
+  buildPageWordCoordinateIndex,
+  coordinateKey,
+  coordinateForPageWord,
+  coordinatesMatch,
+  pageWordForCoordinate,
+  pageWordIdentity,
+  type QuranWordStudyRecord,
+  type WordCoordinate,
+  type WordOccurrence,
+  type WordStudySourceMetadata,
+} from "./word-study";
+import { FOUNDATION_125_ID, VOCABULARY_CURRICULUM_REGISTRY } from "./vocabulary-curriculum";
+import { DEFAULT_VOCABULARY_PROGRESS, dueVocabularyEntries, normalizeVocabularyProgress, type VocabularyProgress } from "./vocabulary-state.mjs";
+import {
+  DEFAULT_TODAY_STUDY_PROGRESS,
+  buildTodayStudyPlan,
+  completeTodayStudyStep,
+  currentTodayStudyStep,
+  normalizeTodayStudyProgress,
+  skipTodayStudyStep,
+  startOrResumeTodayStudy,
+  startTodayStudyStep,
+  todayStudyCompletion,
+  type TodayStudyProgress,
+} from "./today-study.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
@@ -87,6 +115,12 @@ interface TajweedFocus {
   word: string;
   verseKey: string;
   rules: TajweedRule[];
+}
+
+interface SelectedWordContext {
+  coordinate: WordCoordinate;
+  surfaceText: string;
+  tajweedRules: TajweedRule[];
 }
 
 function clampPage(value: number) {
@@ -153,6 +187,12 @@ export default function Home() {
   const [pageScale, setPageScale] = useState<PageScale>("comfortable");
   const [readingFont, setReadingFont] = useState<ReadingFont>("uthman-taha");
   const [selectedVerseKey, setSelectedVerseKey] = useState("1:1");
+  const [studyInitialTab, setStudyInitialTab] = useState<ContextLensTab>("overview");
+  const [studyActiveTab, setStudyActiveTab] = useState<ContextLensTab>("overview");
+  const [selectedWord, setSelectedWord] = useState<SelectedWordContext | null>(null);
+  const [wordRecordResult, setWordRecordResult] = useState<{ key: string; record: QuranWordStudyRecord | null } | null>(null);
+  const [wordStudySource, setWordStudySource] = useState<WordStudySourceMetadata | null>(null);
+  const [occurrenceExplorer, setOccurrenceExplorer] = useState<{ kind: "lemma" | "root"; identifier: string; label: string; items: WordOccurrence[]; total: number; status: "loading" | "ok" | "unavailable" | "error"; reason: string } | null>(null);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -163,6 +203,10 @@ export default function Home() {
   const [rangeStart, setRangeStart] = useState("1:1");
   const [rangeEnd, setRangeEnd] = useState("1:7");
   const [hifzProgress, setHifzProgress] = useState<HifzProgress>(() => normalizeHifzProgress(DEFAULT_HIFZ_PROGRESS));
+  const [vocabularyProgress, setVocabularyProgress] = useState<VocabularyProgress>(() => normalizeVocabularyProgress(DEFAULT_VOCABULARY_PROGRESS));
+  const [todayStudyProgress, setTodayStudyProgress] = useState<TodayStudyProgress>(() => normalizeTodayStudyProgress(DEFAULT_TODAY_STUDY_PROGRESS));
+  const [todayKey, setTodayKey] = useState(() => toLocalDateKey());
+  const [studySessionVisible, setStudySessionVisible] = useState(false);
   const [hifzFrom, setHifzFrom] = useState("1:1");
   const [hifzTo, setHifzTo] = useState("1:7");
   const [hifzRepeatCount, setHifzRepeatCount] = useState<HifzRepeatCount>(5);
@@ -203,6 +247,7 @@ export default function Home() {
   const pageCacheRef = useRef(new Map<number, QuranPage>());
   const lastGoodPageRef = useRef(FALLBACK_PAGE);
   const pendingVerseRef = useRef<string | null>(null);
+  const pendingWordRef = useRef<WordCoordinate | null>(null);
   const pendingEdgeRef = useRef<PageEdge>(null);
   const pendingAutoplayRef = useRef(false);
   const surahPlaybackRef = useRef<number | null>(null);
@@ -211,6 +256,12 @@ export default function Home() {
   const tafsirCacheRef = useRef(new Map<string, TafsirDocument>());
   const translationPackServiceRef = useRef<TranslationPackService | null>(null);
   const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const occurrenceRequestGateRef = useRef(new LatestWordStudyRequestGate());
+  const pendingReadingStartRef = useRef<{ stepId: string; page: number; verseKey: string } | null>(null);
+  const wordButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const verseButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const studyControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const readerArticleRef = useRef<HTMLElement | null>(null);
 
   const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" ? "Read" : overlay ?? "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
@@ -220,19 +271,33 @@ export default function Home() {
   const canStudyPrevious = currentVerseIndex > 0 || pageData.page > 1;
   const canStudyNext = currentVerseIndex >= 0 && (currentVerseIndex < pageData.verses.length - 1 || pageData.page < TOTAL_PAGES);
   const currentBookmark = `${pageData.page}|${selectedVerseKey}`;
+  const wordCoordinateIndex = useMemo(() => buildPageWordCoordinateIndex(pageData), [pageData]);
+  const foundation125 = useMemo(() => VOCABULARY_CURRICULUM_REGISTRY.list().find((curriculum) => curriculum.id === FOUNDATION_125_ID) ?? null, []);
+  const foundationEntryIds = useMemo<string[]>(() => [], []);
+  const selectedWordKey = selectedWord ? coordinateKey(selectedWord.coordinate) : null;
+  const wordRecord = selectedWordKey && wordRecordResult?.key === selectedWordKey ? wordRecordResult.record : null;
+  const wordStudyLoading = Boolean(selectedWordKey && wordRecordResult?.key !== selectedWordKey);
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
   const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
   const isOfflinePackPlayback = offlinePackQueue.length > 0;
-  const todayKey = toLocalDateKey();
-  const hifzStreak = calculateStreak(hifzProgress.activityDates, todayKey);
+  const unifiedActivityDates = useMemo(() => [...new Set([...hifzProgress.activityDates, ...vocabularyProgress.activityDates, ...todayStudyProgress.activityDates])].sort(), [hifzProgress.activityDates, vocabularyProgress.activityDates, todayStudyProgress.activityDates]);
+  const studyStreak = calculateStreak(unifiedActivityDates, todayKey);
   const todayMemorized = todaysMemorizedCount(hifzProgress, todayKey);
   const dueReviews = dueReviewCount(hifzProgress, todayKey);
   const todayGoalPercent = Math.min(100, (todayMemorized / hifzProgress.dailyGoal) * 100);
   const memorizedVerseKeys = new Set(hifzProgress.memorized.map((item) => item.verseKey));
   const pageMasteryMap = useMemo(() => buildPageMasteryMap(hifzProgress, todayKey), [hifzProgress, todayKey]);
   const masteryCounts = useMemo(() => pageMasteryMap.reduce((counts, item) => ({ ...counts, [item.status]: counts[item.status] + 1 }), { "not-started": 0, learning: 0, due: 0, strong: 0 }), [pageMasteryMap]);
-  const dailyPlan = useMemo(() => buildDailyPlan(hifzProgress, pageData.verses.map((verse) => ({ verseKey: verse.key, page: pageData.page })), pageData.page, todayKey), [hifzProgress, pageData, todayKey]);
+  const todayPlan = useMemo(() => buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: todayKey }), [hifzProgress, vocabularyProgress, foundationEntryIds, pageData.page, selectedVerseKey, todayKey]);
+  const activeStudySession = todayStudyProgress.activeSession?.dateKey === todayKey ? todayStudyProgress.activeSession : null;
+  const activeStudyStep = currentTodayStudyStep(todayStudyProgress, todayKey);
+  const activeStudyStepStarted = Boolean(activeStudyStep && activeStudySession?.startedStepIds.includes(activeStudyStep.id));
+  const displayedTodayPlan = activeStudySession ? { dateKey: activeStudySession.dateKey, sessionMinutes: activeStudySession.sessionMinutes, steps: activeStudySession.steps, totalEstimatedMinutes: activeStudySession.steps.reduce((sum, step) => sum + step.estimatedMinutes, 0) } : todayPlan;
+  const todayCompletion = todayStudyCompletion(todayStudyProgress, displayedTodayPlan, todayKey);
+  const todaySessionFinished = Boolean(activeStudySession && !activeStudyStep);
+  const studyDurationLocked = Boolean(activeStudySession && activeStudyStep);
+  const vocabularyDue = foundationEntryIds.length ? dueVocabularyEntries(vocabularyProgress, todayKey).length : 0;
   const currentPlanItem = activePlan[activePlanIndex];
   const targetAudioKey = `${reciter}|${selectedVerseKey}`;
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
@@ -272,6 +337,8 @@ export default function Home() {
     setRecentPages(preferences.reader.recentPages);
     setBookmarks(preferences.bookmarks);
     setHifzProgress(preferences.hifz);
+    setVocabularyProgress(preferences.vocabulary);
+    setTodayStudyProgress(preferences.study);
     setDark(preferences.reader.theme === "dark");
     setTajweed(preferences.reader.tajweed);
     setTransliteration(preferences.reader.transliteration);
@@ -294,6 +361,7 @@ export default function Home() {
       setPageData(data);
       setRecentPages((pages) => [data.page, ...pages.filter((item) => item !== data.page)].slice(0, 6));
       setTajweedFocus(null);
+      setSelectedWord(null);
       setLoadingPage(false);
       setJumpValue(String(data.page));
       const requestedVerse = pendingVerseRef.current;
@@ -308,7 +376,13 @@ export default function Home() {
           updateSurahPlayback(null);
           updatePlaying(false);
         }
-        setSelectedVerseKey(nextVerse);
+        selectAyah(nextVerse);
+      }
+      const requestedWord = pendingWordRef.current;
+      if (requestedWord) {
+        const mappedWord = wordContextForCoordinate(data, requestedWord);
+        if (mappedWord) setSelectedWord(mappedWord);
+        else setNotice("The audited occurrence could not be matched to this verified Mushaf page.");
       }
       setRangeStart(data.verses[0]?.key ?? "");
       setRangeEnd(data.verses.at(-1)?.key ?? "");
@@ -317,6 +391,7 @@ export default function Home() {
       setRevealedVerses([]);
       setVerseActionsOpen(false);
       pendingVerseRef.current = null;
+      pendingWordRef.current = null;
       pendingEdgeRef.current = null;
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("page", String(data.page));
@@ -352,9 +427,56 @@ export default function Home() {
   }, [page, hydrated, contentTransport]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (!selectedWord || overlay !== "Context" || studyActiveTab !== "words") return () => { cancelled = true; };
+    const requestKey = coordinateKey(selectedWord.coordinate);
+    const loadWord = async () => {
+      for (const sourceId of WORD_STUDY_PROVIDER_REGISTRY.listSourceIds()) {
+        const activation = await WORD_STUDY_PROVIDER_REGISTRY.activate(sourceId);
+        if (cancelled) return;
+        if (activation.status !== "active") continue;
+        const record = await WORD_STUDY_PROVIDER_REGISTRY.getWord(sourceId, selectedWord.coordinate);
+        if (cancelled) return;
+        setWordStudySource(activation.activation.metadata);
+        setWordRecordResult({ key: requestKey, record });
+        return;
+      }
+      setWordStudySource(null);
+      setWordRecordResult({ key: requestKey, record: null });
+    };
+    void loadWord();
+    return () => { cancelled = true; };
+  }, [selectedWord, selectedWordKey, overlay, studyActiveTab]);
+
+  useEffect(() => {
+    let timer = 0;
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      timer = window.setTimeout(() => {
+        setTodayKey(toLocalDateKey());
+        scheduleNextMidnight();
+      }, Math.max(1_000, next.getTime() - now.getTime() + 250));
+    };
+    scheduleNextMidnight();
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const pending = pendingReadingStartRef.current;
+    if (!pending || pageData.page !== pending.page || selectedVerseKey !== pending.verseKey) return;
+    const freshDay = toLocalDateKey();
+    setTodayKey(freshDay);
+    setTodayStudyProgress((current) => startTodayStudyStep(current, pending.stepId, freshDay));
+    pendingReadingStartRef.current = null;
+    setNotice("Reading step started. Complete it after your reading session.");
+  }, [pageData.page, selectedVerseKey]);
+
+  useEffect(() => {
     if (!hydrated) return;
     savePreferences(localStorage, {
-      version: 4,
+      version: 6,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -371,9 +493,11 @@ export default function Home() {
       },
       bookmarks,
       hifz: hifzProgress,
+      vocabulary: vocabularyProgress,
+      study: todayStudyProgress,
       downloads: { wifiOnly: wifiOnlyDownloads },
     } satisfies MushafPreferences);
-  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, wifiOnlyDownloads, hydrated]);
+  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, vocabularyProgress, todayStudyProgress, wifiOnlyDownloads, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -465,7 +589,7 @@ export default function Home() {
   }, [search, overlay, contentTransport]);
 
   useEffect(() => {
-    if ((overlay !== "Tafsir" && overlay !== "Context") || !selectedVerseKey) return;
+    if ((overlay !== "Tafsir" && !(overlay === "Context" && studyActiveTab === "tafsir")) || !selectedVerseKey) return;
     let cancelled = false;
     const controller = new AbortController();
     const cached = tafsirCacheRef.current.get(selectedVerseKey);
@@ -500,7 +624,7 @@ export default function Home() {
       cancelled = true;
       controller.abort();
     };
-  }, [overlay, selectedVerseKey, tafsirRevision, contentTransport]);
+  }, [overlay, studyActiveTab, selectedVerseKey, tafsirRevision, contentTransport]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -509,7 +633,7 @@ export default function Home() {
         const restoreContextFocus = overlay === "Context";
         setOverlay(null);
         setTajweedGuideOpen(false);
-        if (restoreContextFocus) queueMicrotask(() => contextTriggerRef.current?.focus());
+        if (restoreContextFocus) closeContextLens();
         return;
       }
       if (overlay || tajweedGuideOpen || loadingPage) return;
@@ -554,6 +678,21 @@ export default function Home() {
     setSurahPlaybackChapter(chapterId);
   }
 
+  function selectAyah(verseKey: string) {
+    occurrenceRequestGateRef.current.cancel();
+    setSelectedWord(null);
+    setOccurrenceExplorer(null);
+    setSelectedVerseKey(verseKey);
+  }
+
+  function wordContextForCoordinate(data: QuranPage, coordinate: WordCoordinate): SelectedWordContext | null {
+    const word = pageWordForCoordinate(data, coordinate);
+    if (!word) return null;
+    const trustedCoordinate = coordinateForPageWord(data, word);
+    if (!trustedCoordinate) return null;
+    return { coordinate: trustedCoordinate, surfaceText: word.text, tajweedRules: rulesForTajweedHtml(word.tajweedHtml) };
+  }
+
   function selectReciter(nextReciter: ReciterId) {
     setOfflinePackQueue([]);
     setOfflinePackIndex(0);
@@ -573,7 +712,14 @@ export default function Home() {
     if (!keepPlaying) updatePlaying(false);
     if (next === pageData.page && verseKey) {
       pendingVerseRef.current = null;
-      setSelectedVerseKey(verseKey);
+      selectAyah(verseKey);
+      const requestedWord = pendingWordRef.current;
+      if (requestedWord) {
+        const mappedWord = wordContextForCoordinate(pageData, requestedWord);
+        if (mappedWord) setSelectedWord(mappedWord);
+        else setNotice("The audited occurrence could not be matched to this verified Mushaf page.");
+        pendingWordRef.current = null;
+      }
       setTurnDirection("");
       return;
     }
@@ -638,7 +784,7 @@ export default function Home() {
       const nextVerseKey = offlinePackQueue[nextPackIndex];
       if (nextVerseKey) {
         setOfflinePackIndex(nextPackIndex);
-        setSelectedVerseKey(nextVerseKey);
+        selectAyah(nextVerseKey);
       } else if (direction === 1) {
         setOfflinePackQueue([]);
         setOfflinePackIndex(0);
@@ -649,7 +795,7 @@ export default function Home() {
     }
     const nextIndex = currentVerseIndex + direction;
     if (pageData.verses[nextIndex]) {
-      setSelectedVerseKey(pageData.verses[nextIndex].key);
+      selectAyah(pageData.verses[nextIndex].key);
       return;
     }
     if (direction === 1 && pageData.page < TOTAL_PAGES) {
@@ -669,7 +815,7 @@ export default function Home() {
       const nextVerseKey = hifzLoop.verseKeys[loopIndex + 1];
       if (nextVerseKey) {
         pendingAutoplayRef.current = true;
-        setSelectedVerseKey(nextVerseKey);
+        selectAyah(nextVerseKey);
         return;
       }
       if (hifzLoop.pass >= hifzLoop.totalPasses) {
@@ -689,7 +835,7 @@ export default function Home() {
           audio.currentTime = 0;
           audio.play().then(() => updatePlaying(true)).catch(() => updatePlaying(false));
         } else {
-          setSelectedVerseKey(firstVerseKey);
+          selectAyah(firstVerseKey);
         }
         setNotice(`Hifz loop · pass ${nextPass} of ${hifzLoop.totalPasses}`);
       };
@@ -708,7 +854,7 @@ export default function Home() {
       if (nextVerseKey) {
         setOfflinePackIndex(nextPackIndex);
         pendingAutoplayRef.current = true;
-        setSelectedVerseKey(nextVerseKey);
+        selectAyah(nextVerseKey);
       } else {
         setOfflinePackQueue([]);
         setOfflinePackIndex(0);
@@ -725,7 +871,7 @@ export default function Home() {
       }
       const nextVerse = pageData.verses[currentVerseIndex + 1];
       if (nextVerse) {
-        if (nextVerse.chapterId === surahPlaybackRef.current) setSelectedVerseKey(nextVerse.key);
+        if (nextVerse.chapterId === surahPlaybackRef.current) selectAyah(nextVerse.key);
         else {
           updateSurahPlayback(null);
           updatePlaying(false);
@@ -747,8 +893,8 @@ export default function Home() {
     if (repeatMode === "range") {
       const startIndex = pageData.verses.findIndex((verse) => verse.key === rangeStart);
       const endIndex = pageData.verses.findIndex((verse) => verse.key === rangeEnd);
-      if (currentVerseIndex >= 0 && currentVerseIndex < endIndex) setSelectedVerseKey(pageData.verses[currentVerseIndex + 1].key);
-      else if (startIndex >= 0) setSelectedVerseKey(pageData.verses[startIndex].key);
+      if (currentVerseIndex >= 0 && currentVerseIndex < endIndex) selectAyah(pageData.verses[currentVerseIndex + 1].key);
+      else if (startIndex >= 0) selectAyah(pageData.verses[startIndex].key);
       return;
     }
     moveAyah(1);
@@ -767,25 +913,97 @@ export default function Home() {
     setNotice(wasMemorized ? `Ayah ${selectedVerseKey} removed from memorized.` : `Ayah ${selectedVerseKey} marked memorized.`);
   }
 
-  function startDailyPlan() {
-    if (!dailyPlan.length) {
-      setNotice("Your review queue is clear. Mark an ayah memorized to begin building your map.");
+  function refreshTodayKey() {
+    const freshDay = toLocalDateKey();
+    if (freshDay !== todayKey) setTodayKey(freshDay);
+    return freshDay;
+  }
+
+  function startTodayStudy() {
+    const freshDay = refreshTodayKey();
+    const freshPlan = freshDay === todayPlan.dateKey ? todayPlan : buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: freshDay });
+    if (!freshPlan.steps.length) {
+      setNotice("Today’s study plan is clear.");
       return;
     }
-    const first = dailyPlan[0];
-    setActivePlan(dailyPlan);
-    setActivePlanIndex(0);
-    setHifzHidden(true);
-    setRevealedVerses([]);
+    const next = startOrResumeTodayStudy(todayStudyProgress, freshPlan);
+    setTodayStudyProgress(next);
+    setStudySessionVisible(true);
     setOverlay(null);
-    goToPage(first.page, first.page > pageData.page ? "next" : first.page < pageData.page ? "previous" : undefined, first.verseKey);
-    setNotice(`Daily mastery · 1 of ${dailyPlan.length}`);
+    const step = currentTodayStudyStep(next, freshDay);
+    setNotice(step ? `Today’s Study · ${step.title}` : "Today’s study plan is complete.");
+  }
+
+  function beginActiveStudyStep() {
+    if (!activeStudyStep) return;
+    const freshDay = refreshTodayKey();
+    if (!activeStudySession || activeStudySession.dateKey !== freshDay) {
+      setNotice("A new local day has begun. Open My Mushaf to start today’s plan.");
+      return;
+    }
+    if (activeStudyStep.kind === "hifz-review") {
+      const items = (activeStudyStep.targets as Array<{ verseKey: string; page: number }>).map((target) => ({ ...target, kind: "review" as const, reason: "Due Hifz review" }));
+      const first = items[0];
+      if (!first) return;
+      setActivePlan(items);
+      setActivePlanIndex(0);
+      setHifzHidden(true);
+      setRevealedVerses([]);
+      setTodayStudyProgress((current) => startTodayStudyStep(current, activeStudyStep.id, freshDay));
+      goToPage(first.page, first.page > pageData.page ? "next" : first.page < pageData.page ? "previous" : undefined, first.verseKey);
+      setNotice(`Today’s Study · Hifz review 1 of ${items.length}`);
+      return;
+    }
+    if (activeStudyStep.kind === "reading") {
+      const target = activeStudyStep.targets[0] as { page: number; verseKey: string } | undefined;
+      if (target) {
+        if (target.page === pageData.page && target.verseKey === selectedVerseKey) {
+          setTodayStudyProgress((current) => startTodayStudyStep(current, activeStudyStep.id, freshDay));
+          setNotice("Reading step started. Complete it after your reading session.");
+        } else {
+          pendingReadingStartRef.current = { stepId: activeStudyStep.id, page: target.page, verseKey: target.verseKey };
+          goToPage(target.page, target.page > pageData.page ? "next" : target.page < pageData.page ? "previous" : undefined, target.verseKey);
+        }
+      }
+      if (target && (target.page !== pageData.page || target.verseKey !== selectedVerseKey)) setNotice("Opening the target reading position…");
+      return;
+    }
+    setOverlay("Hifz");
+    setNotice("Vocabulary study remains unavailable until the approved curriculum source is active.");
+  }
+
+  function isFinalPendingStudyStep(stepId: string) {
+    if (!activeStudySession) return true;
+    return activeStudySession.steps.filter((step) => !activeStudySession.completedStepIds.includes(step.id) && !activeStudySession.skippedStepIds.includes(step.id)).every((step) => step.id === stepId);
+  }
+
+  function completeActiveStudyStep() {
+    if (!activeStudyStep) return;
+    const freshDay = refreshTodayKey();
+    if (activeStudyStep.kind === "reading" && !activeStudyStepStarted) {
+      setNotice("Open and reach the reading target before completing this step.");
+      return;
+    }
+    const finalStep = isFinalPendingStudyStep(activeStudyStep.id);
+    setTodayStudyProgress((current) => completeTodayStudyStep(current, activeStudyStep.id, freshDay));
+    if (finalStep) setStudySessionVisible(false);
+    setNotice(finalStep ? "Today’s Study complete." : "Study step complete. The next step is ready.");
+  }
+
+  function skipActiveStudyStep() {
+    if (!activeStudyStep) return;
+    const freshDay = refreshTodayKey();
+    const finalStep = isFinalPendingStudyStep(activeStudyStep.id);
+    setTodayStudyProgress((current) => skipTodayStudyStep(current, activeStudyStep.id, freshDay));
+    if (finalStep) setStudySessionVisible(false);
+    setNotice(finalStep ? "Today’s Study ended. Completed work was saved." : "Step skipped. The next step is ready.");
   }
 
   function rateDailyPlan(grade: ReviewGrade) {
     const item = activePlan[activePlanIndex];
     if (!item || !revealedVerses.includes(item.verseKey)) return;
-    setHifzProgress((current) => recordVerseReview(current, item, grade));
+    const freshDay = refreshTodayKey();
+    setHifzProgress((current) => recordVerseReview(current, item, grade, freshDay));
     const nextIndex = activePlanIndex + 1;
     const next = activePlan[nextIndex];
     if (!next) {
@@ -793,7 +1011,11 @@ export default function Home() {
       setActivePlanIndex(0);
       setHifzHidden(false);
       setRevealedVerses([]);
-      setNotice(`Daily mastery complete · ${activePlan.length} ayat strengthened.`);
+      if (activeStudyStep?.kind === "hifz-review") {
+        setTodayStudyProgress((current) => completeTodayStudyStep(current, activeStudyStep.id, freshDay));
+        if (isFinalPendingStudyStep(activeStudyStep.id)) setStudySessionVisible(false);
+      }
+      setNotice(`Hifz review complete · ${activePlan.length} ayat strengthened.`);
       return;
     }
     setActivePlanIndex(nextIndex);
@@ -807,12 +1029,13 @@ export default function Home() {
     setActivePlanIndex(0);
     setHifzHidden(false);
     setRevealedVerses([]);
-    setNotice("Daily mastery session saved for later.");
+    setStudySessionVisible(false);
+    setNotice("Today’s Study is saved. Resume it from My Mushaf.");
   }
 
   function preferenceSnapshot(): MushafPreferences {
     return {
-      version: 4,
+      version: 6,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -829,6 +1052,8 @@ export default function Home() {
       },
       bookmarks,
       hifz: hifzProgress,
+      vocabulary: vocabularyProgress,
+      study: todayStudyProgress,
       downloads: { wifiOnly: wifiOnlyDownloads },
     };
   }
@@ -853,6 +1078,8 @@ export default function Home() {
       savePreferences(localStorage, restored);
       setBookmarks(restored.bookmarks);
       setHifzProgress(restored.hifz);
+      setVocabularyProgress(restored.vocabulary);
+      setTodayStudyProgress(restored.study);
       setDark(restored.reader.theme === "dark");
       setTajweed(restored.reader.tajweed);
       setTransliteration(restored.reader.transliteration);
@@ -912,7 +1139,7 @@ export default function Home() {
     if (reciterChanges) setReciter("alafasy");
     pendingAutoplayRef.current = true;
     if (firstVerseKey !== selectedVerseKey || reciterChanges) {
-      setSelectedVerseKey(firstVerseKey);
+      selectAyah(firstVerseKey);
     } else {
       pendingAutoplayRef.current = false;
       window.setTimeout(() => {
@@ -942,28 +1169,43 @@ export default function Home() {
     setOverlay("Tafsir");
   }
 
-  function openContextLens(trigger: HTMLButtonElement) {
+  function openContextLens(trigger: HTMLButtonElement, initialTab: ContextLensTab = "overview") {
     if (!pageData.verses.some((verse) => verse.key === selectedVerseKey)) {
       setNotice("Select an ayah on its Quran page before opening context.");
       return;
     }
     contextTriggerRef.current = trigger;
     translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: contentTransport.fetchTranslationPackSource });
+    setStudyInitialTab(initialTab);
+    setStudyActiveTab(initialTab);
     setVerseActionsOpen(false);
     setTajweedFocus(null);
     setOverlay("Context");
   }
 
   function closeContextLens() {
+    occurrenceRequestGateRef.current.cancel();
+    setOccurrenceExplorer(null);
     setOverlay(null);
-    queueMicrotask(() => contextTriggerRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      const isUsable = (node: HTMLElement | null | undefined) => Boolean(node?.isConnected && node.getClientRects().length);
+      const original = contextTriggerRef.current;
+      const selectedWordButton = selectedWord?.coordinate.sourceWordId
+        ? wordButtonRefs.current.get(`${selectedWord.coordinate.verseKey}|${selectedWord.coordinate.sourceWordId}`)
+        : null;
+      const selectedAyahButton = verseButtonRefs.current.get(selectedVerseKey);
+      const studyControl = studyControlRefs.current.find(isUsable);
+      const target = [original, selectedWordButton, selectedAyahButton, studyControl, readerArticleRef.current].find(isUsable);
+      target?.focus();
+    });
   }
 
   function moveStudyAyah(direction: -1 | 1) {
+    setSelectedWord(null);
     const nextIndex = currentVerseIndex + direction;
     const nextVerse = pageData.verses[nextIndex];
     if (nextVerse) {
-      setSelectedVerseKey(nextVerse.key);
+      selectAyah(nextVerse.key);
       return;
     }
     if (direction === 1 && pageData.page < TOTAL_PAGES) {
@@ -1030,7 +1272,7 @@ export default function Home() {
     setOfflinePackQueue(verseKeys);
     setOfflinePackIndex(0);
     pendingAutoplayRef.current = true;
-    setSelectedVerseKey(verseKeys[0]);
+    selectAyah(verseKeys[0]);
     setOfflineAudioRevision((value) => value + 1);
     setOverlay("Listen");
     setNotice(`${pack.label} · playing ${verseKeys.length} verified files offline.`);
@@ -1045,24 +1287,51 @@ export default function Home() {
       .finally(() => setContentsLoading(false));
   }
 
-  function selectMushafWord(word: PageWord) {
+  function selectMushafWord(word: PageWord, trigger: HTMLButtonElement) {
     if (offlinePackQueue.length) {
       setOfflinePackQueue([]);
       setOfflinePackIndex(0);
     }
-    setSelectedVerseKey(word.verseKey);
-    setVerseActionsOpen(true);
+    selectAyah(word.verseKey);
     if (hifzHidden) {
+      setVerseActionsOpen(true);
       setRevealedVerses((current) => current.includes(word.verseKey) ? current.filter((key) => key !== word.verseKey) : [...current, word.verseKey]);
       setTajweedFocus(null);
       return;
     }
-    if (!tajweed || word.isEnd) {
-      setTajweedFocus(null);
-      return;
+    const rules = tajweed && !word.isEnd ? rulesForTajweedHtml(word.tajweedHtml) : [];
+    const coordinate = wordCoordinateIndex.get(pageWordIdentity(word)) ?? null;
+    setSelectedWord(coordinate ? { coordinate, surfaceText: word.text, tajweedRules: rules } : null);
+    setOccurrenceExplorer(null);
+    setVerseActionsOpen(false);
+    setTajweedFocus(null);
+    openContextLens(trigger, coordinate ? "words" : "overview");
+  }
+
+  async function exploreWordOccurrences(kind: "lemma" | "root", identifier: string, label: string) {
+    if (!wordStudySource) return;
+    const token = occurrenceRequestGateRef.current.begin(`${kind}:${identifier}`);
+    setOccurrenceExplorer({ kind, identifier, label, items: [], total: 0, status: "loading", reason: "" });
+    const result = kind === "lemma"
+      ? await WORD_STUDY_PROVIDER_REGISTRY.getOccurrencesByLemma(wordStudySource.sourceId, identifier)
+      : await WORD_STUDY_PROVIDER_REGISTRY.getOccurrencesByRoot(wordStudySource.sourceId, identifier);
+    if (!occurrenceRequestGateRef.current.isCurrent(token)) return;
+    setOccurrenceExplorer(result.status === "ok"
+      ? { kind, identifier, label, items: result.items, total: result.total, status: "ok", reason: "" }
+      : { kind, identifier, label, items: [], total: 0, status: result.status, reason: result.reason });
+  }
+
+  async function openWordOccurrence(occurrence: WordOccurrence) {
+    try {
+      const target = await contentTransport.lookupVerse(occurrence.coordinate.verseKey);
+      if (target.page !== occurrence.coordinate.page || target.verseKey !== occurrence.coordinate.verseKey) throw new Error("Occurrence coordinate mismatch");
+      pendingWordRef.current = occurrence.coordinate;
+      setStudyInitialTab("words");
+      goToPage(target.page, target.page > pageData.page ? "next" : target.page < pageData.page ? "previous" : undefined, target.verseKey);
+    } catch {
+      pendingWordRef.current = null;
+      setNotice("This occurrence did not match the trusted Quran page mapping and was not opened.");
     }
-    const rules = rulesForTajweedHtml(word.tajweedHtml);
-    setTajweedFocus(rules.length ? { word: word.text, verseKey: word.verseKey, rules } : null);
   }
 
   async function startSurahPlayback(chapterId: number) {
@@ -1077,7 +1346,7 @@ export default function Home() {
     setOverlay("Listen");
     setNotice(`Starting complete sūrah playback for Sūrah ${chapterId}.`);
     if (pageData.verses.some((verse) => verse.key === verseKey)) {
-      setSelectedVerseKey(verseKey);
+      selectAyah(verseKey);
     } else {
       try {
         const target = await contentTransport.lookupVerse(verseKey);
@@ -1148,14 +1417,26 @@ export default function Home() {
         {line.words.map((word) => {
           const glyph = tajweed ? (word.qcfTajweedCode ?? word.qcfCode) : word.qcfCode;
           const useQcfGlyph = fontReady && glyph && (readingFont === "uthman-taha" || word.isEnd);
+          const coordinate = wordCoordinateIndex.get(pageWordIdentity(word));
+          const rules = tajweed && !word.isEnd ? rulesForTajweedHtml(word.tajweedHtml) : [];
           return (
             <button
               type="button"
               key={word.id}
-              className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}${memorizedVerseKeys.has(word.verseKey) ? " memorized" : ""}${revealedVerses.includes(word.verseKey) ? " hifz-revealed" : ""}${hifzLoop?.active && selectedVerseKey === word.verseKey ? " hifz-playing" : ""}`}
-              onClick={() => selectMushafWord(word)}
-              aria-label={hifzHidden ? `${revealedVerses.includes(word.verseKey) ? "Hide" : "Reveal"} ayah ${word.verseKey}` : `${tajweed && rulesForTajweedHtml(word.tajweedHtml).length ? "Explain Tajweed in" : "Select"} ayah ${word.verseKey}`}
-              tabIndex={word.isEnd ? 0 : -1}
+              ref={(node) => {
+                const identity = `${word.verseKey}|${word.id}`;
+                if (node) {
+                  wordButtonRefs.current.set(identity, node);
+                  if (word.isEnd) verseButtonRefs.current.set(word.verseKey, node);
+                } else {
+                  wordButtonRefs.current.delete(identity);
+                  if (word.isEnd) verseButtonRefs.current.delete(word.verseKey);
+                }
+              }}
+              className={`mushaf-word${word.isEnd ? " ayah-end" : ""}${selectedVerseKey === word.verseKey ? " selected" : ""}${coordinate && selectedWord && coordinatesMatch(selectedWord.coordinate, coordinate, true) ? " word-selected" : ""}${memorizedVerseKeys.has(word.verseKey) ? " memorized" : ""}${revealedVerses.includes(word.verseKey) ? " hifz-revealed" : ""}${hifzLoop?.active && selectedVerseKey === word.verseKey ? " hifz-playing" : ""}`}
+              onClick={(event) => selectMushafWord(word, event.currentTarget)}
+              aria-label={hifzHidden ? `${word.text} — ${revealedVerses.includes(word.verseKey) ? "hide" : "reveal"} ayah ${word.verseKey}` : word.isEnd ? `Study ayah ${word.verseKey}` : `${word.text} — open word study, word ${coordinate?.wordPosition ?? ""} in ayah ${word.verseKey}${rules.length ? `; ${rules.length} Tajweed ${rules.length === 1 ? "rule" : "rules"}` : ""}`}
+              tabIndex={word.isEnd || selectedVerseKey === word.verseKey ? 0 : -1}
             >
               {useQcfGlyph
                 ? <span className="qcf-glyph" style={{ fontFamily: `"${fontName}"` }} dangerouslySetInnerHTML={{ __html: glyph }} />
@@ -1203,7 +1484,7 @@ export default function Home() {
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${translation ? "active" : ""}`} onClick={() => setTranslation((value) => !value)} aria-label="Toggle Saheeh International translation"><span>Translation</span></button>
-            <button type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Context" ? "active" : ""}`} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Context Lens for selected ayah"><span>Context</span></button>
+            <button ref={(node) => { studyControlRefs.current[0] = node; }} type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Context" ? "active" : ""}`} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Study Lens for selected ayah"><span>Study</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${overlay === "Tafsir" ? "active" : ""}`} onClick={openTafsir} aria-label="Open tafsir for selected ayah"><span>Tafsir</span></button>
             <button type="button" className={`toggle-control hifz-shortcut ${hifzHidden || hifzLoop ? "active" : ""}`} onClick={() => setOverlay("Hifz")} aria-label="Open Hifz memorization mode"><span>Hifz</span></button>
             <button type="button" className="icon-button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">?</button>
@@ -1218,13 +1499,13 @@ export default function Home() {
           <button type="button" className={tajweed ? "active" : ""} onClick={() => setTajweed((value) => !value)} aria-pressed={tajweed}><span className="tajweed-dot" /> Tajweed</button>
           <button type="button" className={transliteration ? "active" : ""} onClick={() => setTransliteration((value) => !value)} aria-pressed={transliteration}>Transliteration</button>
           <button type="button" className={translation ? "active" : ""} onClick={() => setTranslation((value) => !value)} aria-pressed={translation}>Translation</button>
-          <button type="button" className={overlay === "Context" ? "active" : ""} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Context Lens for selected ayah">Context</button>
+          <button ref={(node) => { studyControlRefs.current[1] = node; }} type="button" className={overlay === "Context" ? "active" : ""} onClick={(event) => openContextLens(event.currentTarget)} aria-label="Open Ayah Study Lens for selected ayah">Study</button>
           <button type="button" className={overlay === "Tafsir" ? "active" : ""} onClick={openTafsir}>Tafsir</button>
           <button type="button" className={hifzHidden || hifzLoop ? "active" : ""} onClick={() => setOverlay("Hifz")}>Hifz</button>
           <button type="button" onClick={() => setTajweedGuideOpen(true)} aria-label="Open Tajweed guide">Guide</button>
         </div>
 
-        {currentPlanItem ? <div className="hifz-reader-banner mastery-session-banner" aria-label="Daily mastery session"><div><span>DAILY MASTERY · {activePlanIndex + 1} OF {activePlan.length}</span><p>{currentPlanItem.reason} · Ayah {currentPlanItem.verseKey}</p></div>{revealedVerses.includes(currentPlanItem.verseKey) ? <div className="mastery-rating" aria-label="Rate this review">{(["again", "hard", "good", "easy"] as ReviewGrade[]).map((grade) => <button type="button" onClick={() => rateDailyPlan(grade)} key={grade}>{grade}</button>)}</div> : <button type="button" onClick={() => setRevealedVerses([currentPlanItem.verseKey])}>Reveal ayah</button>}<button type="button" className="mastery-stop" onClick={stopDailyPlan}>Stop</button></div> : hifzHidden && <div className="hifz-reader-banner" role="status"><span>Hidden-text self-test</span><p>Tap any ayah to reveal it. Tap it again to hide it.</p><button type="button" onClick={() => { setHifzHidden(false); setRevealedVerses([]); }}>Show all text</button></div>}
+        {currentPlanItem ? <div className="hifz-reader-banner mastery-session-banner" aria-label="Today’s Study Hifz review"><div><span>TODAY&apos;S STUDY · HIFZ {activePlanIndex + 1} OF {activePlan.length}</span><p>{currentPlanItem.reason} · Ayah {currentPlanItem.verseKey}</p></div>{revealedVerses.includes(currentPlanItem.verseKey) ? <div className="mastery-rating" aria-label="Rate this review">{(["again", "hard", "good", "easy"] as ReviewGrade[]).map((grade) => <button type="button" onClick={() => rateDailyPlan(grade)} key={grade}>{grade}</button>)}</div> : <button type="button" onClick={() => setRevealedVerses([currentPlanItem.verseKey])}>Reveal ayah</button>}<button type="button" className="mastery-stop" onClick={stopDailyPlan}>Exit</button></div> : studySessionVisible && activeStudyStep && activeStudySession ? <div className="hifz-reader-banner today-study-banner" aria-label="Today’s Study session"><div><span>TODAY&apos;S STUDY · STEP {activeStudySession.currentStepIndex + 1} OF {activeStudySession.steps.length}</span><p>{activeStudyStep.title} · about {activeStudyStep.estimatedMinutes} min</p></div><div className="today-study-actions"><button type="button" onClick={beginActiveStudyStep}>{activeStudyStep.kind === "reading" ? activeStudyStepStarted ? "Reading opened" : "Open page" : "Begin"}</button>{activeStudyStep.kind === "reading" && <button type="button" onClick={completeActiveStudyStep} disabled={!activeStudyStepStarted}>Complete</button>}<button type="button" onClick={skipActiveStudyStep}>Skip</button></div><button type="button" className="mastery-stop" onClick={() => { setStudySessionVisible(false); setNotice("Today’s Study is saved. Resume it from My Mushaf."); }}>Exit</button></div> : hifzHidden && <div className="hifz-reader-banner" role="status"><span>Hidden-text self-test</span><p>Tap any ayah to reveal it. Tap it again to hide it.</p><button type="button" onClick={() => { setHifzHidden(false); setRevealedVerses([]); }}>Show all text</button></div>}
         {hifzLoop && <div className="hifz-reader-banner loop-banner" role="status"><span>Hifz loop</span><p>Pass {hifzLoop.pass} of {hifzLoop.totalPasses} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => stopHifzLoop()}>Stop</button></div>}
 
         <section className="reading-area" aria-label="Mushaf reader">
@@ -1232,6 +1513,8 @@ export default function Home() {
           <div className="book-stage">
             <div className="book-meta"><span>JUZ {pageData.juz}</span>{currentChapter ? <button type="button" onClick={() => setNotice(`Double-click Sūrah ${currentChapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(currentChapter.id)} aria-label={`Sūrah ${currentChapter.id}, ${currentChapter.name}. Double-click to play from the beginning`}>{currentChapter.id} · {currentChapter.name}</button> : <span>Quran</span>}<span>HIZB {pageData.hizb}</span></div>
             <article
+              ref={readerArticleRef}
+              tabIndex={-1}
               className={`mushaf-page reading-font-${readingFont}${hifzHidden ? " hifz-hidden" : ""} ${turnDirection ? `turn-${turnDirection}` : ""}`}
               aria-label={`Quran page ${pageData.page}`}
               onPointerDown={handlePointerDown}
@@ -1246,7 +1529,7 @@ export default function Home() {
             {tajweedFocus && <aside className="tajweed-explanation" aria-live="polite"><header><div><span>TAJWEED IN AYAH {tajweedFocus.verseKey}</span><strong lang="ar" dir="rtl">{tajweedFocus.word}</strong></div><button type="button" onClick={() => setTajweedFocus(null)} aria-label="Close Tajweed explanation">×</button></header>{tajweedFocus.rules.map((rule) => <div className={`tajweed-explanation-rule rule-${rule.id}`} key={rule.id}><span className="rule-swatch" /><div><strong>{rule.name}</strong><small>{rule.arabicName}{rule.count ? ` · ${rule.count}` : ""}</small><p>{rule.instruction}</p></div></div>)}<button type="button" className="open-guide-link" onClick={() => setTajweedGuideOpen(true)}>Open the complete Tajweed guide</button></aside>}
             {transliteration && selectedVerse && <aside className="learning-strip" aria-live="polite"><span>AYAH {selectedVerse.key}</span><p>{selectedVerse.transliteration || "Transliteration is not available for this ayah."}</p></aside>}
             {translation && selectedVerse && <aside className="learning-strip translation-strip" aria-live="polite"><span>SAHEEH INTERNATIONAL · AYAH {selectedVerse.key}</span><p>{selectedVerse.translation || "Translation is temporarily unavailable for this ayah."}</p></aside>}
-            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="context-action" onClick={(event) => openContextLens(event.currentTarget)}>Context lens</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
+            {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="context-action" onClick={(event) => openContextLens(event.currentTarget)}>Study lens</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
               <button type="button" className="mobile-jump-button" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><strong>{pageData.page}</strong><span>/ {TOTAL_PAGES}</span></button>
@@ -1302,7 +1585,7 @@ export default function Home() {
               <header><div><span className="panel-kicker">PERSONAL MASTERY MAP</span><h2 id="hifz-title">My Mushaf</h2></div>{closeButton}</header>
               <div className="hifz-content">
                 <section className="hifz-summary" aria-label="Hifz progress">
-                  <div className="hifz-stat streak-stat"><span>◆</span><strong>{hifzStreak}</strong><small>day rhythm</small></div>
+                  <div className="hifz-stat streak-stat"><span>◆</span><strong>{studyStreak}</strong><small>study rhythm</small></div>
                   <div className="hifz-stat"><span>✓</span><strong>{hifzProgress.memorized.length}</strong><small>ayāt mapped</small></div>
                   <div className="hifz-stat due-stat"><span>↺</span><strong>{dueReviews}</strong><small>reviews due</small></div>
                   <div className="hifz-goal">
@@ -1312,11 +1595,19 @@ export default function Home() {
                   </div>
                 </section>
 
-                <section className="mastery-plan-card" aria-labelledby="daily-plan-title">
-                  <div className="mastery-plan-copy"><span className="mastery-eyebrow">TODAY&apos;S PATH</span><h3 id="daily-plan-title">A focused {hifzProgress.sessionMinutes}-minute session</h3><p>Due reviews come first, followed by new ayāt from page {pageData.page}. Your ratings set the next review date.</p></div>
-                  <div className="mastery-duration" aria-label="Session length">{([5, 10, 20] as const).map((minutes) => <button type="button" className={hifzProgress.sessionMinutes === minutes ? "active" : ""} aria-pressed={hifzProgress.sessionMinutes === minutes} onClick={() => setHifzProgress((current) => ({ ...current, sessionMinutes: minutes }))} key={minutes}>{minutes} min</button>)}</div>
-                  <div className="mastery-plan-preview">{dailyPlan.map((item, index) => <span className={`plan-chip ${item.kind}`} key={item.verseKey}><i>{index + 1}</i><strong>{item.verseKey}</strong><small>{item.kind}</small></span>)}{!dailyPlan.length && <p>Your queue is clear. Select an ayah in the reader and mark it memorized to begin.</p>}</div>
-                  <button type="button" className="mastery-start" onClick={startDailyPlan} disabled={!dailyPlan.length}>Start today&apos;s session <span>→</span></button>
+                <section className="mastery-plan-card today-plan-card" aria-labelledby="daily-plan-title">
+                  <div className="mastery-plan-copy"><span className="mastery-eyebrow">TODAY&apos;S STUDY</span><h3 id="daily-plan-title">A focused {hifzProgress.sessionMinutes}-minute path</h3><p>Due Hifz comes first, then due vocabulary, new approved vocabulary, and reading. You can skip or exit at any time.</p><div className="today-plan-metrics"><span><strong>Page {pageData.page}</strong>continue reading</span><span><strong>{dueReviews}</strong>Hifz due</span><span><strong>{vocabularyDue}</strong>vocabulary due</span><span><strong>{studyStreak}</strong>day rhythm</span></div></div>
+                  <div className="mastery-duration" aria-label="Session length">{([5, 10, 20] as const).map((minutes) => <button type="button" disabled={studyDurationLocked} className={hifzProgress.sessionMinutes === minutes ? "active" : ""} aria-pressed={hifzProgress.sessionMinutes === minutes} onClick={() => setHifzProgress((current) => ({ ...current, sessionMinutes: minutes }))} key={minutes}>{minutes} min</button>)}</div>
+                  <div className="today-goal" role="progressbar" aria-label="Today’s Study progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={todayCompletion.percent}><span style={{ width: `${todayCompletion.percent}%` }} /><small>{todayCompletion.completedSteps} of {todayCompletion.totalSteps} steps complete</small></div>
+                  <div className="mastery-plan-preview">{displayedTodayPlan.steps.map((step, index) => <span className={`plan-chip ${step.kind}`} key={step.id}><i>{index + 1}</i><strong>{step.title}</strong><small>{step.estimatedMinutes} min</small></span>)}{!displayedTodayPlan.steps.length && <p>Your plan is clear. Continue reading whenever you are ready.</p>}</div>
+                  <button type="button" className="mastery-start" onClick={startTodayStudy} disabled={!todayPlan.steps.length || todaySessionFinished}>{todaySessionFinished ? todayCompletion.percent === 100 ? "Today’s Study complete" : "Today’s Study ended" : activeStudySession ? "Resume Today’s Study" : "Start Today’s Study"} <span>→</span></button>
+                </section>
+
+                <section className="vocabulary-dashboard-card" aria-labelledby="vocabulary-dashboard-title">
+                  <div><span className="mastery-eyebrow">QURAN VOCABULARY</span><h3 id="vocabulary-dashboard-title">Foundation 125</h3><p>The learning engine and local review state are ready. Production lessons remain unavailable until a 125-entry source passes rights, provenance, integrity, and coordinate audit.</p></div>
+                  <dl><div><dt>Curriculum</dt><dd>0 / {foundation125?.expectedEntryCount ?? 125}</dd></div><div><dt>Due today</dt><dd>0</dd></div><div><dt>Status</dt><dd>Source approval required</dd></div></dl>
+                  <button type="button" disabled aria-describedby="foundation-source-status">Continue learning</button>
+                  <small id="foundation-source-status">No Quran vocabulary, morphology, root, lemma, or occurrence data is bundled.</small>
                 </section>
 
                 <section className="mastery-map-card" aria-labelledby="mastery-map-title">
@@ -1476,6 +1767,7 @@ export default function Home() {
           {overlay === "Context" && selectedVerse && translationPackServiceRef.current && (
             <AyahContextLens
               service={translationPackServiceRef.current}
+              initialTab={studyInitialTab}
               verseKey={selectedVerseKey}
               surahNumber={currentChapter?.id ?? Number(selectedVerseKey.split(":")[0])}
               surahName={currentChapter?.name ?? "Quran"}
@@ -1488,10 +1780,29 @@ export default function Home() {
               tafsirDocument={displayedTafsir}
               tafsirLoading={tafsirLoading || (!displayedTafsir && !tafsirError)}
               tafsirError={tafsirError}
+              selectedWord={selectedWord}
+              wordRecord={wordRecord}
+              wordStudySource={wordStudySource}
+              wordStudyLoading={wordStudyLoading}
+              occurrenceExplorer={occurrenceExplorer}
+              playing={playing}
+              memorized={memorizedVerseKeys.has(selectedVerseKey)}
+              tajweedEnabled={tajweed}
               canMovePrevious={canStudyPrevious}
               canMoveNext={canStudyNext}
-              onMoveTafsir={moveStudyAyah}
+              onActiveTabChange={setStudyActiveTab}
+              onMoveAyah={moveStudyAyah}
               onRetryTafsir={() => setTafsirRevision((value) => value + 1)}
+              onTogglePlay={togglePlay}
+              onToggleMemorized={toggleMemorized}
+              onToggleTajweed={() => setTajweed((value) => !value)}
+              onOpenHifz={() => setOverlay("Hifz")}
+              onOpenTajweedGuide={() => { setOverlay(null); setTajweedGuideOpen(true); }}
+              onHearWordInAyah={togglePlay}
+              onExploreLemma={(lemmaId, label) => exploreWordOccurrences("lemma", lemmaId, label)}
+              onExploreRoot={(rootId, label) => exploreWordOccurrences("root", rootId, label)}
+              onOpenOccurrence={openWordOccurrence}
+              onCloseOccurrences={() => { occurrenceRequestGateRef.current.cancel(); setOccurrenceExplorer(null); }}
               onClose={closeContextLens}
             />
           )}

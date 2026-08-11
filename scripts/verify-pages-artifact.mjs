@@ -57,8 +57,8 @@ const rootAssetUrls = [...index.matchAll(/(?:src|href)="(\/[^"#?]*)/g)].map((mat
 assert.ok(rootAssetUrls.length >= 4, "Pages index has too few application assets.");
 for (const url of rootAssetUrls) assert.ok(url.startsWith(basePath), `Broken repository-base asset path: ${url}`);
 
-assert.match(combined, /Ayah Context Lens/);
-for (const label of ["Tajweed", "Transliteration", "Translation", "Context", "Tafsir", "Hifz"]) assert.match(combined, new RegExp(label));
+assert.match(combined, /Ayah Study Lens/);
+for (const label of ["Tajweed", "Transliteration", "Translation", "Study", "Tafsir", "Hifz"]) assert.match(combined, new RegExp(label));
 assert.doesNotMatch(combined.replaceAll("https://api.quran.com/api/v4", ""), /["'`]\/api\//, "Pages bundle contains a same-origin server API path.");
 
 assert.equal(manifest.id, basePath);

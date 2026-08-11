@@ -89,7 +89,12 @@ test("the lens displays required identity, translation, attribution, and unchang
   ]);
 
   assert.match(lens, /SŪRAH \{surahNumber\}/);
+  assert.match(lens, /Ayah Study Lens/);
   assert.match(lens, /VERIFIED ARABIC AYAH/);
+  assert.match(lens, /id: "overview", label: "Overview"/);
+  assert.match(lens, /id: "words", label: "Words"/);
+  assert.match(lens, /id: "tafsir", label: "Tafsir"/);
+  assert.match(lens, /id: "practice", label: "Practice"/);
   assert.match(lens, /English · Saheeh International/);
   assert.match(lens, /Amharic · Muhammad Zain Zahruddin/);
   assert.match(lens, /Source<\/dt>/);
@@ -136,7 +141,32 @@ test("keyboard and accessibility behavior includes modal semantics, focus return
   assert.match(lens, /"ArrowLeft", "ArrowRight", "Home", "End"/);
   assert.match(lens, /role="progressbar"/);
   assert.match(lens, /role="alert"/);
-  assert.match(lens, /aria-label="Close Ayah Context Lens"/);
-  assert.match(page, /contextTriggerRef\.current\?\.focus\(\)/);
-  assert.match(page, /aria-label="Open Ayah Context Lens for selected ayah"/);
+  assert.match(lens, /aria-label="Close Ayah Study Lens"/);
+  assert.match(page, /node\?\.isConnected/);
+  assert.match(page, /selectedWordButton/);
+  assert.match(page, /selectedAyahButton/);
+  assert.match(page, /studyControlRefs\.current\.find/);
+  assert.match(page, /readerArticleRef\.current/);
+  assert.match(page, /target\?\.focus\(\)/);
+  assert.match(page, /aria-label="Open Ayah Study Lens for selected ayah"/);
+});
+
+test("the Study Lens reuses reader audio, Tajweed, Hifz, tafsir, and shared ayah navigation", async () => {
+  const [lens, page] = await Promise.all([
+    readFile(new URL("../app/ayah-context-lens.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(lens, /onMoveAyah\(-1\)/);
+  assert.match(lens, /onMoveAyah\(1\)/);
+  assert.match(lens, /onTogglePlay/);
+  assert.match(lens, /onToggleMemorized/);
+  assert.match(lens, /onToggleTajweed/);
+  assert.match(lens, /onOpenHifz/);
+  assert.match(lens, /onOpenTajweedGuide/);
+  assert.match(lens, /Hear this ayah/);
+  assert.match(page, /onMoveAyah=\{moveStudyAyah\}/);
+  assert.match(page, /onTogglePlay=\{togglePlay\}/);
+  assert.match(page, /onToggleMemorized=\{toggleMemorized\}/);
+  assert.match(page, /onOpenHifz=\{\(\) => setOverlay\("Hifz"\)\}/);
 });

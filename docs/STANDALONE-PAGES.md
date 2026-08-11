@@ -77,4 +77,4 @@ npm run verify:pages
 npm run smoke:pages
 ```
 
-`verify:pages` fails if the artifact contains an iframe or ChatGPT Site reference, lacks the React JS/CSS application or Context Lens, contains a same-origin `/api/` dependency, uses assets outside `/mushaf-companion/`, has a wrong manifest start URL or service-worker scope, lacks navigation fallback, or does not contain the exact verified Amharic package.
+`verify:pages` fails if the artifact contains an iframe or ChatGPT Site reference, lacks the React JS/CSS application or Study Lens, contains a same-origin `/api/` dependency, uses assets outside `/mushaf-companion/`, has a wrong manifest start URL or service-worker scope, lacks navigation fallback, or does not contain the exact verified Amharic package.
