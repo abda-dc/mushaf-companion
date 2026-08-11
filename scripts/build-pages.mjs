@@ -12,13 +12,16 @@ const outputDirectory = resolve(root, "_site");
 const contentDirectory = resolve(outputDirectory, "content");
 const amharicSource = findTranslationSource("quranenc:amharic_zain");
 
-async function fetchBuildSource(url, init) {
+async function fetchBuildSourceBytes(url, init) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
-      if (response.ok) return response;
-      lastError = new Error(`Source returned status ${response.status} on attempt ${attempt}.`);
+      const response = await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+      if (!response.ok) {
+        lastError = new Error(`Source returned status ${response.status} on attempt ${attempt}.`);
+        continue;
+      }
+      return await readResponseBytesWithLimit(response);
     } catch (error) {
       lastError = error;
     }
@@ -57,12 +60,11 @@ await writeFile(
   "utf8",
 );
 
-const packageResponse = await fetchBuildSource(amharicSource.provider.packageUrl, {
+const packageBytes = await fetchBuildSourceBytes(amharicSource.provider.packageUrl, {
   cache: "no-store",
   redirect: "follow",
   headers: { accept: "application/xml,text/xml;q=0.9" },
 });
-const packageBytes = await readResponseBytesWithLimit(packageResponse);
 const fingerprint = await fingerprintQuranEncPackage(amharicSource, packageBytes);
 if (
   fingerprint.rawChecksum !== amharicSource.integrity.rawChecksum

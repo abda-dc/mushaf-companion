@@ -1,4 +1,7 @@
 import type { HifzProgress } from "./hifz-state.mjs";
+import type { StudyNotesState } from "./study-notes.mjs";
+import type { VocabularyProgress } from "./vocabulary-state.mjs";
+import type { TodayStudyProgress } from "./today-study.mjs";
 import type { ReciterId } from "./quran-data";
 
 export type ThemePreference = "light" | "dark";
@@ -6,7 +9,7 @@ export type PageScalePreference = "compact" | "comfortable" | "large";
 export type ReadingFontPreference = "uthman-taha" | "amiri" | "lateef" | "scheherazade";
 
 export interface MushafPreferences {
-  version: 4;
+  version: 7;
   reader: {
     lastPage: number;
     lastVerse: string;
@@ -23,11 +26,14 @@ export interface MushafPreferences {
   };
   bookmarks: string[];
   hifz: HifzProgress;
+  vocabulary: VocabularyProgress;
+  study: TodayStudyProgress;
+  notes: StudyNotesState;
   downloads: { wifiOnly: boolean };
 }
 
-export const PREFERENCE_STORAGE_KEY: "mushaf:preferences-v4";
-export const PREFERENCE_SCHEMA_VERSION: 4;
+export const PREFERENCE_STORAGE_KEY: "mushaf:preferences-v7";
+export const PREFERENCE_SCHEMA_VERSION: 7;
 export const DEFAULT_PREFERENCES: Readonly<MushafPreferences>;
 export function normalizePreferences(value: unknown): MushafPreferences;
 export function migrateLegacyPreferences(storage: Pick<Storage, "getItem">): MushafPreferences;

@@ -7,6 +7,7 @@ import {
   calculateStreak,
   calendarDayDifference,
   dueReviewCount,
+  isValidCalendarDateKey,
   normalizeHifzProgress,
   recordHifzActivity,
   recordVerseReview,
@@ -19,6 +20,16 @@ test("calendar day math crosses leap days, months, and years", () => {
   assert.equal(calendarDayDifference("2024-02-29", "2024-03-01"), 1);
   assert.equal(calendarDayDifference("2025-12-31", "2026-01-01"), 1);
   assert.equal(addCalendarDays("2024-02-28", 2), "2024-03-01");
+});
+
+test("strict local calendar validation rejects impossible dates and accepts real leap days", () => {
+  assert.equal(isValidCalendarDateKey("2026-02-31"), false);
+  assert.equal(isValidCalendarDateKey("2026-04-31"), false);
+  assert.equal(isValidCalendarDateKey("2026-00-10"), false);
+  assert.equal(isValidCalendarDateKey("2026-01-00"), false);
+  assert.equal(isValidCalendarDateKey("2024-02-29"), true);
+  assert.equal(isValidCalendarDateKey("2023-02-29"), false);
+  assert.equal(Number.isNaN(calendarDayDifference("2026-02-31", "2026-03-01")), true);
 });
 
 test("streak continues through today and resets only after a missed day", () => {

@@ -42,6 +42,7 @@ export interface PageMastery {
 
 export const DEFAULT_HIFZ_PROGRESS: Readonly<HifzProgress>;
 export function toLocalDateKey(date?: Date): string;
+export function isValidCalendarDateKey(value: unknown): value is string;
 export function calendarDayDifference(fromKey: string, toKey: string): number;
 export function addCalendarDays(dateKey: string, days: number): string;
 export function calculateStreak(activityDates: string[], todayKey?: string): number;

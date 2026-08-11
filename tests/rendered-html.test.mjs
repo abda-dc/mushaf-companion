@@ -162,7 +162,7 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(data, /FALLBACK_PAGE/);
   assert.match(page, /My Mushaf/);
   assert.match(page, /buildPageMasteryMap/);
-  assert.match(page, /Start today&apos;s session/);
+  assert.match(page, /Start Today’s Study/);
   assert.match(page, /createPortableBackup/);
   assert.match(page, /Saheeh International/);
   assert.match(page, /getVerifiedAudioBlob/);

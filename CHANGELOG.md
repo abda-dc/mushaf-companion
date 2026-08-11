@@ -2,6 +2,30 @@
 
 All notable product changes to Mushaf Companion are documented here.
 
+## Unreleased — local changes
+
+### Added
+
+- Private ayah and exact-word study notes with bounded plain text, user-defined Unicode tags, explicit editing/deletion, local search, trusted anchor navigation, and Saved Study/My Mushaf access.
+- Preference schema v7 migration and portable backup/restore coverage for private notes, tags, anchors, and timestamps while preserving all M1–M6 domains.
+- A source-neutral evidence relationship contract with independently pinned provider/source/revision/origin/approval/checksum/normalization identity, complete delivery-specific rights, fail-closed adapter boundaries, canonical semantic edge identity, partial-provider results, trusted Quran reconciliation, and stale-query protection.
+- Notes and Evidence tabs in the existing Ayah Study Lens with responsive, accessible layouts and clear private-versus-source-backed labeling.
+- A single Ayah Study Lens with Overview, Words, Tafsir, Practice, Notes, and Evidence tabs, shared selected-ayah navigation, responsive drawer/sheet behavior, and reused translation, Ibn Kathir, audio, Tajweed, and Hifz systems.
+- A source-neutral Quran word-study contract with deterministic Mushaf coordinates, provider approval/provenance gates, dataset and runtime audits, and a disabled Quranic Arabic Corpus reference descriptor.
+- Tap-a-word study context, trusted occurrence navigation, and separate lemma/root exploration that remain unavailable when no approved provider is active.
+- A gated Foundation 125 curriculum loader, device-local vocabulary progress, shared Again/Hard/Good/Easy interval semantics, and preference backup/restore support.
+- A unified Today’s Study plan for due Hifz, approved vocabulary, and reading, with deterministic 5/10/20-minute budgets, resumable local sessions, skip/exit controls, and calendar-safe activity.
+
+### Reliability
+
+- Private note text and tags remain device-local during normal operation, are never sent to Quran APIs or analytics, and leave the device only through explicit backup download.
+- New note drafts freeze their full Quran anchor, exact word anchors are revalidated on save, existing-note edits preserve anchors, secure UUID generation falls back to `crypto.getRandomValues()`, renamed active tag filters remain valid, and backup restore rejects unsupported future schemas.
+- No production evidence relationships are bundled: the reference provider remains disabled until a source passes rights, provenance, integrity, runtime audit, and Quran-mapping review.
+- Evidence failures and partial coverage remain distinct from authoritative zero; authority labels appear only after successful approved runtime checks, and inferred, synthetic, keyword-, root-, lemma-, embedding-, or AI-derived links cannot enter approved provider results.
+- Word-study and curriculum content fail closed on disabled sources, malformed records, duplicate or mismatched coordinates, incomplete provenance, and source-revision changes.
+- Production vocabulary, morphology, root, lemma, and occurrence content remains disabled pending explicit source and rights approval; automated tests use synthetic fixtures only.
+- Preference schema v7 migrates earlier reader, Hifz, vocabulary, Today's Study, audio, and download settings without replacing existing user state.
+
 ## 1.1.0 — 2026-08-07
 
 ### Added

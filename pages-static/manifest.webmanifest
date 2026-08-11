@@ -2,7 +2,7 @@
   "id": "/mushaf-companion/",
   "name": "Mushaf Companion",
   "short_name": "Mushaf",
-  "description": "A calm, page-faithful Quran reader with all 604 Madani mushaf pages, memorization guidance, offline recitation packs, translation, Context Lens, and source-attributed tafsir.",
+  "description": "A calm, page-faithful Quran reader with all 604 Madani mushaf pages, memorization guidance, offline recitation packs, translation, Study Lens, and source-attributed tafsir.",
   "lang": "en",
   "dir": "auto",
   "start_url": "/mushaf-companion/?source=pwa",

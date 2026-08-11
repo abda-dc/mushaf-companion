@@ -1,3 +1,5 @@
+import { isReviewGrade, nextReviewIntervalDays } from "./review-schedule.mjs";
+
 export const DEFAULT_HIFZ_PROGRESS = Object.freeze({
   activityDates: [],
   memorized: [],
@@ -8,8 +10,23 @@ export const DEFAULT_HIFZ_PROGRESS = Object.freeze({
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const VERSE_KEY = /^\d{1,3}:\d{1,3}$/;
-const REVIEW_GRADES = new Set(["again", "hard", "good", "easy"]);
 const SESSION_MINUTES = new Set([5, 10, 20]);
+const MAX_ACTIVITY_DATES = 730;
+const MAX_MEMORIZED = 10_000;
+const MAX_REVIEWS = 10_000;
+
+function takeUnique(items, keyForItem, limit) {
+  const seen = new Set();
+  const result = [];
+  for (const item of items) {
+    const key = keyForItem(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
 
 export function toLocalDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -18,22 +35,33 @@ export function toLocalDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+export function isValidCalendarDateKey(value) {
+  if (typeof value !== "string" || !DATE_KEY.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const candidate = new Date(0);
+  candidate.setHours(12, 0, 0, 0);
+  candidate.setFullYear(year, month - 1, day);
+  return candidate.getFullYear() === year && candidate.getMonth() === month - 1 && candidate.getDate() === day;
+}
+
 export function calendarDayDifference(fromKey, toKey) {
-  if (!DATE_KEY.test(fromKey) || !DATE_KEY.test(toKey)) return Number.NaN;
+  if (!isValidCalendarDateKey(fromKey) || !isValidCalendarDateKey(toKey)) return Number.NaN;
   const [fromYear, fromMonth, fromDay] = fromKey.split("-").map(Number);
   const [toYear, toMonth, toDay] = toKey.split("-").map(Number);
   return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86_400_000);
 }
 
 export function addCalendarDays(dateKey, days) {
-  if (!DATE_KEY.test(dateKey) || !Number.isInteger(days)) return dateKey;
+  if (!isValidCalendarDateKey(dateKey) || !Number.isInteger(days)) return dateKey;
   const [year, month, day] = dateKey.split("-").map(Number);
   const next = new Date(Date.UTC(year, month - 1, day + days));
   return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
 }
 
 export function calculateStreak(activityDates, todayKey = toLocalDateKey()) {
-  const dates = [...new Set(activityDates.filter((date) => DATE_KEY.test(date) && calendarDayDifference(date, todayKey) >= 0))].sort();
+  if (!Array.isArray(activityDates) || !isValidCalendarDateKey(todayKey)) return 0;
+  const dates = [...new Set(activityDates.slice(-MAX_ACTIVITY_DATES * 2).filter((date) => isValidCalendarDateKey(date) && calendarDayDifference(date, todayKey) >= 0))].sort();
   const latest = dates.at(-1);
   if (!latest) return 0;
   const latestAge = calendarDayDifference(latest, todayKey);
@@ -50,17 +78,15 @@ export function calculateStreak(activityDates, todayKey = toLocalDateKey()) {
 export function normalizeHifzProgress(value) {
   const source = value && typeof value === "object" ? value : {};
   const activityDates = Array.isArray(source.activityDates)
-    ? [...new Set(source.activityDates.filter((date) => typeof date === "string" && DATE_KEY.test(date)))].sort().slice(-730)
+    ? [...new Set(source.activityDates.slice(-MAX_ACTIVITY_DATES * 2).filter(isValidCalendarDateKey))].sort().slice(-MAX_ACTIVITY_DATES)
     : [];
   const memorized = Array.isArray(source.memorized)
-    ? source.memorized.filter((item) => item && typeof item === "object" && VERSE_KEY.test(item.verseKey) && Number.isInteger(item.page) && item.page >= 1 && item.page <= 604 && DATE_KEY.test(item.markedAt))
-      .filter((item, index, items) => items.findIndex((candidate) => candidate.verseKey === item.verseKey) === index)
+    ? takeUnique(source.memorized.slice(0, MAX_MEMORIZED * 2).filter((item) => item && typeof item === "object" && VERSE_KEY.test(item.verseKey) && Number.isInteger(item.page) && item.page >= 1 && item.page <= 604 && isValidCalendarDateKey(item.markedAt)), (item) => item.verseKey, MAX_MEMORIZED)
       .map((item) => ({ verseKey: item.verseKey, page: item.page, markedAt: item.markedAt }))
     : [];
   const memorizedKeys = new Set(memorized.map((item) => item.verseKey));
   const reviews = Array.isArray(source.reviews)
-    ? source.reviews.filter((item) => item && typeof item === "object" && memorizedKeys.has(item.verseKey) && Number.isInteger(item.page) && item.page >= 1 && item.page <= 604 && DATE_KEY.test(item.lastReviewed) && DATE_KEY.test(item.dueAt) && REVIEW_GRADES.has(item.grade))
-      .filter((item, index, items) => items.findIndex((candidate) => candidate.verseKey === item.verseKey) === index)
+    ? takeUnique(source.reviews.slice(0, MAX_REVIEWS * 2).filter((item) => item && typeof item === "object" && memorizedKeys.has(item.verseKey) && Number.isInteger(item.page) && item.page >= 1 && item.page <= 604 && isValidCalendarDateKey(item.lastReviewed) && isValidCalendarDateKey(item.dueAt) && isReviewGrade(item.grade)), (item) => item.verseKey, MAX_REVIEWS)
       .map((item) => ({
         verseKey: item.verseKey,
         page: item.page,
@@ -80,7 +106,7 @@ export function normalizeHifzProgress(value) {
 export function recordHifzActivity(progress, date = new Date()) {
   const normalized = normalizeHifzProgress(progress);
   const dateKey = typeof date === "string" ? date : toLocalDateKey(date);
-  if (!DATE_KEY.test(dateKey) || normalized.activityDates.includes(dateKey)) return normalized;
+  if (!isValidCalendarDateKey(dateKey) || normalized.activityDates.includes(dateKey)) return normalized;
   return normalizeHifzProgress({ ...normalized, activityDates: [...normalized.activityDates, dateKey] });
 }
 
@@ -101,20 +127,12 @@ export function toggleMemorizedVerse(progress, verse, date = new Date()) {
   }, dateKey);
 }
 
-function reviewInterval(previous, grade) {
-  const base = previous?.intervalDays ?? 1;
-  if (grade === "again") return 1;
-  if (grade === "hard") return Math.max(2, Math.round(base * 1.2));
-  if (grade === "easy") return previous ? Math.min(365, Math.max(7, Math.round(base * 3))) : 7;
-  return previous ? Math.min(365, Math.max(3, Math.round(base * 2))) : 3;
-}
-
 export function recordVerseReview(progress, verse, grade, date = new Date()) {
-  if (!REVIEW_GRADES.has(grade) || !VERSE_KEY.test(verse.verseKey) || !Number.isInteger(verse.page) || verse.page < 1 || verse.page > 604) {
+  if (!isReviewGrade(grade) || !VERSE_KEY.test(verse.verseKey) || !Number.isInteger(verse.page) || verse.page < 1 || verse.page > 604) {
     return normalizeHifzProgress(progress);
   }
   const dateKey = typeof date === "string" ? date : toLocalDateKey(date);
-  if (!DATE_KEY.test(dateKey)) return normalizeHifzProgress(progress);
+  if (!isValidCalendarDateKey(dateKey)) return normalizeHifzProgress(progress);
   let normalized = normalizeHifzProgress(progress);
   if (!normalized.memorized.some((item) => item.verseKey === verse.verseKey)) {
     normalized = normalizeHifzProgress({
@@ -123,7 +141,7 @@ export function recordVerseReview(progress, verse, grade, date = new Date()) {
     });
   }
   const previous = normalized.reviews.find((item) => item.verseKey === verse.verseKey);
-  const intervalDays = reviewInterval(previous, grade);
+  const intervalDays = nextReviewIntervalDays(previous?.intervalDays, grade, Boolean(previous));
   const review = {
     verseKey: verse.verseKey,
     page: verse.page,
