@@ -761,6 +761,31 @@ export default function Home() {
     setSurahPlaybackChapter(chapterId);
   }
 
+  function stopPlayback(showNotice = true) {
+    pendingAutoplayRef.current = false;
+
+    if (hifzPauseTimerRef.current !== null) {
+      window.clearTimeout(hifzPauseTimerRef.current);
+      hifzPauseTimerRef.current = null;
+    }
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    setHifzLoop(null);
+    setOfflinePackQueue([]);
+    setOfflinePackIndex(0);
+    updateSurahPlayback(null);
+    updatePlaying(false);
+    setProgress(0);
+
+    if (showNotice) {
+      setNotice(`Recitation stopped at ayah ${selectedVerseKey}.`);
+    }
+  }
   function selectAyah(verseKey: string) {
     occurrenceRequestGateRef.current.cancel();
     evidenceRequestGateRef.current.cancel();
@@ -981,6 +1006,17 @@ export default function Home() {
       else if (startIndex >= 0) selectAyah(pageData.verses[startIndex].key);
       return;
     }
+    if (currentReciter.scope === "ayah") {
+      if (selectedVerseKey === "114:6") {
+        pendingAutoplayRef.current = false;
+        updatePlaying(false);
+        setNotice("Quran playback complete.");
+        return;
+      }
+
+      pendingAutoplayRef.current = true;
+    }
+
     moveAyah(1);
   }
 
@@ -1743,6 +1779,7 @@ export default function Home() {
         <div className="mini-transport">
           <button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button>
           <button type="button" className="mini-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button>
+          <button type="button" onClick={() => stopPlayback()} aria-label="Stop recitation">■</button>
           <button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button>
         </div>
         <div className="mini-progress-cluster">
@@ -2017,7 +2054,7 @@ export default function Home() {
               <div className="sheet-handle" aria-hidden="true" />
               <header><div><span className="panel-kicker">{isOfflinePackPlayback ? `OFFLINE PACK · ${offlinePackIndex + 1} OF ${offlinePackQueue.length}` : isSurahPlayback ? "SURAH RECITATION" : "VERSE RECITATION"}</span><h2 id="audio-title">{isSurahPlayback && !isOfflinePackPlayback ? (currentChapter?.name ?? "Quran") : `Ayah ${selectedVerseKey}`}</h2></div>{closeButton}</header>
               <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}{audioSource?.offline ? " · Playing offline" : " · Streaming"}</small></div></div>
-              <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
+              <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => stopPlayback()} aria-label="Stop recitation">■</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
               <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
               <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={isSurahPlayback}><option value="off">{isSurahPlayback ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
               <button type="button" className="open-downloads" onClick={openDownloads}><span>↓</span><span><strong>Offline audio library</strong><small>{offlineAudioStats.packCount ? `${offlineAudioStats.completePacks} packs ready · ${formatAudioBytes(offlineAudioStats.usedBytes)}` : "Download a sūrah or juz"}</small></span><span>›</span></button>
