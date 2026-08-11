@@ -1,10 +1,11 @@
 import { DEFAULT_HIFZ_PROGRESS, normalizeHifzProgress } from "./hifz-state.mjs";
+import { DEFAULT_STUDY_NOTES, normalizeStudyNotes } from "./study-notes.mjs";
 import { DEFAULT_VOCABULARY_PROGRESS, normalizeVocabularyProgress } from "./vocabulary-state.mjs";
 import { DEFAULT_TODAY_STUDY_PROGRESS, normalizeTodayStudyProgress } from "./today-study.mjs";
 
-export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v6";
-export const PREFERENCE_SCHEMA_VERSION = 6;
-const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
+export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v7";
+export const PREFERENCE_SCHEMA_VERSION = 7;
+const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v6", "mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
 
 const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
@@ -12,6 +13,9 @@ const READING_FONTS = new Set(["uthman-taha", "amiri", "lateef", "scheherazade"]
 const SPEEDS = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
 const VERSE_KEY = /^\d{1,3}:\d{1,3}$/;
 const MAX_PREFERENCE_JSON_LENGTH = 5_000_000;
+const PORTABLE_BACKUP_KIND = "mushaf-companion-backup";
+const SUPPORTED_PORTABLE_BACKUP_VERSIONS = new Set([2, 3, 4, 5, 6, 7]);
+const ISO_INSTANT = /^[1-9]\d{3}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}Z$/;
 
 export const DEFAULT_PREFERENCES = Object.freeze({
   version: PREFERENCE_SCHEMA_VERSION,
@@ -33,6 +37,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   hifz: DEFAULT_HIFZ_PROGRESS,
   vocabulary: DEFAULT_VOCABULARY_PROGRESS,
   study: DEFAULT_TODAY_STUDY_PROGRESS,
+  notes: DEFAULT_STUDY_NOTES,
   downloads: { wifiOnly: true },
 });
 
@@ -48,6 +53,18 @@ function parseJson(value, fallback = null) {
 function normalizeBookmarks(value) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.slice(0, 10_000).filter((item) => typeof item === "string" && /^\d{1,3}\|\d{1,3}:\d{1,3}$/.test(item)))].slice(0, 5000);
+}
+
+function isPlainRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function isValidPortableInstant(value) {
+  if (typeof value !== "string" || !ISO_INSTANT.test(value)) return false;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 function normalizeRecentPages(value, lastPage) {
@@ -81,6 +98,7 @@ export function normalizePreferences(value) {
     hifz: normalizeHifzProgress(source.hifz),
     vocabulary: normalizeVocabularyProgress(source.vocabulary),
     study: normalizeTodayStudyProgress(source.study),
+    notes: normalizeStudyNotes(source.notes),
     downloads: { wifiOnly: source.downloads?.wifiOnly !== false },
   };
 }
@@ -122,8 +140,9 @@ export function savePreferences(storage, value) {
 }
 
 export function createPortableBackup(value, exportedAt = new Date().toISOString()) {
+  if (!isValidPortableInstant(exportedAt)) throw new Error("The backup export timestamp is invalid.");
   return JSON.stringify({
-    kind: "mushaf-companion-backup",
+    kind: PORTABLE_BACKUP_KIND,
     schemaVersion: PREFERENCE_SCHEMA_VERSION,
     exportedAt,
     preferences: normalizePreferences(value),
@@ -132,8 +151,14 @@ export function createPortableBackup(value, exportedAt = new Date().toISOString(
 
 export function restorePortableBackup(raw) {
   const parsed = typeof raw === "string" ? parseJson(raw) : raw;
-  if (!parsed || parsed.kind !== "mushaf-companion-backup" || !parsed.preferences) {
+  if (!isPlainRecord(parsed) || parsed.kind !== PORTABLE_BACKUP_KIND || !isPlainRecord(parsed.preferences)) {
     throw new Error("This is not a Mushaf Companion backup.");
   }
+  if (!Number.isInteger(parsed.schemaVersion) || !SUPPORTED_PORTABLE_BACKUP_VERSIONS.has(parsed.schemaVersion)) {
+    if (Number.isInteger(parsed.schemaVersion) && parsed.schemaVersion > PREFERENCE_SCHEMA_VERSION) throw new Error(`Backup schema v${parsed.schemaVersion} is newer than this app supports.`);
+    throw new Error("The backup schema version is missing or unsupported.");
+  }
+  if (parsed.exportedAt !== undefined && !isValidPortableInstant(parsed.exportedAt)) throw new Error("The backup export timestamp is invalid.");
+  // Every known portable schema migrates section-by-section through the current bounded normalizers.
   return normalizePreferences(parsed.preferences);
 }

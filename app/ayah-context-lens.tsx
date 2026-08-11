@@ -5,6 +5,10 @@ import { CONTENT_MANIFEST } from "./content-manifest";
 import { findTranslationSource } from "./content/source-registry";
 import type { TafsirDocument } from "./tafsir-source.mjs";
 import type { TajweedRule } from "./tajweed-guide";
+import { EvidencePanel } from "./evidence-panel";
+import type { EvidenceQueryResult, ResolvedEvidenceEdge } from "./evidence-layer";
+import { StudyNotesPanel } from "./study-notes-ui";
+import type { StudyAnchor, StudyNote } from "./study-notes.mjs";
 import type { QuranWordStudyRecord, WordCoordinate, WordOccurrence, WordStudySourceMetadata } from "./word-study";
 import {
   AMHARIC_TRANSLATION_SOURCE_ID,
@@ -38,6 +42,9 @@ interface AyahContextLensProps {
   wordStudySource: WordStudySourceMetadata | null;
   wordStudyLoading: boolean;
   occurrenceExplorer: { kind: "lemma" | "root"; identifier: string; label: string; items: WordOccurrence[]; total: number; status: "loading" | "ok" | "unavailable" | "error"; reason: string } | null;
+  ayahNotes: StudyNote[];
+  wordNotes: StudyNote[];
+  evidenceResult: EvidenceQueryResult | { status: "loading" };
   playing: boolean;
   memorized: boolean;
   tajweedEnabled: boolean;
@@ -56,6 +63,10 @@ interface AyahContextLensProps {
   onExploreRoot: (rootId: string, label: string) => void;
   onOpenOccurrence: (occurrence: WordOccurrence) => void;
   onCloseOccurrences: () => void;
+  onCreateNote: (anchor: StudyAnchor, body: string, tags: string[]) => Promise<string | null>;
+  onUpdateNote: (id: string, body: string, tags: string[]) => string | null;
+  onDeleteNote: (id: string) => void;
+  onOpenEvidenceAyah: (edge: ResolvedEvidenceEdge) => void;
   onClose: () => void;
 }
 
@@ -67,6 +78,8 @@ const STUDY_TABS: Array<{ id: ContextLensTab; label: string }> = [
   { id: "words", label: "Words" },
   { id: "tafsir", label: "Tafsir" },
   { id: "practice", label: "Practice" },
+  { id: "notes", label: "Notes" },
+  { id: "evidence", label: "Evidence" },
 ];
 
 function errorMessage(error: unknown) {
@@ -107,6 +120,9 @@ export function AyahContextLens({
   wordStudySource,
   wordStudyLoading,
   occurrenceExplorer,
+  ayahNotes,
+  wordNotes,
+  evidenceResult,
   playing,
   memorized,
   tajweedEnabled,
@@ -125,6 +141,10 @@ export function AyahContextLens({
   onExploreRoot,
   onOpenOccurrence,
   onCloseOccurrences,
+  onCreateNote,
+  onUpdateNote,
+  onDeleteNote,
+  onOpenEvidenceAyah,
   onClose,
 }: AyahContextLensProps) {
   const [state, dispatch] = useReducer(contextLensReducer, initialTab, createContextLensState);
@@ -388,6 +408,20 @@ export function AyahContextLens({
               <button type="button" onClick={onOpenTajweedGuide}><span aria-hidden="true">?</span><strong>Open Tajweed guide</strong><small>Review the verified color explanations</small></button>
             </div>
             <button type="button" className="context-primary study-open-hifz" onClick={onOpenHifz}>Open My Mushaf practice</button>
+          </div>
+        )}
+
+        {state.activeTab === "notes" && (
+          <div className="context-tab-panel" id="context-notes-panel" role="tabpanel" aria-labelledby="context-notes-tab">
+            <div className="study-section-heading"><span>PRIVATE STUDY</span><h3>Notes for this ayah</h3><p>User-authored annotations remain separate from Quran text, translation, tafsir, and source evidence.</p></div>
+            <StudyNotesPanel verseKey={verseKey} page={page} ayahNotes={ayahNotes} wordNotes={wordNotes} selectedWord={selectedWord?.coordinate ?? null} onCreate={onCreateNote} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
+          </div>
+        )}
+
+        {state.activeTab === "evidence" && (
+          <div className="context-tab-panel" id="context-evidence-panel" role="tabpanel" aria-labelledby="context-evidence-tab">
+            <div className="study-section-heading"><span>EVIDENCE</span><h3>Evidence for this ayah</h3><p>Approved sources are checked at runtime before any relationship is presented.</p></div>
+            <EvidencePanel result={evidenceResult} onOpenAyah={onOpenEvidenceAyah} />
           </div>
         )}
       </div>

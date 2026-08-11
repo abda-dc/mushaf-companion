@@ -7,7 +7,7 @@ The Ayah Study Lens is the single contextual study surface for the currently sel
 `app/page.tsx` remains the owner of `selectedVerseKey`. The Mushaf page, Lens, translation, tafsir, recitation, Hifz, and word selection all consume that same identity.
 
 1. Select an ayah action to open Overview, or select a content word to open Words.
-2. Use Overview, Words, Tafsir, and Practice without leaving the verified page context.
+2. Use Overview, Words, Tafsir, Practice, Private Notes, and Source Evidence without leaving the verified page context.
 3. Move to the previous or next ayah from any tab. Page-edge movement uses the existing trusted page loader.
 4. Close with the close button, Escape, or backdrop. Focus returns to the control that opened the Lens.
 
@@ -34,6 +34,8 @@ Opening a result first verifies its verse and page through the existing Quran co
 - Optional Amharic translation: Muhammad Zain Zahruddin, Africa Academy, QuranEnc `amharic_zain`, pinned and verified by the existing pack service.
 - Tafsir: Ibn Kathir (Abridged), Hafiz Ibn Kathir, Quran.com resource 169.
 - Word study and vocabulary: no approved production provider. The Quranic Arabic Corpus 0.4 descriptor is reference-only, blocked, and returns no records.
+- Private Notes: local plain-text user content, not encrypted, with a frozen and save-time-revalidated Quran anchor.
+- Evidence: no approved production provider and zero shipped edges; loading/disabled/failure states use neutral wording, while audited/verified wording is reserved for successful approved runtime results.
 
 No AI-generated or placeholder Quran interpretation is used.
 
@@ -44,6 +46,7 @@ No AI-generated or placeholder Quran interpretation is used.
 - Semantic word and occurrence buttons with accessible coordinate labels.
 - Status, alert, progressbar, language, and Arabic direction attributes where appropriate.
 - Touch-friendly controls, mobile safe-area padding, and no new persistent navigation item.
+- Note editor and deletion focus moves to a connected editor, trigger, neighboring note, or stable fallback when controls are replaced.
 
 ## Extension boundary
 

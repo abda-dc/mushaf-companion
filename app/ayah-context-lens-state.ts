@@ -1,6 +1,6 @@
 import type { TranslationPackMetadata, TranslationPackProgress } from "./translation-packs.mjs";
 
-export type ContextLensTab = "overview" | "words" | "tafsir" | "practice";
+export type ContextLensTab = "overview" | "words" | "tafsir" | "practice" | "notes" | "evidence";
 export type ContextTranslationId = "english-saheeh" | "amharic-zain";
 export type ContextPackStatus = "checking" | "not-installed" | "installed" | "working" | "failed" | "reclaimed";
 export type ContextPackAction = "install" | "verify" | "repair" | "delete";

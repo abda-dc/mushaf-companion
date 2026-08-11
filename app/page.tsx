@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   FALLBACK_PAGE,
   RECITERS,
@@ -18,9 +18,17 @@ import { TafsirPanel } from "./tafsir-panel";
 import type { TafsirDocument } from "./tafsir-source.mjs";
 import { AyahContextLens } from "./ayah-context-lens";
 import type { ContextLensTab } from "./ayah-context-lens-state";
+import { StudyNotesIndex } from "./study-notes-ui";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
+import {
+  LatestEvidenceRequestGate,
+  createProductionEvidenceRegistry,
+  type EvidenceProviderRegistry,
+  type EvidenceQueryResult,
+  type ResolvedEvidenceEdge,
+} from "./evidence-layer";
 import {
   DEFAULT_HIFZ_PROGRESS,
   buildPageMasteryMap,
@@ -71,6 +79,21 @@ import {
   todayStudyCompletion,
   type TodayStudyProgress,
 } from "./today-study.mjs";
+import {
+  DEFAULT_STUDY_NOTES,
+  buildStudyNoteIndex,
+  createStudyNote,
+  deleteStudyNote as deletePrivateStudyNote,
+  normalizeStudyNotes,
+  revalidateStudyAnchor,
+  removeStudyTag,
+  renameStudyTag,
+  studyAnchorKey,
+  updateStudyNote,
+  type StudyAnchor,
+  type StudyNote,
+  type StudyNotesState,
+} from "./study-notes.mjs";
 
 type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
@@ -205,6 +228,9 @@ export default function Home() {
   const [hifzProgress, setHifzProgress] = useState<HifzProgress>(() => normalizeHifzProgress(DEFAULT_HIFZ_PROGRESS));
   const [vocabularyProgress, setVocabularyProgress] = useState<VocabularyProgress>(() => normalizeVocabularyProgress(DEFAULT_VOCABULARY_PROGRESS));
   const [todayStudyProgress, setTodayStudyProgress] = useState<TodayStudyProgress>(() => normalizeTodayStudyProgress(DEFAULT_TODAY_STUDY_PROGRESS));
+  const [studyNotes, setStudyNotes] = useState<StudyNotesState>(() => normalizeStudyNotes(DEFAULT_STUDY_NOTES));
+  const [evidenceResult, setEvidenceResult] = useState<EvidenceQueryResult | { status: "loading" }>({ status: "disabled", reason: "No rights-cleared evidence dataset is active." });
+  const [savedSection, setSavedSection] = useState<"bookmarks" | "notes">("bookmarks");
   const [todayKey, setTodayKey] = useState(() => toLocalDateKey());
   const [studySessionVisible, setStudySessionVisible] = useState(false);
   const [hifzFrom, setHifzFrom] = useState("1:1");
@@ -257,7 +283,10 @@ export default function Home() {
   const translationPackServiceRef = useRef<TranslationPackService | null>(null);
   const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
   const occurrenceRequestGateRef = useRef(new LatestWordStudyRequestGate());
+  const evidenceRequestGateRef = useRef(new LatestEvidenceRequestGate());
+  const evidenceRegistryRef = useRef<EvidenceProviderRegistry | null>(null);
   const pendingReadingStartRef = useRef<{ stepId: string; page: number; verseKey: string } | null>(null);
+  const pendingStudyNoteRef = useRef<StudyNote | null>(null);
   const wordButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const verseButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const studyControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -275,6 +304,11 @@ export default function Home() {
   const foundation125 = useMemo(() => VOCABULARY_CURRICULUM_REGISTRY.list().find((curriculum) => curriculum.id === FOUNDATION_125_ID) ?? null, []);
   const foundationEntryIds = useMemo<string[]>(() => [], []);
   const selectedWordKey = selectedWord ? coordinateKey(selectedWord.coordinate) : null;
+  const studyNoteIndex = useMemo(() => buildStudyNoteIndex(studyNotes), [studyNotes]);
+  const selectedAyahNoteKey = studyAnchorKey({ type: "ayah", verseKey: selectedVerseKey, page: pageData.page });
+  const selectedWordNoteKey = selectedWord ? studyAnchorKey({ type: "word", ...selectedWord.coordinate }) : null;
+  const selectedAyahNotes = selectedAyahNoteKey ? studyNoteIndex.byAnchor.get(selectedAyahNoteKey) ?? [] : [];
+  const selectedWordNotes = selectedWordNoteKey ? studyNoteIndex.byAnchor.get(selectedWordNoteKey) ?? [] : [];
   const wordRecord = selectedWordKey && wordRecordResult?.key === selectedWordKey ? wordRecordResult.record : null;
   const wordStudyLoading = Boolean(selectedWordKey && wordRecordResult?.key !== selectedWordKey);
   const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
@@ -339,6 +373,7 @@ export default function Home() {
     setHifzProgress(preferences.hifz);
     setVocabularyProgress(preferences.vocabulary);
     setTodayStudyProgress(preferences.study);
+    setStudyNotes(preferences.notes);
     setDark(preferences.reader.theme === "dark");
     setTajweed(preferences.reader.tajweed);
     setTransliteration(preferences.reader.transliteration);
@@ -449,6 +484,32 @@ export default function Home() {
   }, [selectedWord, selectedWordKey, overlay, studyActiveTab]);
 
   useEffect(() => {
+    const gate = evidenceRequestGateRef.current;
+    if (overlay !== "Context" || studyActiveTab !== "evidence") {
+      gate.cancel();
+      return;
+    }
+    evidenceRegistryRef.current ??= createProductionEvidenceRegistry(async (verseKey) => {
+      try {
+        const target = await contentTransport.lookupVerse(verseKey);
+        return { verseKey: target.verseKey, page: target.page };
+      } catch {
+        return null;
+      }
+    });
+    const token = gate.begin(`${selectedVerseKey}|${pageData.page}`);
+    const registry = evidenceRegistryRef.current;
+    void registry.queryAll(selectedVerseKey, pageData.page)
+      .then((result) => {
+        if (gate.isCurrent(token)) setEvidenceResult(result);
+      })
+      .catch(() => {
+        if (gate.isCurrent(token)) setEvidenceResult({ status: "error", reason: "Evidence sources could not be queried." });
+      });
+    return () => gate.cancel();
+  }, [overlay, studyActiveTab, selectedVerseKey, pageData.page, contentTransport]);
+
+  useEffect(() => {
     let timer = 0;
     const scheduleNextMidnight = () => {
       const now = new Date();
@@ -474,9 +535,30 @@ export default function Home() {
   }, [pageData.page, selectedVerseKey]);
 
   useEffect(() => {
+    const note = pendingStudyNoteRef.current;
+    if (!note || pageData.page !== note.anchor.page || selectedVerseKey !== note.anchor.verseKey) return;
+    if (note.anchor.type === "word") {
+      const mappedWord = wordContextForCoordinate(pageData, note.anchor);
+      if (!mappedWord) {
+        pendingStudyNoteRef.current = null;
+        setNotice("That private word note no longer matches the trusted Mushaf coordinate and was not opened.");
+        return;
+      }
+      setSelectedWord(mappedWord);
+    } else {
+      setSelectedWord(null);
+    }
+    pendingStudyNoteRef.current = null;
+    translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: contentTransport.fetchTranslationPackSource });
+    setStudyInitialTab("notes");
+    setStudyActiveTab("notes");
+    setOverlay("Context");
+  }, [pageData, selectedVerseKey, contentTransport]);
+
+  useEffect(() => {
     if (!hydrated) return;
     savePreferences(localStorage, {
-      version: 6,
+      version: 7,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -495,9 +577,10 @@ export default function Home() {
       hifz: hifzProgress,
       vocabulary: vocabularyProgress,
       study: todayStudyProgress,
+      notes: studyNotes,
       downloads: { wifiOnly: wifiOnlyDownloads },
     } satisfies MushafPreferences);
-  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, vocabularyProgress, todayStudyProgress, wifiOnlyDownloads, hydrated]);
+  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, vocabularyProgress, todayStudyProgress, studyNotes, wifiOnlyDownloads, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -680,6 +763,7 @@ export default function Home() {
 
   function selectAyah(verseKey: string) {
     occurrenceRequestGateRef.current.cancel();
+    evidenceRequestGateRef.current.cancel();
     setSelectedWord(null);
     setOccurrenceExplorer(null);
     setSelectedVerseKey(verseKey);
@@ -1035,7 +1119,7 @@ export default function Home() {
 
   function preferenceSnapshot(): MushafPreferences {
     return {
-      version: 6,
+      version: 7,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -1054,6 +1138,7 @@ export default function Home() {
       hifz: hifzProgress,
       vocabulary: vocabularyProgress,
       study: todayStudyProgress,
+      notes: studyNotes,
       downloads: { wifiOnly: wifiOnlyDownloads },
     };
   }
@@ -1080,6 +1165,7 @@ export default function Home() {
       setHifzProgress(restored.hifz);
       setVocabularyProgress(restored.vocabulary);
       setTodayStudyProgress(restored.study);
+      setStudyNotes(restored.notes);
       setDark(restored.reader.theme === "dark");
       setTajweed(restored.reader.tajweed);
       setTransliteration(restored.reader.transliteration);
@@ -1091,7 +1177,7 @@ export default function Home() {
       setRecentPages(restored.reader.recentPages);
       setWifiOnlyDownloads(restored.downloads.wifiOnly);
       goToPage(restored.reader.lastPage, undefined, restored.reader.lastVerse);
-      setNotice("Backup restored. Your mastery map and reading preferences are ready.");
+      setNotice("Backup restored. Your private notes, mastery map, and reading preferences are ready.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "This backup could not be restored.");
     }
@@ -1156,7 +1242,106 @@ export default function Home() {
       openContents();
       return;
     }
+    if (item === "Bookmarks") setSavedSection("bookmarks");
     setOverlay(item === "Read" ? null : item);
+  }
+
+  async function createPrivateNote(capturedAnchor: StudyAnchor, body: string, tags: string[]) {
+    try {
+      const anchor = await revalidateStudyAnchor(capturedAnchor, {
+        resolveVerse: async (verseKey) => {
+          const cachedPage = pageCacheRef.current.get(capturedAnchor.page) ?? (pageData.page === capturedAnchor.page ? pageData : null);
+          if (cachedPage && isVerifiedPage(cachedPage, capturedAnchor.page) && cachedPage.verses.some((verse) => verse.key === verseKey)) {
+            return { verseKey, page: capturedAnchor.page };
+          }
+          return contentTransport.lookupVerse(verseKey);
+        },
+        resolveWord: async (wordAnchor) => {
+          const cachedPage = pageCacheRef.current.get(wordAnchor.page);
+          const trustedPage = cachedPage ?? await contentTransport.loadPage(wordAnchor.page);
+          if (!isVerifiedPage(trustedPage, wordAnchor.page)) return null;
+          if (!cachedPage) pageCacheRef.current.set(wordAnchor.page, trustedPage);
+          const word = pageWordForCoordinate(trustedPage, wordAnchor);
+          const coordinate = word ? coordinateForPageWord(trustedPage, word) : null;
+          return coordinate?.sourceWordId === undefined ? null : { type: "word" as const, ...coordinate, sourceWordId: coordinate.sourceWordId };
+        },
+      });
+      if (!anchor) return capturedAnchor.type === "word"
+        ? "The captured word no longer matches its complete trusted Quran coordinate, so the note was not saved."
+        : "The captured ayah no longer matches the trusted Quran page map, so the note was not saved.";
+      const created = createStudyNote(studyNotes, { anchor, body, tags });
+      setStudyNotes(created.state);
+      setNotice(`Private ${anchor.type} note saved on this device.`);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "The private note could not be saved.";
+    }
+  }
+
+  function updatePrivateNote(id: string, body: string, tags: string[]) {
+    try {
+      setStudyNotes(updateStudyNote(studyNotes, id, { body, tags }));
+      setNotice("Private note updated on this device.");
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "The private note could not be updated.";
+    }
+  }
+
+  function deletePrivateNote(id: string) {
+    setStudyNotes((current) => deletePrivateStudyNote(current, id));
+    setNotice("Private note deleted. Quran content and other saved study data were unchanged.");
+  }
+
+  function renamePrivateTag(fromTag: string, toTag: string) {
+    setStudyNotes((current) => renameStudyTag(current, fromTag, toTag));
+    setNotice("Private tag renamed across your notes.");
+  }
+
+  function removePrivateTag(tag: string) {
+    setStudyNotes((current) => removeStudyTag(current, tag));
+    setNotice("Private tag removed. The notes themselves were kept.");
+  }
+
+  async function openPrivateNote(note: StudyNote, trigger: HTMLButtonElement) {
+    try {
+      const target = await contentTransport.lookupVerse(note.anchor.verseKey);
+      if (target.verseKey !== note.anchor.verseKey || target.page !== note.anchor.page) throw new Error("Private note anchor mismatch");
+      contextTriggerRef.current = trigger;
+      setStudyInitialTab("notes");
+      setStudyActiveTab("notes");
+      if (target.page === pageData.page) {
+        selectAyah(target.verseKey);
+        if (note.anchor.type === "word") {
+          const mappedWord = wordContextForCoordinate(pageData, note.anchor);
+          if (!mappedWord) throw new Error("Private word note coordinate mismatch");
+          setSelectedWord(mappedWord);
+        }
+        translationPackServiceRef.current ??= createTranslationPackService({ fetchImpl: contentTransport.fetchTranslationPackSource });
+        setOverlay("Context");
+        return;
+      }
+      pendingStudyNoteRef.current = note;
+      goToPage(target.page, target.page > pageData.page ? "next" : "previous", target.verseKey);
+    } catch {
+      pendingStudyNoteRef.current = null;
+      setNotice("That private note no longer matches the trusted Quran page mapping and was not opened.");
+    }
+  }
+
+  async function openEvidenceAyah(edge: ResolvedEvidenceEdge) {
+    try {
+      const target = await contentTransport.lookupVerse(edge.to.verseKey);
+      if (target.verseKey !== edge.to.verseKey || target.page !== edge.targetPage) throw new Error("Evidence target mismatch");
+      evidenceRequestGateRef.current.cancel();
+      setEvidenceResult({ status: "loading" });
+      setStudyInitialTab("evidence");
+      setStudyActiveTab("evidence");
+      setSelectedWord(null);
+      goToPage(target.page, target.page > pageData.page ? "next" : target.page < pageData.page ? "previous" : undefined, target.verseKey);
+    } catch {
+      setNotice("That evidence target did not match the trusted Quran page mapping and was not opened.");
+    }
   }
 
   function openTafsir() {
@@ -1185,6 +1370,7 @@ export default function Home() {
 
   function closeContextLens() {
     occurrenceRequestGateRef.current.cancel();
+    evidenceRequestGateRef.current.cancel();
     setOccurrenceExplorer(null);
     setOverlay(null);
     window.requestAnimationFrame(() => {
@@ -1201,6 +1387,10 @@ export default function Home() {
   }
 
   function moveStudyAyah(direction: -1 | 1) {
+    if (studyActiveTab === "evidence") {
+      evidenceRequestGateRef.current.cancel();
+      setEvidenceResult({ status: "loading" });
+    }
     setSelectedWord(null);
     const nextIndex = currentVerseIndex + direction;
     const nextVerse = pageData.verses[nextIndex];
@@ -1307,6 +1497,11 @@ export default function Home() {
     setTajweedFocus(null);
     openContextLens(trigger, coordinate ? "words" : "overview");
   }
+
+  const changeStudyActiveTab = useCallback((tab: ContextLensTab) => {
+    if (tab === "evidence") setEvidenceResult({ status: "loading" });
+    setStudyActiveTab(tab);
+  }, []);
 
   async function exploreWordOccurrences(kind: "lemma" | "root", identifier: string, label: string) {
     if (!wordStudySource) return;
@@ -1576,7 +1771,7 @@ export default function Home() {
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
-              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => setOverlay("Bookmarks")}><span>◇</span><strong>Saved places</strong><small>{bookmarks.length} bookmarks</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button></div>
+              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => { setSavedSection("bookmarks"); setOverlay("Bookmarks"); }}><span>◇</span><strong>Saved study</strong><small>{bookmarks.length} bookmarks · {studyNotes.notes.length} private notes</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button></div>
             </section>
           )}
 
@@ -1609,6 +1804,8 @@ export default function Home() {
                   <button type="button" disabled aria-describedby="foundation-source-status">Continue learning</button>
                   <small id="foundation-source-status">No Quran vocabulary, morphology, root, lemma, or occurrence data is bundled.</small>
                 </section>
+
+                <section className="notes-dashboard-card" aria-labelledby="notes-dashboard-title"><div><span className="mastery-eyebrow">PRIVATE STUDY NOTES</span><h3 id="notes-dashboard-title">Your annotations</h3><p>Plain-text notes and personal tags stay on this device and remain separate from verified source evidence.</p></div><strong>{studyNotes.notes.length}</strong><button type="button" onClick={() => { setSavedSection("notes"); setOverlay("Bookmarks"); }}>Open My Notes</button></section>
 
                 <section className="mastery-map-card" aria-labelledby="mastery-map-title">
                   <header><div><span className="mastery-eyebrow">604-PAGE VIEW</span><h3 id="mastery-map-title">Your Mushaf at a glance</h3></div><div className="mastery-map-totals"><span><i className="strong" />{masteryCounts.strong} strong</span><span><i className="learning" />{masteryCounts.learning} learning</span><span><i className="due" />{masteryCounts.due} due</span></div></header>
@@ -1670,7 +1867,7 @@ export default function Home() {
                 </section>
 
                 <section className="jump-shortcuts" aria-labelledby="saved-places-title">
-                  <div><h3 id="saved-places-title">Saved places</h3><button type="button" onClick={() => setOverlay("Bookmarks")}>View all</button></div>
+                  <div><h3 id="saved-places-title">Saved places</h3><button type="button" onClick={() => { setSavedSection("bookmarks"); setOverlay("Bookmarks"); }}>View all</button></div>
                   {savedPageShortcuts.length ? <div className="jump-saved-list">{savedPageShortcuts.map((saved) => <button type="button" key={`${saved.page}|${saved.verseKey}`} onClick={() => { goToPage(saved.page, undefined, saved.verseKey); setOverlay(null); }}><span>PAGE {saved.page}</span><strong>Ayah {saved.verseKey}</strong><span aria-hidden="true">›</span></button>)}</div> : <p className="jump-empty">Bookmark an ayah to keep a shortcut here.</p>}
                 </section>
               </div>
@@ -1710,14 +1907,15 @@ export default function Home() {
 
           {overlay === "Bookmarks" && (
             <section className="panel-shell bookmark-panel" role="dialog" aria-modal="true" aria-labelledby="bookmarks-title">
-              <header><div><span className="panel-kicker">SAVED PLACES</span><h2 id="bookmarks-title">Bookmarks</h2></div>{closeButton}</header>
-              <div className="bookmark-list">
+              <header><div><span className="panel-kicker">SAVED ON THIS DEVICE</span><h2 id="bookmarks-title">Saved study</h2></div>{closeButton}</header>
+              <div className="saved-study-tabs" role="tablist" aria-label="Saved study sections"><button type="button" role="tab" aria-selected={savedSection === "bookmarks"} onClick={() => setSavedSection("bookmarks")}>Bookmarks</button><button type="button" role="tab" aria-selected={savedSection === "notes"} onClick={() => setSavedSection("notes")}>My Notes · {studyNotes.notes.length}</button></div>
+              {savedSection === "bookmarks" ? <div className="bookmark-list" role="tabpanel">
                 {bookmarks.map((bookmark) => {
                   const [savedPage, verseKey] = bookmark.split("|");
                   return <div key={bookmark}><button type="button" onClick={() => { goToPage(Number(savedPage), undefined, verseKey); setOverlay(null); }}><span>PAGE {savedPage}</span><strong>Ayah {verseKey}</strong></button><button type="button" onClick={() => setBookmarks((items) => items.filter((item) => item !== bookmark))} aria-label={`Remove bookmark ${verseKey}`}>×</button></div>;
                 })}
                 {!bookmarks.length && <p className="empty-state">Bookmark an ayah to keep your place here.</p>}
-              </div>
+              </div> : <div role="tabpanel"><StudyNotesIndex notes={studyNotes.notes} onOpen={openPrivateNote} onDelete={deletePrivateNote} onRenameTag={renamePrivateTag} onRemoveTag={removePrivateTag} /></div>}
             </section>
           )}
 
@@ -1729,7 +1927,7 @@ export default function Home() {
                 <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label><label className="setting-row"><span><strong>English translation</strong><small>Saheeh International · source resource 20.</small></span><input className="switch" type="checkbox" checked={translation} onChange={(event) => setTranslation(event.target.checked)} /></label><div className="setting-row tafsir-setting"><span><strong>English tafsir</strong><small>Ibn Kathir (Abridged) · source resource 169.</small></span><button type="button" onClick={openTafsir}>Open for ayah {selectedVerseKey}</button></div></section>
                 <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
                 <section className="settings-group offline-settings"><h3>Offline audio</h3><p>{offlineAudioStats.completePacks} verified packs · {formatAudioBytes(offlineAudioStats.usedBytes)} on this device.</p><button type="button" onClick={openDownloads}>Manage downloads <span>→</span></button><small>Surah and juz packs are stored privately in this browser.</small></section>
-                <section className="settings-group data-portability"><h3>Private backup</h3><p>Your reading history and mastery map stay on this device unless you download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
+                <section className="settings-group data-portability"><h3>Private backup</h3><p>Your private notes, reading history, and mastery map stay on this device unless you explicitly download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
                 <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href={contentTransport.contentManifestUrl} target="_blank" rel="noreferrer">view sources</a></small></footer>
               </div>
             </section>
@@ -1785,12 +1983,15 @@ export default function Home() {
               wordStudySource={wordStudySource}
               wordStudyLoading={wordStudyLoading}
               occurrenceExplorer={occurrenceExplorer}
+              ayahNotes={selectedAyahNotes}
+              wordNotes={selectedWordNotes}
+              evidenceResult={evidenceResult}
               playing={playing}
               memorized={memorizedVerseKeys.has(selectedVerseKey)}
               tajweedEnabled={tajweed}
               canMovePrevious={canStudyPrevious}
               canMoveNext={canStudyNext}
-              onActiveTabChange={setStudyActiveTab}
+              onActiveTabChange={changeStudyActiveTab}
               onMoveAyah={moveStudyAyah}
               onRetryTafsir={() => setTafsirRevision((value) => value + 1)}
               onTogglePlay={togglePlay}
@@ -1803,6 +2004,10 @@ export default function Home() {
               onExploreRoot={(rootId, label) => exploreWordOccurrences("root", rootId, label)}
               onOpenOccurrence={openWordOccurrence}
               onCloseOccurrences={() => { occurrenceRequestGateRef.current.cancel(); setOccurrenceExplorer(null); }}
+              onCreateNote={createPrivateNote}
+              onUpdateNote={updatePrivateNote}
+              onDeleteNote={deletePrivateNote}
+              onOpenEvidenceAyah={openEvidenceAyah}
               onClose={closeContextLens}
             />
           )}

@@ -63,7 +63,7 @@ No QAC-derived morphology, gloss, root, lemma, frequency, curriculum, or occurre
 
 ### M1 — Study Lens
 
-Evolve `AyahContextLens` into a calm Study Lens with Overview, Words, Tafsir, and Practice sections. Overview reuses translation and ayah identity; Tafsir reuses the current normalized document; Practice delegates to existing audio and Hifz callbacks. It remains a fixed overlay so it cannot change the 15-line page geometry.
+Evolve `AyahContextLens` into a calm Study Lens. M1–M6 introduced Overview, Words, Tafsir, and Practice; M7–M8 subsequently added Notes and Evidence. Overview reuses translation and ayah identity; Tafsir reuses the current normalized document; Practice delegates to existing audio and Hifz callbacks. It remains a fixed overlay so it cannot change the 15-line page geometry.
 
 ### M2 — word-study foundation
 
@@ -155,7 +155,7 @@ Without an approved word-study dataset, M2–M6 can provide complete contracts, 
 
 ### M1 — Ayah Study Lens
 
-The existing `AyahContextLens` is now the shared Study Lens. Its four tabs are Overview, Words, Tafsir, and Practice. It retains the fixed desktop drawer/mobile sheet, modal semantics, focus trap, Escape handling, and focus return. `selectedVerseKey` in `app/page.tsx` remains authoritative. Translation packs, normalized Ibn Kathir, recitation, Hifz, and Tajweed actions are reused through callbacks; none were reimplemented.
+The existing `AyahContextLens` is now the shared Study Lens. Its six tabs are Overview, Words, Tafsir, Practice, Notes, and Evidence. It retains the fixed desktop drawer/mobile sheet, modal semantics, focus trap, Escape handling, and focus return. `selectedVerseKey` in `app/page.tsx` remains authoritative. Translation packs, normalized Ibn Kathir, recitation, Hifz, and Tajweed actions are reused through callbacks; none were reimplemented.
 
 ### M2 — word-study domain
 
@@ -198,7 +198,7 @@ My Mushaf presents the plan, due counts, reading resume, completion, and the uni
 
 ## Persistence and migration
 
-Preference schema v6 adds `vocabulary` and `study` to the existing local preference document and portable JSON backup. Loading probes v6, then v5 through v2, then fragmented legacy keys. Each domain normalizes independently; strict local-calendar validation rejects impossible dates, and malformed arrays, coordinates, session targets, or incompatible schema versions fail safely. Entries, histories, steps, targets, activity dates, bookmarks, and raw backup JSON are bounded before expensive deduplication or scanning.
+Preference schema v7 preserves the v6 `vocabulary` and `study` domains and adds sectional private-note state to the existing local preference document and portable JSON backup. Loading probes v7, then v6 through v2, then fragmented legacy keys. Each domain normalizes independently; strict local-calendar validation rejects impossible dates, and malformed arrays, coordinates, session targets, note anchors, or incompatible schema versions fail safely. Entries, histories, steps, targets, notes, tags, activity dates, bookmarks, and raw backup JSON are bounded before expensive deduplication or scanning.
 
 No account, server database, sync, analytics event, or cloud write was introduced.
 
@@ -215,7 +215,13 @@ The initial reader imports contracts and a disabled descriptor, not a Quran morp
 - Loading, failure, unavailable, and progress states use status, alert, or progressbar semantics.
 - Desktop and mobile layouts remain overlays and preserve all 15 Quran lines.
 
-## Future M7+ extension points
+## M7–M8 extensions
+
+M7 Private Study Notes and the M8 evidence integration boundary extend this architecture without changing M1–M6 ownership. Notes use preference schema v7, freeze exact Quran anchors at draft start, and revalidate them on save. Evidence uses a separate independently pinned approval policy and is queried only from its Study Lens tab. See `docs/PRIVATE-STUDY-NOTES.md` and `docs/EVIDENCE-RELATIONSHIPS.md`.
+
+M8 is architecture/source-integration ready pending an approved source; it is not a production evidence release. No production evidence provider is active and zero edges ship. No link is extracted from tafsir prose or inferred from word-study data. Private notes never become evidence.
+
+## Future extension points
 
 - Approve and register a rights-cleared word-study dataset without changing reader ownership of Arabic.
 - Activate Foundation 125 only after the exact production curriculum and provider pass the documented audits.
