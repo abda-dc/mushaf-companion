@@ -6,6 +6,12 @@ All notable product changes to Mushaf Companion are documented here.
 
 ### Added
 
+- A dedicated Learn destination and responsive Learn hub for Today’s Study, approved guided courses, the current lesson, due education review, My Mushaf, vocabulary, Tajweed, private notes, reader study, and device-local learning progress without replacing the Read → Ayah Study Lens workflow.
+- Source-neutral education course/module/lesson/provider contracts with structured plain-text blocks, separate lesson citations, trusted Quran-reference reconciliation, knowledge checks, and source/revision-pinned local progress.
+- Fail-closed education activation requiring exact independent pins for provider and source identity, author and organization, named scholarly review, revision, rights, capabilities, SHA-256 integrity, normalization, audit identity, coverage, and catalog structure.
+- Today’s Study schema v2 education-review and education-lesson steps using deterministic due-before-new ordering and the shared Again/Hard/Good/Easy scheduler.
+- Study Notes schema v2 source-pinned lesson and section anchors, preference schema v8, and lossless portable restore compatibility from schemas v2 through v8.
+- Server and GitHub Pages education transport parity, Pages release metadata and artifact rejection for undeclared education catalogs, plus the guided-curriculum approval and release guide.
 - Private ayah and exact-word study notes with bounded plain text, user-defined Unicode tags, explicit editing/deletion, local search, trusted anchor navigation, and Saved Study/My Mushaf access.
 - Preference schema v7 migration and portable backup/restore coverage for private notes, tags, anchors, and timestamps while preserving all M1–M6 domains.
 - A source-neutral evidence relationship contract with independently pinned provider/source/revision/origin/approval/checksum/normalization identity, complete delivery-specific rights, fail-closed adapter boundaries, canonical semantic edge identity, partial-provider results, trusted Quran reconciliation, and stale-query protection.
@@ -18,6 +24,12 @@ All notable product changes to Mushaf Companion are documented here.
 
 ### Reliability
 
+- Production guided courses remain explicitly unavailable: the only production registration is a disabled, empty synthetic reference provider with no approved or substantive Islamic teaching content.
+- Curriculum revisions cannot silently reuse lesson completion, review, Today’s Study, or private-note anchors from another source revision.
+- The exact catalog instance must pass independent checksum verification, strict structured validation, runtime audit, rights compatibility, and trusted Quran-reference lookup before activation is cached.
+- The verified education catalog is now a deeply immutable canonical snapshot; provider, audit-time, and consumer mutations cannot change the cached or subsequently returned curriculum.
+- Backdated education reviews preserve existing progress, grouped Today’s Study reviews advance across lessons, Learn restores its exact opener focus, and bounded education state round-trips through local preferences and portable backup.
+- Pages now applies its education release declaration across the entire artifact, including public-derived files and compiled assets, rather than only `_site/content/`.
 - Private note text and tags remain device-local during normal operation, are never sent to Quran APIs or analytics, and leave the device only through explicit backup download.
 - New note drafts freeze their full Quran anchor, exact word anchors are revalidated on save, existing-note edits preserve anchors, secure UUID generation falls back to `crypto.getRandomValues()`, renamed active tag filters remain valid, and backup restore rejects unsupported future schemas.
 - No production evidence relationships are bundled: the reference provider remains disabled until a source passes rights, provenance, integrity, runtime audit, and Quran-mapping review.

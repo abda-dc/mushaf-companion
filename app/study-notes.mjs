@@ -1,4 +1,4 @@
-export const STUDY_NOTE_SCHEMA_VERSION = 1;
+export const STUDY_NOTE_SCHEMA_VERSION = 2;
 export const MAX_STUDY_NOTES = 250;
 export const MAX_NOTE_BODY_CODE_POINTS = 4_000;
 export const MAX_TAGS_PER_NOTE = 12;
@@ -8,6 +8,7 @@ const VERSE_KEY = /^[1-9]\d{0,2}:[1-9]\d{0,2}$/;
 const NOTE_ID = /^note:[A-Za-z0-9_-]{8,96}$/;
 const UUID_V4 = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const ISO_INSTANT = /^[1-9]\d{3}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}Z$/;
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9:._/-]{1,159}$/;
 
 export const DEFAULT_STUDY_NOTES = Object.freeze({ schemaVersion: STUDY_NOTE_SCHEMA_VERSION, notes: [] });
 
@@ -54,7 +55,12 @@ export function normalizeStudyTags(value) {
 }
 
 export function normalizeStudyAnchor(value) {
-  if (!isPlainRecord(value) || !VERSE_KEY.test(value.verseKey ?? "")) return null;
+  if (!isPlainRecord(value)) return null;
+  if (value.type === "lesson") {
+    if (!SAFE_ID.test(value.sourceId ?? "") || typeof value.sourceRevision !== "string" || value.sourceRevision.trim() !== value.sourceRevision || !value.sourceRevision || value.sourceRevision.length > 160 || /[<>\u0000-\u001f]/u.test(value.sourceRevision) || !SAFE_ID.test(value.courseId ?? "") || !SAFE_ID.test(value.moduleId ?? "") || !SAFE_ID.test(value.lessonId ?? "") || (value.sectionId !== null && !SAFE_ID.test(value.sectionId ?? ""))) return null;
+    return { type: "lesson", sourceId: value.sourceId, sourceRevision: value.sourceRevision, courseId: value.courseId, moduleId: value.moduleId, lessonId: value.lessonId, sectionId: value.sectionId };
+  }
+  if (!VERSE_KEY.test(value.verseKey ?? "")) return null;
   if (!Number.isInteger(value.page) || value.page < 1 || value.page > 604) return null;
   if (value.type === "ayah") return { type: "ayah", verseKey: value.verseKey, page: value.page };
   if (value.type !== "word") return null;
@@ -76,7 +82,9 @@ export function studyAnchorKey(anchor) {
   if (!normalized) return null;
   return normalized.type === "ayah"
     ? `ayah|${normalized.verseKey}|${normalized.page}`
-    : `word|${normalized.verseKey}|${normalized.wordPosition}|${normalized.page}|${normalized.line}|${normalized.sourceWordId}`;
+    : normalized.type === "word"
+      ? `word|${normalized.verseKey}|${normalized.wordPosition}|${normalized.page}|${normalized.line}|${normalized.sourceWordId}`
+      : `lesson|${normalized.sourceId}|${normalized.sourceRevision}|${normalized.courseId}|${normalized.moduleId}|${normalized.lessonId}|${normalized.sectionId ?? "lesson"}`;
 }
 
 export function freezeStudyAnchor(value) {
@@ -86,8 +94,14 @@ export function freezeStudyAnchor(value) {
 
 export async function revalidateStudyAnchor(value, resolvers) {
   const anchor = normalizeStudyAnchor(value);
-  if (!anchor || typeof resolvers?.resolveVerse !== "function") return null;
+  if (!anchor) return null;
   try {
+    if (anchor.type === "lesson") {
+      if (typeof resolvers?.resolveLesson !== "function") return null;
+      const trustedLesson = normalizeStudyAnchor(await resolvers.resolveLesson(anchor));
+      return trustedLesson?.type === "lesson" && studyAnchorKey(trustedLesson) === studyAnchorKey(anchor) ? anchor : null;
+    }
+    if (typeof resolvers?.resolveVerse !== "function") return null;
     const verse = await resolvers.resolveVerse(anchor.verseKey);
     if (!isPlainRecord(verse) || verse.verseKey !== anchor.verseKey || verse.page !== anchor.page) return null;
     if (anchor.type === "ayah") return anchor;
@@ -137,10 +151,10 @@ export function createSecureStudyNoteUuid(cryptoProvider = globalThis.crypto) {
 }
 
 function normalizeNote(value) {
-  if (!isPlainRecord(value) || value.schemaVersion !== STUDY_NOTE_SCHEMA_VERSION || !NOTE_ID.test(value.id ?? "")) return null;
+  if (!isPlainRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== STUDY_NOTE_SCHEMA_VERSION) || !NOTE_ID.test(value.id ?? "")) return null;
   const anchor = normalizeStudyAnchor(value.anchor);
   const body = normalizePlainText(value.body);
-  if (!anchor || !body || codePointLength(body) > MAX_NOTE_BODY_CODE_POINTS) return null;
+  if (!anchor || (value.schemaVersion === 1 && anchor.type === "lesson") || !body || codePointLength(body) > MAX_NOTE_BODY_CODE_POINTS) return null;
   if (!isValidStudyNoteInstant(value.createdAt) || !isValidStudyNoteInstant(value.updatedAt) || value.updatedAt < value.createdAt) return null;
   return {
     id: value.id,
@@ -154,7 +168,7 @@ function normalizeNote(value) {
 }
 
 export function normalizeStudyNotes(value) {
-  const source = isPlainRecord(value) ? value : {};
+  const source = isPlainRecord(value) && (value.schemaVersion === 1 || value.schemaVersion === STUDY_NOTE_SCHEMA_VERSION) ? value : {};
   const candidates = Array.isArray(source.notes) ? source.notes.slice(0, MAX_STUDY_NOTES * 2) : [];
   const notes = [];
   const ids = new Set();
@@ -280,7 +294,8 @@ export function searchStudyNotes(state, query, anchorType = "all", tag = "") {
     if (anchorType !== "all" && note.anchor.type !== anchorType) return false;
     if (tagKey && !note.tags.some((item) => normalizeStudyTag(item)?.key === tagKey)) return false;
     if (!term) return true;
-    const searchable = `${note.body}\n${note.tags.join(" ")}\n${note.anchor.verseKey}`.normalize("NFKC").toLowerCase();
+    const anchorText = note.anchor.type === "lesson" ? `${note.anchor.courseId} ${note.anchor.moduleId} ${note.anchor.lessonId} ${note.anchor.sectionId ?? ""}` : note.anchor.verseKey;
+    const searchable = `${note.body}\n${note.tags.join(" ")}\n${anchorText}`.normalize("NFKC").toLowerCase();
     return searchable.includes(term);
   });
 }

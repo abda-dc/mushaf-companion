@@ -9,6 +9,7 @@ import {
   searchQuranSource,
 } from "./quran-runtime-source.ts";
 import type { ReaderContentTransport } from "./runtime-transport.types.ts";
+import { createProductionEducationRegistry } from "../education-content.ts";
 
 const AMHARIC_SOURCE = findTranslationSource("quranenc:amharic_zain");
 
@@ -33,6 +34,11 @@ export function createPagesReaderTransport(fetchImpl: typeof fetch = fetch): Rea
     },
     loadAudioManifest(type, id, reciterId = "alafasy", signal) {
       return fetchAudioManifestFromSource(type, id, reciterId, fetchImpl, signal);
+    },
+    async loadEducationCatalog(signal) {
+      if (signal?.aborted) throw new DOMException("The operation was aborted.", "AbortError");
+      const registry = createProductionEducationRegistry(async (verseKey) => lookupVerseFromSource(verseKey, fetchImpl, signal));
+      return registry.loadFirstApprovedCatalog();
     },
     fetchTranslationPackSource(input, init) {
       const url = input instanceof Request ? input.url : String(input);

@@ -22,6 +22,8 @@ import type { TafsirDocument } from "./tafsir-source.mjs";
 import { AyahContextLens } from "./ayah-context-lens";
 import type { ContextLensTab } from "./ayah-context-lens-state";
 import { StudyNotesIndex } from "./study-notes-ui";
+import { LearnPanel } from "./learn-panel";
+import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
@@ -32,6 +34,16 @@ import {
   type EvidenceQueryResult,
   type ResolvedEvidenceEdge,
 } from "./evidence-layer";
+import type { EducationCatalogResult, EducationQuranCitation } from "./education-content";
+import {
+  DEFAULT_EDUCATION_PROGRESS,
+  completeEducationLesson,
+  dueEducationReviews,
+  normalizeEducationProgress,
+  recordEducationKnowledgeReview,
+  startEducationLesson,
+  type EducationProgress,
+} from "./education-state.mjs";
 import {
   DEFAULT_HIFZ_PROGRESS,
   buildPageMasteryMap,
@@ -75,12 +87,15 @@ import {
   buildTodayStudyPlan,
   completeTodayStudyStep,
   currentTodayStudyStep,
+  educationReviewStepComplete,
   normalizeTodayStudyProgress,
+  remainingEducationReviewTargets,
   skipTodayStudyStep,
   startOrResumeTodayStudy,
   startTodayStudyStep,
   todayStudyCompletion,
   type TodayStudyProgress,
+  type TodayStudyTarget,
 } from "./today-study.mjs";
 import {
   DEFAULT_STUDY_NOTES,
@@ -94,12 +109,14 @@ import {
   studyAnchorKey,
   updateStudyNote,
   type StudyAnchor,
+  type LessonStudyAnchor,
   type StudyNote,
   type StudyNotesState,
 } from "./study-notes.mjs";
 
-type NavItem = "Home" | "Contents" | "Read" | "Listen" | "Bookmarks" | "Search" | "Settings";
-type Overlay = Exclude<NavItem, "Read"> | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
+type NavItem = "Home" | "Contents" | "Read" | "Learn" | "Listen" | "Bookmarks" | "Search" | "Settings";
+type MobileNavItem = "Home" | "Read" | "Learn" | "Listen" | "More";
+type Overlay = Exclude<NavItem, "Read"> | "More" | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -130,10 +147,18 @@ const NAV_ITEMS: Array<{ label: NavItem; glyph: string }> = [
   { label: "Home", glyph: "⌂" },
   { label: "Contents", glyph: "☷" },
   { label: "Read", glyph: "▤" },
+  { label: "Learn", glyph: "◎" },
   { label: "Listen", glyph: "◖" },
   { label: "Bookmarks", glyph: "◇" },
   { label: "Search", glyph: "⌕" },
   { label: "Settings", glyph: "⚙" },
+];
+const MOBILE_NAV_ITEMS: Array<{ label: MobileNavItem; glyph: string }> = [
+  { label: "Home", glyph: "⌂" },
+  { label: "Read", glyph: "▤" },
+  { label: "Learn", glyph: "◎" },
+  { label: "Listen", glyph: "◖" },
+  { label: "More", glyph: "•••" },
 ];
 const FONT_LOADS = new Map<string, Promise<string>>();
 
@@ -231,6 +256,8 @@ export default function Home() {
   const [hifzProgress, setHifzProgress] = useState<HifzProgress>(() => normalizeHifzProgress(DEFAULT_HIFZ_PROGRESS));
   const [vocabularyProgress, setVocabularyProgress] = useState<VocabularyProgress>(() => normalizeVocabularyProgress(DEFAULT_VOCABULARY_PROGRESS));
   const [todayStudyProgress, setTodayStudyProgress] = useState<TodayStudyProgress>(() => normalizeTodayStudyProgress(DEFAULT_TODAY_STUDY_PROGRESS));
+  const [educationProgress, setEducationProgress] = useState<EducationProgress>(() => normalizeEducationProgress(DEFAULT_EDUCATION_PROGRESS));
+  const [educationCatalogResult, setEducationCatalogResult] = useState<EducationCatalogResult | { status: "loading" }>({ status: "disabled", reason: "Guided courses awaiting approved curriculum." });
   const [studyNotes, setStudyNotes] = useState<StudyNotesState>(() => normalizeStudyNotes(DEFAULT_STUDY_NOTES));
   const [evidenceResult, setEvidenceResult] = useState<EvidenceQueryResult | { status: "loading" }>({ status: "disabled", reason: "No rights-cleared evidence dataset is active." });
   const [savedSection, setSavedSection] = useState<"bookmarks" | "notes">("bookmarks");
@@ -288,14 +315,19 @@ export default function Home() {
   const occurrenceRequestGateRef = useRef(new LatestWordStudyRequestGate());
   const evidenceRequestGateRef = useRef(new LatestEvidenceRequestGate());
   const evidenceRegistryRef = useRef<EvidenceProviderRegistry | null>(null);
+  const educationCatalogRequestedRef = useRef(false);
   const pendingReadingStartRef = useRef<{ stepId: string; page: number; verseKey: string } | null>(null);
   const pendingStudyNoteRef = useRef<StudyNote | null>(null);
   const wordButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const verseButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const studyControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const readerArticleRef = useRef<HTMLElement | null>(null);
+  const learnTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const desktopLearnNavRef = useRef<HTMLButtonElement | null>(null);
+  const mobileLearnNavRef = useRef<HTMLButtonElement | null>(null);
 
-  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" ? "Read" : overlay ?? "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" || overlay === "More" ? "Read" : overlay ?? "Read";
+  const activeMobileNav: MobileNavItem = overlay === "Home" ? "Home" : overlay === "Learn" ? "Learn" : overlay === "Listen" || overlay === "Downloads" ? "Listen" : overlay === "More" || overlay === "Contents" || overlay === "Bookmarks" || overlay === "Search" || overlay === "Settings" ? "More" : "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -306,6 +338,11 @@ export default function Home() {
   const wordCoordinateIndex = useMemo(() => buildPageWordCoordinateIndex(pageData), [pageData]);
   const foundation125 = useMemo(() => VOCABULARY_CURRICULUM_REGISTRY.list().find((curriculum) => curriculum.id === FOUNDATION_125_ID) ?? null, []);
   const foundationEntryIds = useMemo<string[]>(() => [], []);
+  const educationCatalog = educationCatalogResult.status === "ready" ? educationCatalogResult.catalog : null;
+  const educationIdentity = educationCatalog ? { sourceId: educationCatalog.sourceId, sourceRevision: educationCatalog.sourceRevision } : null;
+  const educationSourceCurrent = Boolean(educationCatalog && (!educationProgress.sourceId || (educationProgress.sourceId === educationCatalog.sourceId && educationProgress.sourceRevision === educationCatalog.sourceRevision)));
+  const currentEducationLesson = educationCatalog && educationSourceCurrent && educationProgress.currentLesson ? educationCatalog.lessons.find((lesson) => lesson.id === educationProgress.currentLesson?.lessonId && lesson.courseId === educationProgress.currentLesson?.courseId && lesson.moduleId === educationProgress.currentLesson?.moduleId) ?? null : null;
+  const educationDueReviews = educationCatalog && educationProgress.sourceId === educationCatalog.sourceId && educationProgress.sourceRevision === educationCatalog.sourceRevision ? dueEducationReviews(educationProgress, todayKey) : [];
   const selectedWordKey = selectedWord ? coordinateKey(selectedWord.coordinate) : null;
   const studyNoteIndex = useMemo(() => buildStudyNoteIndex(studyNotes), [studyNotes]);
   const selectedAyahNoteKey = studyAnchorKey({ type: "ayah", verseKey: selectedVerseKey, page: pageData.page });
@@ -318,7 +355,7 @@ export default function Home() {
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
   const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
   const isOfflinePackPlayback = offlinePackQueue.length > 0;
-  const unifiedActivityDates = useMemo(() => [...new Set([...hifzProgress.activityDates, ...vocabularyProgress.activityDates, ...todayStudyProgress.activityDates])].sort(), [hifzProgress.activityDates, vocabularyProgress.activityDates, todayStudyProgress.activityDates]);
+  const unifiedActivityDates = useMemo(() => [...new Set([...hifzProgress.activityDates, ...vocabularyProgress.activityDates, ...educationProgress.activityDates, ...todayStudyProgress.activityDates])].sort(), [hifzProgress.activityDates, vocabularyProgress.activityDates, educationProgress.activityDates, todayStudyProgress.activityDates]);
   const studyStreak = calculateStreak(unifiedActivityDates, todayKey);
   const todayMemorized = todaysMemorizedCount(hifzProgress, todayKey);
   const dueReviews = dueReviewCount(hifzProgress, todayKey);
@@ -326,10 +363,13 @@ export default function Home() {
   const memorizedVerseKeys = new Set(hifzProgress.memorized.map((item) => item.verseKey));
   const pageMasteryMap = useMemo(() => buildPageMasteryMap(hifzProgress, todayKey), [hifzProgress, todayKey]);
   const masteryCounts = useMemo(() => pageMasteryMap.reduce((counts, item) => ({ ...counts, [item.status]: counts[item.status] + 1 }), { "not-started": 0, learning: 0, due: 0, strong: 0 }), [pageMasteryMap]);
-  const todayPlan = useMemo(() => buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: todayKey }), [hifzProgress, vocabularyProgress, foundationEntryIds, pageData.page, selectedVerseKey, todayKey]);
+  const todayPlan = useMemo(() => buildTodayStudyPlan({ hifzProgress, vocabularyProgress, educationProgress, educationCatalog, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: todayKey }), [hifzProgress, vocabularyProgress, educationProgress, educationCatalog, foundationEntryIds, pageData.page, selectedVerseKey, todayKey]);
   const activeStudySession = todayStudyProgress.activeSession?.dateKey === todayKey ? todayStudyProgress.activeSession : null;
   const activeStudyStep = currentTodayStudyStep(todayStudyProgress, todayKey);
   const activeStudyStepStarted = Boolean(activeStudyStep && activeStudySession?.startedStepIds.includes(activeStudyStep.id));
+  const activeEducationReviewTargets = activeStudyStep?.kind === "education-review" ? activeStudyStep.targets as Array<Extract<TodayStudyTarget, { checkId: string }>> : [];
+  const remainingActiveEducationReviews = activeStudyStep?.kind === "education-review" ? remainingEducationReviewTargets(activeStudyStep, educationProgress, activeStudySession?.dateKey ?? todayKey) : [];
+  const activeEducationReview = activeStudyStep?.kind === "education-review" ? { completed: activeEducationReviewTargets.length - remainingActiveEducationReviews.length, total: activeEducationReviewTargets.length, current: remainingActiveEducationReviews[0] ?? null } : null;
   const displayedTodayPlan = activeStudySession ? { dateKey: activeStudySession.dateKey, sessionMinutes: activeStudySession.sessionMinutes, steps: activeStudySession.steps, totalEstimatedMinutes: activeStudySession.steps.reduce((sum, step) => sum + step.estimatedMinutes, 0) } : todayPlan;
   const todayCompletion = todayStudyCompletion(todayStudyProgress, displayedTodayPlan, todayKey);
   const todaySessionFinished = Boolean(activeStudySession && !activeStudyStep);
@@ -388,6 +428,7 @@ export default function Home() {
     setHifzProgress(preferences.hifz);
     setVocabularyProgress(preferences.vocabulary);
     setTodayStudyProgress(preferences.study);
+    setEducationProgress(preferences.education);
     setStudyNotes(preferences.notes);
     setDark(preferences.reader.theme === "dark");
     setTajweed(preferences.reader.tajweed);
@@ -400,6 +441,18 @@ export default function Home() {
     setWifiOnlyDownloads(preferences.downloads.wifiOnly);
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if ((overlay !== "Learn" && overlay !== "Hifz") || educationCatalogRequestedRef.current) return;
+    educationCatalogRequestedRef.current = true;
+    setEducationCatalogResult({ status: "loading" });
+    contentTransport.loadEducationCatalog()
+      .then((result) => setEducationCatalogResult(result))
+      .catch(() => {
+        educationCatalogRequestedRef.current = false;
+        setEducationCatalogResult({ status: "error", reason: "Guided education sources could not be checked safely." });
+      });
+  }, [overlay, contentTransport]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -554,7 +607,7 @@ export default function Home() {
 
   useEffect(() => {
     const note = pendingStudyNoteRef.current;
-    if (!note || pageData.page !== note.anchor.page || selectedVerseKey !== note.anchor.verseKey) return;
+    if (!note || note.anchor.type === "lesson" || pageData.page !== note.anchor.page || selectedVerseKey !== note.anchor.verseKey) return;
     if (note.anchor.type === "word") {
       const mappedWord = wordContextForCoordinate(pageData, note.anchor);
       if (!mappedWord) {
@@ -576,7 +629,7 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     savePreferences(localStorage, {
-      version: 7,
+      version: 8,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -595,10 +648,11 @@ export default function Home() {
       hifz: hifzProgress,
       vocabulary: vocabularyProgress,
       study: todayStudyProgress,
+      education: educationProgress,
       notes: studyNotes,
       downloads: { wifiOnly: wifiOnlyDownloads },
     } satisfies MushafPreferences);
-  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, vocabularyProgress, todayStudyProgress, studyNotes, wifiOnlyDownloads, hydrated]);
+  }, [selectedVerseKey, pageData.page, recentPages, bookmarks, dark, tajweed, transliteration, translation, reciter, speed, pageScale, readingFont, hifzProgress, vocabularyProgress, todayStudyProgress, educationProgress, studyNotes, wifiOnlyDownloads, hydrated]);
 
   useEffect(() => {
     if (!hydrated || typeof FontFace === "undefined") return;
@@ -733,6 +787,11 @@ export default function Home() {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && (overlay || tajweedGuideOpen)) {
         event.preventDefault();
+        if (overlay === "Learn") {
+          closeLearn();
+          setTajweedGuideOpen(false);
+          return;
+        }
         const restoreContextFocus = overlay === "Context";
         setOverlay(null);
         setTajweedGuideOpen(false);
@@ -1072,7 +1131,7 @@ export default function Home() {
 
   function startTodayStudy() {
     const freshDay = refreshTodayKey();
-    const freshPlan = freshDay === todayPlan.dateKey ? todayPlan : buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: freshDay });
+    const freshPlan = freshDay === todayPlan.dateKey ? todayPlan : buildTodayStudyPlan({ hifzProgress, vocabularyProgress, educationProgress, educationCatalog, curriculumEntryIds: foundationEntryIds, reading: { page: pageData.page, verseKey: selectedVerseKey }, sessionMinutes: hifzProgress.sessionMinutes, date: freshDay });
     if (!freshPlan.steps.length) {
       setNotice("Today’s study plan is clear.");
       return;
@@ -1117,6 +1176,27 @@ export default function Home() {
         }
       }
       if (target && (target.page !== pageData.page || target.verseKey !== selectedVerseKey)) setNotice("Opening the target reading position…");
+      return;
+    }
+    if (activeStudyStep.kind === "education-review" || activeStudyStep.kind === "education-lesson") {
+      const target = (activeStudyStep.kind === "education-review"
+        ? remainingEducationReviewTargets(activeStudyStep, educationProgress, freshDay)[0]
+        : activeStudyStep.targets[0]) as { sourceId: string; sourceRevision: string; courseId: string; moduleId: string; lessonId: string } | undefined;
+      if (activeStudyStep.kind === "education-review" && !target) {
+        const finalStep = isFinalPendingStudyStep(activeStudyStep.id);
+        setTodayStudyProgress((current) => completeTodayStudyStep(current, activeStudyStep.id, freshDay));
+        if (finalStep) setStudySessionVisible(false);
+        setNotice(finalStep ? "Today’s Study complete." : "Every guided-learning review in this step is complete.");
+        return;
+      }
+      if (!target || !educationCatalog || target.sourceId !== educationCatalog.sourceId || target.sourceRevision !== educationCatalog.sourceRevision) {
+        setNotice("That guided-learning source revision is unavailable. Your pinned progress was not remapped.");
+        return;
+      }
+      setTodayStudyProgress((current) => startTodayStudyStep(current, activeStudyStep.id, freshDay));
+      setEducationProgress((current) => startEducationLesson(current, { sourceId: target.sourceId, sourceRevision: target.sourceRevision }, target, freshDay));
+      setOverlay("Learn");
+      setNotice(activeStudyStep.kind === "education-review" ? "Guided-learning review opened in Learn." : "Guided lesson opened in Learn.");
       return;
     }
     setOverlay("Hifz");
@@ -1186,7 +1266,7 @@ export default function Home() {
 
   function preferenceSnapshot(): MushafPreferences {
     return {
-      version: 7,
+      version: 8,
       reader: {
         lastPage: pageData.page,
         lastVerse: selectedVerseKey,
@@ -1205,6 +1285,7 @@ export default function Home() {
       hifz: hifzProgress,
       vocabulary: vocabularyProgress,
       study: todayStudyProgress,
+      education: educationProgress,
       notes: studyNotes,
       downloads: { wifiOnly: wifiOnlyDownloads },
     };
@@ -1232,6 +1313,7 @@ export default function Home() {
       setHifzProgress(restored.hifz);
       setVocabularyProgress(restored.vocabulary);
       setTodayStudyProgress(restored.study);
+      setEducationProgress(restored.education);
       setStudyNotes(restored.notes);
       setDark(restored.reader.theme === "dark");
       setTajweed(restored.reader.tajweed);
@@ -1304,16 +1386,33 @@ export default function Home() {
     }
   }
 
-  function chooseNav(item: NavItem) {
+  function closeLearn() {
+    setOverlay(null);
+    scheduleLearnFocusRestore([
+      () => learnTriggerRef.current,
+      () => desktopLearnNavRef.current,
+      () => mobileLearnNavRef.current,
+      () => readerArticleRef.current,
+    ]);
+  }
+
+  function chooseNav(item: NavItem, trigger?: HTMLButtonElement) {
     if (item === "Contents") {
       openContents();
       return;
     }
+    if (item === "Learn") learnTriggerRef.current = trigger ?? null;
     if (item === "Bookmarks") setSavedSection("bookmarks");
     setOverlay(item === "Read" ? null : item);
   }
 
+  function chooseMobileNav(item: MobileNavItem, trigger?: HTMLButtonElement) {
+    if (item === "Learn") learnTriggerRef.current = trigger ?? null;
+    setOverlay(item === "Read" ? null : item);
+  }
+
   async function createPrivateNote(capturedAnchor: StudyAnchor, body: string, tags: string[]) {
+    if (capturedAnchor.type === "lesson") return createPrivateLessonNote(capturedAnchor, body, tags);
     try {
       const anchor = await revalidateStudyAnchor(capturedAnchor, {
         resolveVerse: async (verseKey) => {
@@ -1370,7 +1469,103 @@ export default function Home() {
     setNotice("Private tag removed. The notes themselves were kept.");
   }
 
+  async function createPrivateLessonNote(anchor: LessonStudyAnchor, body: string, tags: string[]) {
+    try {
+      const trusted = await revalidateStudyAnchor(anchor, {
+        resolveLesson: async (candidate) => {
+          if (!educationCatalog || candidate.sourceId !== educationCatalog.sourceId || candidate.sourceRevision !== educationCatalog.sourceRevision) return null;
+          const lesson = educationCatalog.lessons.find((item) => item.id === candidate.lessonId && item.courseId === candidate.courseId && item.moduleId === candidate.moduleId);
+          if (!lesson || (candidate.sectionId !== null && !lesson.blocks.some((block) => block.id === candidate.sectionId))) return null;
+          return candidate;
+        },
+      });
+      if (!trusted || trusted.type !== "lesson") return "The captured lesson no longer matches its approved source revision, so the note was not saved.";
+      const created = createStudyNote(studyNotes, { anchor: trusted, body, tags });
+      setStudyNotes(created.state);
+      setNotice("Private lesson note saved on this device.");
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "The private lesson note could not be saved.";
+    }
+  }
+
+  function openEducationLesson(courseId: string, moduleId: string, lessonId: string) {
+    if (!educationCatalog || !educationIdentity || !educationCatalog.lessons.some((lesson) => lesson.id === lessonId && lesson.courseId === courseId && lesson.moduleId === moduleId)) {
+      setNotice("That guided lesson is unavailable from an approved source.");
+      return;
+    }
+    if (educationProgress.sourceId && !educationSourceCurrent) {
+      setNotice("Your guided-learning progress is pinned to an unavailable source revision and was not remapped.");
+      return;
+    }
+    setEducationProgress((current) => startEducationLesson(current, educationIdentity, { courseId, moduleId, lessonId }, refreshTodayKey()));
+  }
+
+  function finishEducationLesson(courseId: string, moduleId: string, lessonId: string) {
+    if (!educationIdentity) return;
+    setEducationProgress((current) => completeEducationLesson(current, educationIdentity, { courseId, moduleId, lessonId }, refreshTodayKey()));
+    const activeLessonTarget = activeStudyStep?.kind === "education-lesson" ? activeStudyStep.targets[0] as { sourceId?: string; sourceRevision?: string; courseId?: string; moduleId?: string; lessonId?: string } | undefined : undefined;
+    const completesActiveLesson = Boolean(activeLessonTarget && activeLessonTarget.sourceId === educationIdentity.sourceId && activeLessonTarget.sourceRevision === educationIdentity.sourceRevision && activeLessonTarget.courseId === courseId && activeLessonTarget.moduleId === moduleId && activeLessonTarget.lessonId === lessonId);
+    if (activeStudyStep?.kind === "education-lesson" && completesActiveLesson) {
+      const finalStep = isFinalPendingStudyStep(activeStudyStep.id);
+      setTodayStudyProgress((current) => completeTodayStudyStep(current, activeStudyStep.id, refreshTodayKey()));
+      if (finalStep) setStudySessionVisible(false);
+    }
+    setNotice(activeStudyStep?.kind === "education-lesson" && !completesActiveLesson ? "Guided lesson completed. The separately pinned Today’s Study lesson remains open." : "Guided lesson completed on this device.");
+  }
+
+  function rateEducationCheck(courseId: string, moduleId: string, lessonId: string, checkId: string, grade: ReviewGrade) {
+    if (!educationIdentity || !educationCatalog?.lessons.some((lesson) => lesson.id === lessonId && lesson.courseId === courseId && lesson.moduleId === moduleId && lesson.knowledgeChecks.some((check) => check.id === checkId))) return;
+    const reviewDate = refreshTodayKey();
+    const previousReviewCount = educationProgress.knowledgeChecks.find((item) => item.checkId === checkId)?.reviewCount ?? 0;
+    let nextEducationProgress = recordEducationKnowledgeReview(educationProgress, educationIdentity, { courseId, moduleId, lessonId, checkId }, grade, reviewDate);
+    const nextReviewCount = nextEducationProgress.knowledgeChecks.find((item) => item.checkId === checkId)?.reviewCount ?? 0;
+    if (nextReviewCount <= previousReviewCount) {
+      setNotice("That guided-learning review was not recorded because it would violate the saved study chronology.");
+      return;
+    }
+    if (activeStudyStep?.kind === "education-review") {
+      const targets = activeStudyStep.targets as Array<{ sourceId?: string; sourceRevision?: string; courseId?: string; moduleId?: string; lessonId?: string; checkId: string }>;
+      const ratedTarget = targets.some((target) => target.sourceId === educationIdentity.sourceId && target.sourceRevision === educationIdentity.sourceRevision && target.courseId === courseId && target.moduleId === moduleId && target.lessonId === lessonId && target.checkId === checkId);
+      const sessionDate = activeStudySession?.dateKey ?? reviewDate;
+      const remaining = ratedTarget ? remainingEducationReviewTargets(activeStudyStep, nextEducationProgress, sessionDate) : remainingActiveEducationReviews;
+      if (ratedTarget && educationReviewStepComplete(activeStudyStep, nextEducationProgress, sessionDate)) {
+        const finalStep = isFinalPendingStudyStep(activeStudyStep.id);
+        setTodayStudyProgress((current) => completeTodayStudyStep(current, activeStudyStep.id, sessionDate));
+        if (finalStep) setStudySessionVisible(false);
+      } else if (ratedTarget) {
+        const nextTarget = remaining[0];
+        nextEducationProgress = startEducationLesson(nextEducationProgress, { sourceId: nextTarget.sourceId, sourceRevision: nextTarget.sourceRevision }, nextTarget, sessionDate);
+      }
+    }
+    setEducationProgress(nextEducationProgress);
+    setNotice(`Guided-learning review rated ${grade}.`);
+  }
+
+  async function openEducationQuranCitation(citation: EducationQuranCitation) {
+    try {
+      const target = await contentTransport.lookupVerse(citation.verseKey);
+      if (target.verseKey !== citation.verseKey) throw new Error("Citation mapping mismatch");
+      goToPage(target.page, target.page > pageData.page ? "next" : target.page < pageData.page ? "previous" : undefined, target.verseKey);
+      setOverlay(null);
+      setNotice(`Opened trusted Quran citation ${citation.verseKey}.`);
+    } catch {
+      setNotice("That Quran citation did not match the trusted verse lookup boundary and was not opened.");
+    }
+  }
+
   async function openPrivateNote(note: StudyNote, trigger: HTMLButtonElement) {
+    if (note.anchor.type === "lesson") {
+      const lessonAnchor = note.anchor;
+      if (!educationCatalog || lessonAnchor.sourceId !== educationCatalog.sourceId || lessonAnchor.sourceRevision !== educationCatalog.sourceRevision || !educationCatalog.lessons.some((lesson) => lesson.id === lessonAnchor.lessonId && lesson.courseId === lessonAnchor.courseId && lesson.moduleId === lessonAnchor.moduleId)) {
+        setNotice("That private lesson note is preserved, but its pinned guided-course revision is unavailable.");
+        return;
+      }
+      setEducationProgress((current) => startEducationLesson(current, { sourceId: lessonAnchor.sourceId, sourceRevision: lessonAnchor.sourceRevision }, lessonAnchor, refreshTodayKey()));
+      setOverlay("Learn");
+      window.requestAnimationFrame(() => lessonAnchor.sectionId ? document.getElementById(`lesson-section-${lessonAnchor.sectionId}`)?.focus() : undefined);
+      return;
+    }
     try {
       const target = await contentTransport.lookupVerse(note.anchor.verseKey);
       if (target.verseKey !== note.anchor.verseKey || target.page !== note.anchor.page) throw new Error("Private note anchor mismatch");
@@ -1722,7 +1917,7 @@ export default function Home() {
         <div className="brand-mark" aria-label="Mushaf Companion"><span className="brand-logo" style={{ backgroundImage: `url("${appPath("logo.png")}")` }} aria-hidden="true" /></div>
         <nav>
           {NAV_ITEMS.map((item) => (
-            <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}>
+            <button ref={item.label === "Learn" ? desktopLearnNavRef : undefined} key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={(event) => chooseNav(item.label, event.currentTarget)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}>
               <span>{item.glyph}</span><small>{item.label}</small>
             </button>
           ))}
@@ -1830,17 +2025,56 @@ export default function Home() {
       }} preload="metadata" />
 
       <nav className="mobile-nav" aria-label="Primary navigation">
-        {NAV_ITEMS.map((item) => <button key={item.label} type="button" className={activeNav === item.label ? "active" : ""} onClick={() => chooseNav(item.label)} aria-label={item.label} aria-current={activeNav === item.label ? "page" : undefined}><span>{item.glyph}</span><small>{item.label}</small></button>)}
+        {MOBILE_NAV_ITEMS.map((item) => <button ref={item.label === "Learn" ? mobileLearnNavRef : undefined} key={item.label} type="button" className={activeMobileNav === item.label ? "active" : ""} onClick={(event) => chooseMobileNav(item.label, event.currentTarget)} aria-label={item.label} aria-current={activeMobileNav === item.label ? "page" : undefined}><span>{item.glyph}</span><small>{item.label}</small></button>)}
       </nav>
 
       {overlay && (
-        <div className={`layer-backdrop ${overlay === "Listen" ? "audio-layer" : ""} ${overlay === "Context" ? "context-lens-layer" : ""}`} onMouseDown={(event) => { if (event.target === event.currentTarget) { if (overlay === "Context") closeContextLens(); else setOverlay(null); } }}>
+        <div className={`layer-backdrop ${overlay === "Listen" ? "audio-layer" : ""} ${overlay === "Context" ? "context-lens-layer" : ""}`} onMouseDown={(event) => { if (event.target === event.currentTarget) { if (overlay === "Context") closeContextLens(); else if (overlay === "Learn") closeLearn(); else setOverlay(null); } }}>
           {overlay === "Home" && (
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
               <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => { setSavedSection("bookmarks"); setOverlay("Bookmarks"); }}><span>◇</span><strong>Saved study</strong><small>{bookmarks.length} bookmarks · {studyNotes.notes.length} private notes</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button></div>
             </section>
+          )}
+
+          {overlay === "More" && (
+            <section className="panel-shell more-panel" role="dialog" aria-modal="true" aria-labelledby="more-title">
+              <header><div><span className="panel-kicker">MORE DESTINATIONS</span><h2 id="more-title">More</h2></div>{closeButton}</header>
+              <div className="more-nav-grid">{(["Contents", "Bookmarks", "Search", "Settings"] as NavItem[]).map((item) => <button type="button" onClick={() => chooseNav(item)} key={item}><strong>{item}</strong><small>{item === "Contents" ? "Browse 114 surahs" : item === "Bookmarks" ? "Bookmarks and private notes" : item === "Search" ? "Find a verified passage" : "Reader and private-data preferences"}</small></button>)}</div>
+            </section>
+          )}
+
+          {overlay === "Learn" && (
+            <LearnPanel
+              catalogResult={educationCatalogResult}
+              educationProgress={educationProgress}
+              currentLesson={currentEducationLesson}
+              dueCheckIds={new Set(educationDueReviews.map((item) => item.checkId))}
+              todayPlan={displayedTodayPlan}
+              todayCompletion={todayCompletion}
+              todayStudyAction={todaySessionFinished ? todayCompletion.percent === 100 ? "Today’s Study complete" : "Today’s Study ended" : activeStudySession ? "Resume Today’s Study" : "Start Today’s Study"}
+              todayStudyDisabled={!todayPlan.steps.length || todaySessionFinished}
+              activeEducationReview={activeEducationReview}
+              hifzDue={dueReviews}
+              hifzMemorized={hifzProgress.memorized.length}
+              vocabularyDue={vocabularyDue}
+              vocabularyAvailable={foundationEntryIds.length > 0}
+              notes={studyNotes.notes}
+              studyStreak={studyStreak}
+              onTodayStudy={startTodayStudy}
+              onOpenLesson={openEducationLesson}
+              onCompleteLesson={finishEducationLesson}
+              onRateKnowledgeCheck={rateEducationCheck}
+              onOpenQuranCitation={openEducationQuranCitation}
+              onOpenHifz={() => setOverlay("Hifz")}
+              onOpenVocabulary={() => setOverlay("Hifz")}
+              onOpenTajweed={() => { setOverlay(null); setTajweedGuideOpen(true); }}
+              onOpenNotes={() => { setSavedSection("notes"); setOverlay("Bookmarks"); }}
+              onOpenReaderStudy={(trigger) => openContextLens(trigger)}
+              onCreateLessonNote={createPrivateLessonNote}
+              onClose={closeLearn}
+            />
           )}
 
           {overlay === "Hifz" && (
@@ -1859,7 +2093,7 @@ export default function Home() {
                 </section>
 
                 <section className="mastery-plan-card today-plan-card" aria-labelledby="daily-plan-title">
-                  <div className="mastery-plan-copy"><span className="mastery-eyebrow">TODAY&apos;S STUDY</span><h3 id="daily-plan-title">A focused {hifzProgress.sessionMinutes}-minute path</h3><p>Due Hifz comes first, then due vocabulary, new approved vocabulary, and reading. You can skip or exit at any time.</p><div className="today-plan-metrics"><span><strong>Page {pageData.page}</strong>continue reading</span><span><strong>{dueReviews}</strong>Hifz due</span><span><strong>{vocabularyDue}</strong>vocabulary due</span><span><strong>{studyStreak}</strong>day rhythm</span></div></div>
+                  <div className="mastery-plan-copy"><span className="mastery-eyebrow">TODAY&apos;S STUDY</span><h3 id="daily-plan-title">A focused {hifzProgress.sessionMinutes}-minute path</h3><p>Due Hifz, approved education checks, and due vocabulary come before new approved lessons, vocabulary, and reading. You can skip or exit at any time.</p><div className="today-plan-metrics"><span><strong>Page {pageData.page}</strong>continue reading</span><span><strong>{dueReviews}</strong>Hifz due</span><span><strong>{vocabularyDue}</strong>vocabulary due</span><span><strong>{studyStreak}</strong>day rhythm</span></div></div>
                   <div className="mastery-duration" aria-label="Session length">{([5, 10, 20] as const).map((minutes) => <button type="button" disabled={studyDurationLocked} className={hifzProgress.sessionMinutes === minutes ? "active" : ""} aria-pressed={hifzProgress.sessionMinutes === minutes} onClick={() => setHifzProgress((current) => ({ ...current, sessionMinutes: minutes }))} key={minutes}>{minutes} min</button>)}</div>
                   <div className="today-goal" role="progressbar" aria-label="Today’s Study progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={todayCompletion.percent}><span style={{ width: `${todayCompletion.percent}%` }} /><small>{todayCompletion.completedSteps} of {todayCompletion.totalSteps} steps complete</small></div>
                   <div className="mastery-plan-preview">{displayedTodayPlan.steps.map((step, index) => <span className={`plan-chip ${step.kind}`} key={step.id}><i>{index + 1}</i><strong>{step.title}</strong><small>{step.estimatedMinutes} min</small></span>)}{!displayedTodayPlan.steps.length && <p>Your plan is clear. Continue reading whenever you are ready.</p>}</div>

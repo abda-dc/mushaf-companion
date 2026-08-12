@@ -88,6 +88,14 @@ test("Pages tafsir transport preserves resource 169 mapping and SHA-256 provenan
   assert.match(document.provenance.contentChecksum, /^[a-f0-9]{64}$/);
 });
 
+test("Pages education transport preserves the disabled production registry without a bundled catalog", async () => {
+  configureReaderRuntime({ mode: "pages", basePath: "/mushaf-companion/" });
+  const transport = createPagesReaderTransport(async () => { throw new Error("disabled production education must not fetch"); });
+  const result = await transport.loadEducationCatalog();
+  assert.equal(result.status, "disabled");
+  assert.match(result.reason, /approved|disabled|curriculum/i);
+});
+
 test("standalone source, PWA scope, navigation fallback, and workflow remove the wrapper runtime", async () => {
   const [page, panel, pagesTransport, entry, index, manifestText, serviceWorker, register, workflow, verifier] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

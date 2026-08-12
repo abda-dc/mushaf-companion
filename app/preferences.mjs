@@ -3,18 +3,18 @@ import { DEFAULT_STUDY_NOTES, normalizeStudyNotes } from "./study-notes.mjs";
 import { DEFAULT_VOCABULARY_PROGRESS, normalizeVocabularyProgress } from "./vocabulary-state.mjs";
 import { DEFAULT_TODAY_STUDY_PROGRESS, normalizeTodayStudyProgress } from "./today-study.mjs";
 import { DEFAULT_RECITER_ID, RECITER_IDS } from "./reciter-registry.mjs";
-
-export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v7";
-export const PREFERENCE_SCHEMA_VERSION = 7;
-const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v6", "mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
+import { DEFAULT_EDUCATION_PROGRESS, normalizeEducationProgress } from "./education-state.mjs";
+export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v8";
+export const PREFERENCE_SCHEMA_VERSION = 8;
+const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v7", "mushaf:preferences-v6", "mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
 
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
 const READING_FONTS = new Set(["uthman-taha", "amiri", "lateef", "scheherazade"]);
 const SPEEDS = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
 const VERSE_KEY = /^\d{1,3}:\d{1,3}$/;
-const MAX_PREFERENCE_JSON_LENGTH = 5_000_000;
+export const MAX_PREFERENCE_DOCUMENT_CHARACTERS = 4_000_000;
 const PORTABLE_BACKUP_KIND = "mushaf-companion-backup";
-const SUPPORTED_PORTABLE_BACKUP_VERSIONS = new Set([2, 3, 4, 5, 6, 7]);
+const SUPPORTED_PORTABLE_BACKUP_VERSIONS = new Set([2, 3, 4, 5, 6, 7, 8]);
 const ISO_INSTANT = /^[1-9]\d{3}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}Z$/;
 
 export const DEFAULT_PREFERENCES = Object.freeze({
@@ -37,17 +37,23 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   hifz: DEFAULT_HIFZ_PROGRESS,
   vocabulary: DEFAULT_VOCABULARY_PROGRESS,
   study: DEFAULT_TODAY_STUDY_PROGRESS,
+  education: DEFAULT_EDUCATION_PROGRESS,
   notes: DEFAULT_STUDY_NOTES,
   downloads: { wifiOnly: true },
 });
 
 function parseJson(value, fallback = null) {
-  if (typeof value === "string" && value.length > MAX_PREFERENCE_JSON_LENGTH) return fallback;
+  if (typeof value === "string" && value.length > MAX_PREFERENCE_DOCUMENT_CHARACTERS) return fallback;
   try {
     return JSON.parse(value ?? "null") ?? fallback;
   } catch {
     return fallback;
   }
+}
+
+function requireBoundedPreferenceDocument(value, label) {
+  if (value.length > MAX_PREFERENCE_DOCUMENT_CHARACTERS) throw new Error(`${label} exceeds the supported device-local size limit.`);
+  return value;
 }
 
 function normalizeBookmarks(value) {
@@ -98,6 +104,7 @@ export function normalizePreferences(value) {
     hifz: normalizeHifzProgress(source.hifz),
     vocabulary: normalizeVocabularyProgress(source.vocabulary),
     study: normalizeTodayStudyProgress(source.study),
+    education: normalizeEducationProgress(source.education),
     notes: normalizeStudyNotes(source.notes),
     downloads: { wifiOnly: source.downloads?.wifiOnly !== false },
   };
@@ -135,18 +142,18 @@ export function loadPreferences(storage) {
 
 export function savePreferences(storage, value) {
   const preferences = normalizePreferences(value);
-  storage.setItem(PREFERENCE_STORAGE_KEY, JSON.stringify(preferences));
+  storage.setItem(PREFERENCE_STORAGE_KEY, requireBoundedPreferenceDocument(JSON.stringify(preferences), "The preference document"));
   return preferences;
 }
 
 export function createPortableBackup(value, exportedAt = new Date().toISOString()) {
   if (!isValidPortableInstant(exportedAt)) throw new Error("The backup export timestamp is invalid.");
-  return JSON.stringify({
+  return requireBoundedPreferenceDocument(JSON.stringify({
     kind: PORTABLE_BACKUP_KIND,
     schemaVersion: PREFERENCE_SCHEMA_VERSION,
     exportedAt,
     preferences: normalizePreferences(value),
-  }, null, 2);
+  }, null, 2), "The portable backup");
 }
 
 export function restorePortableBackup(raw) {

@@ -8,7 +8,7 @@
 
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
-The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior.
+The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, a dedicated Learn hub, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior. Guided courses are intentionally unavailable until an exact curriculum passes source, rights, integrity, and named scholarly-review approval.
 
 ![Mushaf Companion cover](./public/mushaf-companion-cover.jpg)
 
@@ -76,6 +76,17 @@ Install or open the public app:
 - Selected-ayah actions for marking verses memorized, green rosette rings, and a jumpable memorized list.
 - Local JSON export and restore for reading progress, bookmarks, preferences, and Hifz history.
 
+### Guided learning foundation
+
+- A dedicated, responsive Learn destination that coordinates Today’s Study, Hifz/My Mushaf, vocabulary, Tajweed, private notes, reader study, due reviews, and device-local learning progress.
+- The existing Read → Ayah Study Lens workflow remains unchanged and remains the owner of selected-ayah study.
+- Dedicated course, module, lesson, provider, rights, integrity, audit, citation, knowledge-check, and revision-pinned progress contracts.
+- Provider lessons accept bounded structured plain text only; arbitrary provider HTML is rejected.
+- Knowledge checks use the shared Again/Hard/Good/Easy review scheduler while retaining separate education progress.
+- Today’s Study adds revision-pinned education reviews and lessons without changing Hifz, vocabulary, or reading ownership.
+- Private notes support exact source/revision/course/module/lesson/section anchors while existing ayah and word notes migrate unchanged.
+- Production contains no approved guided curriculum or substantive synthetic teaching; Learn displays an explicit awaiting-approved-curriculum state.
+
 ### Audio
 
 - Mishary Rashid Alafasy.
@@ -127,6 +138,8 @@ Shared React reader
 The shared page source obtains content from the Quran Foundation/Quran.com Content API, validates required payloads, aligns tajweed markup to words, computes page provenance, and returns a normalized page model. Content-fetch failures are not silently presented as verified Quran text.
 
 See [`docs/STANDALONE-PAGES.md`](./docs/STANDALONE-PAGES.md) for the complete static transport, source-rights, PWA, and independent verification design.
+
+See [`docs/GUIDED-EDUCATION.md`](./docs/GUIDED-EDUCATION.md) for the guided-education trust boundary, provider approval requirements, local state model, migration behavior, and release process.
 
 A disabled-by-default multilingual source registry now records candidate identity, attribution, rights, edition, coverage, and integrity metadata independently of the reader. Provider adapters require exact resource identifiers and can audit candidate packages without enabling or exposing them in the UI. See [`docs/MULTILINGUAL-SOURCES.md`](./docs/MULTILINGUAL-SOURCES.md).
 
