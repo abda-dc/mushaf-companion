@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
+  DEFAULT_RECITERS,
   FALLBACK_PAGE,
+  OTHER_RECITERS,
   RECITERS,
+  searchReciters,
   type PageWord,
   type QuranChapterInfo,
   type QuranPage,
@@ -333,7 +336,19 @@ export default function Home() {
   const studyDurationLocked = Boolean(activeStudySession && activeStudyStep);
   const vocabularyDue = foundationEntryIds.length ? dueVocabularyEntries(vocabularyProgress, todayKey).length : 0;
   const currentPlanItem = activePlan[activePlanIndex];
-  const targetAudioKey = `${reciter}|${selectedVerseKey}`;
+  const [reciterSearch, setReciterSearch] = useState("");
+  const displayedOtherReciters = useMemo(() => {
+    if (!reciterSearch.trim()) return OTHER_RECITERS;
+    const filtered = searchReciters(reciterSearch, OTHER_RECITERS);
+    const isCurrentOther = OTHER_RECITERS.some((item) => item.id === reciter);
+    if (isCurrentOther && !filtered.some((item) => item.id === reciter)) {
+      const current = OTHER_RECITERS.find((item) => item.id === reciter);
+      return current ? [current, ...filtered] : filtered;
+    }
+    return filtered;
+  }, [reciterSearch, reciter]);
+  const selectedChapterId = selectedVerseKey ? selectedVerseKey.split(":")[0] : "1";
+  const targetAudioKey = currentReciter.scope === "surah" ? `${reciter}|chapter:${selectedChapterId}` : `${reciter}|${selectedVerseKey}`;
   const fontKey = `MushafPage${pageData.page}${tajweed ? "v4" : "v2"}${tajweed ? (dark ? "dark" : "light") : "plain"}`;
   const fontReady = fontName === fontKey;
   const displayedSearchResults: SearchResult[] = search.trim() ? searchResults : pageData.verses.slice(0, 10).map((verse) => ({
@@ -625,8 +640,10 @@ export default function Home() {
     getOfflineAudioStats().then((stats) => setOfflineAudioStats({ usedBytes: stats.usedBytes, packCount: stats.packCount, completePacks: stats.completePacks })).catch(() => undefined);
   }, [hydrated, offlineAudioRevision]);
 
+  const audioSourceKey = audioSource?.key;
   useEffect(() => {
     if (!hydrated || !selectedVerseKey) return;
+    if (currentReciter.scope === "surah" && audioSourceKey === targetAudioKey) return;
     let cancelled = false;
     let objectUrl = "";
     if (playingRef.current) pendingAutoplayRef.current = true;
@@ -645,7 +662,7 @@ export default function Home() {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [hydrated, offlineAudioRevision, reciter, selectedVerseKey, targetAudioKey]);
+  }, [hydrated, offlineAudioRevision, reciter, targetAudioKey, audioSourceKey, selectedVerseKey, currentReciter.scope]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1975,8 +1992,27 @@ export default function Home() {
               <header><div><span className="panel-kicker">READER PREFERENCES</span><h2 id="settings-title">Settings</h2></div>{closeButton}</header>
               <div className="settings-content">
                 <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
-                <section className="settings-group"><h3>Reading assistance</h3><label className="setting-row"><span><strong>Tajweed colors</strong><small>Use the verified QCF tajweed font.</small></span><input className="switch" type="checkbox" checked={tajweed} onChange={(event) => setTajweed(event.target.checked)} /></label><label className="setting-row"><span><strong>Transliteration</strong><small>Show pronunciation below the selected ayah.</small></span><input className="switch" type="checkbox" checked={transliteration} onChange={(event) => setTransliteration(event.target.checked)} /></label><label className="setting-row"><span><strong>English translation</strong><small>Saheeh International · source resource 20.</small></span><input className="switch" type="checkbox" checked={translation} onChange={(event) => setTranslation(event.target.checked)} /></label><div className="setting-row tafsir-setting"><span><strong>English tafsir</strong><small>Ibn Kathir (Abridged) · source resource 169.</small></span><button type="button" onClick={openTafsir}>Open for ayah {selectedVerseKey}</button></div></section>
-                <section className="settings-group"><h3>Audio</h3><div className="setting-row"><span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span><select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div><div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div></section>
+                <section className="settings-group">
+                  <h3>Audio</h3>
+                  <div className="setting-row">
+                    <span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span>
+                    <select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Default reciter">
+                      <optgroup label="Default Reciters">
+                        {DEFAULT_RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                      </optgroup>
+                      <optgroup label="Other Reciters">
+                        {displayedOtherReciters.map((item) => <option key={item.id} value={item.id}>{item.name} {item.style !== "murattal" ? `(${item.style})` : ""}</option>)}
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div className="setting-row">
+                    <span><strong>Filter other reciters</strong><small>Search name or recitation style.</small></span>
+                    <div className="reciter-filter-wrap">
+                      <input type="search" className="reciter-search-input" placeholder="Search other reciters…" value={reciterSearch} onChange={(event) => setReciterSearch(event.target.value)} aria-label="Filter other reciters" />
+                    </div>
+                  </div>
+                  <div className="setting-row"><span><strong>Playback speed</strong><small>Applies immediately.</small></span><select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></div>
+                </section>
                 <section className="settings-group offline-settings"><h3>Offline audio</h3><p>{offlineAudioStats.completePacks} verified packs · {formatAudioBytes(offlineAudioStats.usedBytes)} on this device.</p><button type="button" onClick={openDownloads}>Manage downloads <span>→</span></button><small>Surah and juz packs are stored privately in this browser.</small></section>
                 <section className="settings-group data-portability"><h3>Private backup</h3><p>Your private notes, reading history, and mastery map stay on this device unless you explicitly download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
                 <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href={contentTransport.contentManifestUrl} target="_blank" rel="noreferrer">view sources</a></small></footer>
@@ -2070,9 +2106,26 @@ export default function Home() {
               <div className="sheet-now-playing"><span className="reciter-avatar large">{currentReciter.initials}</span><div><strong>{currentReciter.name}</strong><small>{currentChapter?.name} · Page {pageData.page}{audioSource?.offline ? " · Playing offline" : " · Streaming"}</small></div></div>
               <div className="sheet-transport"><button type="button" onClick={() => moveAyah(-1)} disabled={currentReciter.scope === "surah"} aria-label="Previous ayah">‹</button><button type="button" className="sheet-play" onClick={togglePlay} aria-label={playing ? "Pause recitation" : "Play recitation"}>{playing ? "Ⅱ" : "▶"}</button><button type="button" onClick={() => stopPlayback()} aria-label="Stop recitation">■</button><button type="button" onClick={() => moveAyah(1)} disabled={currentReciter.scope === "surah"} aria-label="Next ayah">›</button></div>
               <div className="sheet-progress"><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(progress, duration || 0)} style={{ "--progress": `${duration ? (progress / duration) * 100 : 0}%` } as React.CSSProperties} onChange={(event) => { if (audioRef.current) audioRef.current.currentTime = Number(event.target.value); }} aria-label="Audio progress" /><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
-              <div className="audio-settings-grid"><label>RECITER<select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)}>{RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></label><label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={isSurahPlayback}><option value="off">{isSurahPlayback ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label></div>
+              <div className="audio-settings-grid">
+                <label>
+                  RECITER
+                  <select value={reciter} onChange={(event) => selectReciter(event.target.value as ReciterId)} aria-label="Reciter">
+                    <optgroup label="Default Reciters">
+                      {DEFAULT_RECITERS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </optgroup>
+                    <optgroup label="Other Reciters">
+                      {displayedOtherReciters.map((item) => <option key={item.id} value={item.id}>{item.name} {item.style !== "murattal" ? `(${item.style})` : ""}</option>)}
+                    </optgroup>
+                  </select>
+                </label>
+                <label>SPEED<select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>{PLAYBACK_SPEEDS.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}</select></label>
+                <label>REPEAT<select value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as RepeatMode)} disabled={isSurahPlayback}><option value="off">{isSurahPlayback ? "Sūrah playback" : "Off"}</option><option value="ayah">Current ayah</option><option value="range">Ayah range</option></select></label>
+              </div>
+              <div className="reciter-filter-row">
+                <input type="search" className="reciter-search-input" placeholder="Filter other reciters by name, style…" value={reciterSearch} onChange={(event) => setReciterSearch(event.target.value)} aria-label="Filter other reciters" />
+              </div>
               <button type="button" className="open-downloads" onClick={openDownloads}><span>↓</span><span><strong>Offline audio library</strong><small>{offlineAudioStats.packCount ? `${offlineAudioStats.completePacks} packs ready · ${formatAudioBytes(offlineAudioStats.usedBytes)}` : "Download a sūrah or juz"}</small></span><span>›</span></button>
-              {currentReciter.scope === "surah" && <p className="audio-scope-note">This recitation is provided as continuous sūrah audio. Ayah repeat remains available with the five verse-by-verse reciters.</p>}
+              {currentReciter.scope === "surah" && <p className="audio-scope-note">This recitation is provided as continuous sūrah audio. Ayah repeat remains available with verse-by-verse reciters.</p>}
               {surahPlaybackChapter !== null && currentReciter.scope === "ayah" && <p className="audio-scope-note">Complete sūrah mode is active. Each verified āyah file will continue in order until the end of this sūrah.</p>}
               {isOfflinePackPlayback && <p className="audio-scope-note">Verified offline sequence is active. It will continue through every downloaded āyah even without Quran page-data access.</p>}
               {repeatMode === "range" && <div className="range-settings"><label>FROM<select value={rangeStart} onChange={(event) => setRangeStart(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label><span>to</span><label>TO<select value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)}>{pageData.verses.map((verse) => <option key={verse.key} value={verse.key}>{verse.key}</option>)}</select></label></div>}

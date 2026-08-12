@@ -2,12 +2,12 @@ import { DEFAULT_HIFZ_PROGRESS, normalizeHifzProgress } from "./hifz-state.mjs";
 import { DEFAULT_STUDY_NOTES, normalizeStudyNotes } from "./study-notes.mjs";
 import { DEFAULT_VOCABULARY_PROGRESS, normalizeVocabularyProgress } from "./vocabulary-state.mjs";
 import { DEFAULT_TODAY_STUDY_PROGRESS, normalizeTodayStudyProgress } from "./today-study.mjs";
+import { DEFAULT_RECITER_ID, RECITER_IDS } from "./reciter-registry.mjs";
 
 export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v7";
 export const PREFERENCE_SCHEMA_VERSION = 7;
 const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v6", "mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
 
-const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "muhammad-ayyub", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
 const READING_FONTS = new Set(["uthman-taha", "amiri", "lateef", "scheherazade"]);
 const SPEEDS = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
@@ -89,7 +89,7 @@ export function normalizePreferences(value) {
       tajweed: reader.tajweed !== false,
       transliteration: reader.transliteration === true,
       translation: reader.translation === true,
-      reciter: RECITERS.has(reader.reciter) ? reader.reciter : "alafasy",
+      reciter: RECITER_IDS.has(reader.reciter) ? reader.reciter : DEFAULT_RECITER_ID,
       speed: SPEEDS.has(Number(reader.speed)) ? Number(reader.speed) : 1,
       pageScale: PAGE_SCALES.has(reader.pageScale) ? reader.pageScale : "comfortable",
       readingFont: READING_FONTS.has(reader.readingFont) ? reader.readingFont : "uthman-taha",
@@ -115,7 +115,7 @@ export function migrateLegacyPreferences(storage) {
       tajweed: storage.getItem("mushaf:tajweed") !== "false",
       transliteration: storage.getItem("mushaf:transliteration") === "true",
       translation: storage.getItem("mushaf:translation") === "true",
-      reciter: storage.getItem("mushaf:reciter") ?? "alafasy",
+      reciter: RECITER_IDS.has(storage.getItem("mushaf:reciter")) ? storage.getItem("mushaf:reciter") : DEFAULT_RECITER_ID,
       speed: Number(storage.getItem("mushaf:speed") ?? "1"),
       pageScale: storage.getItem("mushaf:page-scale") ?? "comfortable",
       readingFont: storage.getItem("mushaf:reading-font") ?? "uthman-taha",

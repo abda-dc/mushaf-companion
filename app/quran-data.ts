@@ -1,6 +1,24 @@
-export type ReciterId = "alafasy" | "abdulbasit" | "saad" | "aymen" | "minshawi-kids" | "muhammad-ayyub" | "abdul-rashid-sufi";
-
-export type ReciterScope = "ayah" | "surah";
+// Canonical reciters (Mishary Rashid Alafasy, Abdul Basit Abdus Samad, Dr. Aymen Suwayed,
+// Minshawi Kids Repeat, Sheikh Muhammad Ayyub, Sheikh Abdul Rashid Ali Sufi, etc.)
+// are defined in reciter-registry.mjs as the single source of truth.
+export type {
+  ReciterDefinition,
+  ReciterGroup,
+  ReciterId,
+  ReciterProvider,
+  ReciterRiwayah,
+  ReciterScope,
+  ReciterStyle,
+} from "./reciter-registry.mjs";
+export {
+  DEFAULT_RECITERS,
+  DEFAULT_RECITER_ID,
+  OTHER_RECITERS,
+  RECITER_IDS,
+  RECITERS,
+  getReciterById,
+  searchReciters,
+} from "./reciter-registry.mjs";
 
 export interface PageWord {
   id: number;
@@ -88,16 +106,6 @@ export interface QuranChapterInfo {
   juzs: number[];
   bismillahPre: boolean;
 }
-
-export const RECITERS: Array<{ id: ReciterId; name: string; initials: string; scope: ReciterScope }> = [
-  { id: "alafasy", name: "Mishary Rashid Alafasy", initials: "MA", scope: "ayah" },
-  { id: "abdulbasit", name: "Abdul Basit Abdus Samad", initials: "AB", scope: "ayah" },
-  { id: "saad", name: "Saad Al-Ghamdi", initials: "SG", scope: "ayah" },
-  { id: "aymen", name: "Dr. Aymen Suwayed", initials: "AS", scope: "ayah" },
-  { id: "minshawi-kids", name: "Minshawi Kids Repeat", initials: "MK", scope: "ayah" },
-  { id: "muhammad-ayyub", name: "Sheikh Muhammad Ayyub", initials: "MY", scope: "ayah" },
-  { id: "abdul-rashid-sufi", name: "Sheikh Abdul Rashid Ali Sufi", initials: "RS", scope: "surah" },
-];
 
 const FATIHAH_VERSES: PageVerse[] = [
   { key: "1:1", number: 1, chapterId: 1, uthmani: "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ", transliteration: "Bismi Allahi arrahmani arraheem", translation: "In the name of Allah, the Entirely Merciful, the Especially Merciful." },
