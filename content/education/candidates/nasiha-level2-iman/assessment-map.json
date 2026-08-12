@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:nasiha:foundations-of-iman-level-2",
+  "assessmentStatus": "pending",
+  "assessments": [
+    {
+      "id": "assessment:nasiha:level-2-test:sessions-15-16",
+      "title": "Level 2 Test — Sessions 15 and 16",
+      "revision": null,
+      "responsibleOrganization": "Nasiha Community Center",
+      "sourceUrl": null,
+      "receivedAt": null,
+      "questionsReceived": false,
+      "answerKeyReceived": false,
+      "questionMappings": []
+    }
+  ]
+}

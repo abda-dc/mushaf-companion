@@ -1,4 +1,4 @@
-# Guided Islamic Education Platform (M9A)
+# Guided Islamic Education Platform (M9A–M9B)
 
 Status: architecture complete; no production guided curriculum is approved or active.
 
@@ -42,9 +42,19 @@ Missing, unknown, mismatched, malformed, or throwing boundaries fail closed. Bef
 Lesson citations are provider-scoped source references. They are not M8 Evidence Layer edges and do not assert an ayah-to-ayah relationship.
 
 - Quran citations contain an exact canonical verse key and are re-resolved through `ReaderContentTransport.lookupVerse` before navigation.
-- Other source citations require a work ID, title, edition, locator, and HTTPS source URL.
+- Hadith citations preserve a stable citation/work identity, work title, edition, exact locator, and HTTPS source URL. When a curriculum relies on a grade, the grade, named grader or grading authority, and grading reference are all required together. The schema does not select a hadith website and the application does not infer authenticity, grading, interpretation, or rulings.
+- Scholarly-source citations preserve the author or scholar, work title, edition/revision, exact locator, and HTTPS source URL.
+- Curriculum-source citations identify the exact reviewed curriculum work, title, author, responsible organization, revision, locator, and HTTPS source URL. They distinguish provenance of reviewed lesson prose from religious primary-source evidence.
+- Assessment-source citations preserve the assessment identity, title, revision, question/section locator, responsible organization, and an HTTPS source URL when one applies. They establish question provenance only. A doctrinal answer requires its own supporting Quran, hadith, scholarly, or reviewed-curriculum citations.
+- Learn shows a plain-text semantic category label for every citation. Styling is supplemental; the accessible name carries the category and source description.
 - No citation or relationship is derived from lesson prose, tafsir prose, translations, roots, keywords, private notes, embeddings, or AI output.
 - M8’s independently approved evidence-provider semantics and runtime remain unchanged.
+
+### Catalog compatibility and normalization
+
+M9A catalog schema v1 remains accepted only with `education-catalog-json-v1`. Its generic `source` citation remains a legacy v1 record and is not reinterpreted as hadith, scholarly, curriculum, or assessment provenance.
+
+Typed citation provenance uses catalog schema v2 and `education-catalog-json-v2`. Typed citation fields participate in canonical serialization and therefore in the provider checksum. A v2 citation in a v1 catalog, a legacy generic citation in v2, or a catalog/normalization mismatch fails closed. Provider-metadata schema v1 itself does not change: its existing independently pinned normalization field deliberately binds each provider approval to the catalog version it reviewed.
 
 ## Local progress and scheduling
 
@@ -96,3 +106,16 @@ The Pages build first evaluates the production education registry and aborts unl
 10. Complete human content, attribution, accessibility, responsive, offline, and rollback review before enabling the provider.
 
 Activation, UI exposure, and Pages packaging should remain independently reviewable changes.
+
+## Candidate intake lifecycle (M9B)
+
+Candidate intake is not provider metadata and cannot activate a course. The lifecycle is deliberately one-way and reviewable:
+
+1. **Candidate:** record only known source identity and approved structural mapping. Statuses remain pending/unknown and `productionEligible` remains false. Candidate files stay under `content/education/candidates/`, outside runtime imports, `public/`, `pages-static/`, and Pages artifacts.
+2. **Reviewed package:** after exact source documents are received, record immutable source identities, revisions, checksums, exact citation and assessment mappings, written rights references, and named scholarly review of that exact normalized package. Authoring may transcribe only material authorized and covered by that review; an assessment is not a license to generate lesson prose or answers.
+3. **Approved provider:** create provider metadata and a separate independent approval pin only when source, rights, integrity, audit coverage, and scholarly-review gates are complete. Candidate records are never promoted by changing a status alone.
+4. **Active runtime:** register and enable the exact approved provider revision. Server activation and any separately authorized Pages bundle remain independent release decisions.
+
+For the `Foundations of Iman — Level 2` candidate, exact teaching sources and revision identity, author/owner/signatory details, rights covering application use and the intended transport, all Quran/hadith/scholarly/curriculum/assessment provenance, assessment and answer-key provenance, and named scholarly review are still missing. Nothing in the candidate intake states or implies that Nasiha Community Center approved curriculum use or an application release.
+
+The intake validator treats this candidate package as a closed world: exactly one pinned source record, exactly one pinned pending assessment record, an exact five-lesson order, a responsible-organization identity shared without aliasing across source, assessment, and rights intake, seven structured JSON documents, and the allowlisted README. Missing, additional, nested, hidden, or non-regular files invalidate the package. These intake-level identities describe where missing materials are expected to come from; they do not confer rights, scholarly approval, doctrinal authority, or runtime eligibility.

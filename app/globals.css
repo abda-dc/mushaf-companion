@@ -874,7 +874,10 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .lesson-block > p { margin: 0; white-space: pre-wrap; color: var(--ink); font-size: 10px; line-height: 1.6; }
 .block-reflection { background: rgba(164,124,67,.05); }
 .lesson-citations { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 5px; }
+.lesson-citation { display: inline-grid; gap: 2px; align-content: start; }
+.lesson-citation-category { font-size: 6px; letter-spacing: .11em; color: var(--muted); }
 .lesson-citations button, .lesson-citations a, .lesson-note-trigger { min-height: 44px; padding: 0 8px; border: 1px solid rgba(47,122,86,.28); background: rgba(47,122,86,.05); color: #2f7a56; cursor: pointer; display: inline-flex; align-items: center; font-size: 7px; text-decoration: none; }
+.lesson-citation-text { min-height: 44px; padding: 0 8px; border: 1px solid var(--line); display: inline-flex; align-items: center; color: var(--muted); font-size: 7px; }
 .lesson-note-trigger { min-height: 44px; margin-top: 8px; border-color: var(--line); background: transparent; color: var(--ink-soft); }
 .knowledge-checks { margin-top: 15px; }
 .knowledge-checks article { margin-top: 7px; padding: 12px; border: 1px solid var(--line); }

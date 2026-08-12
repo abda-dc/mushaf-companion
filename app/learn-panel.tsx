@@ -1,6 +1,7 @@
 "use client";
 
 import type { EducationCatalog, EducationCatalogResult, EducationCitation, EducationLesson } from "./education-content.ts";
+import { describeEducationCitation } from "./education-citation-presentation.mjs";
 import type { EducationProgress } from "./education-state.mjs";
 import type { ReviewGrade } from "./review-schedule.mjs";
 import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -46,6 +47,18 @@ function sourceStatus(result: LearnPanelProps["catalogResult"]) {
   if (result.status === "ready") return `${result.metadata.provider.name} · revision ${result.metadata.revision}`;
   if (result.status === "disabled") return "Guided courses awaiting approved curriculum";
   return "Guided courses could not be safely activated";
+}
+
+function LessonCitation({ citation, onOpenQuranCitation }: { citation: EducationCitation; onOpenQuranCitation: LearnPanelProps["onOpenQuranCitation"] }) {
+  const presentation = describeEducationCitation(citation);
+  return <span className={`lesson-citation citation-${citation.type}`} role="group" aria-label={presentation.accessibleLabel} data-citation-role={presentation.role}>
+    <strong className="lesson-citation-category">{presentation.category}</strong>
+    {citation.type === "quran"
+      ? <button type="button" onClick={() => onOpenQuranCitation(citation)} aria-label={`${presentation.accessibleLabel}. Open trusted verse`}>{presentation.display}</button>
+      : presentation.action === "external-source"
+        ? <a href={presentation.href ?? undefined} target="_blank" rel={presentation.externalRel ?? undefined} aria-label={`${presentation.accessibleLabel}. Open source in a new tab`}>{presentation.display}</a>
+        : <span className="lesson-citation-text">{presentation.display}</span>}
+  </span>;
 }
 
 export function LearnPanel(props: LearnPanelProps) {
@@ -135,15 +148,18 @@ export function LearnPanel(props: LearnPanelProps) {
         {props.currentLesson && catalog && <>
           <p>{props.currentLesson.summary}</p>
           <div className="lesson-objectives"><strong>Objectives</strong><ul>{props.currentLesson.objectives.map((objective) => <li key={objective}>{objective}</li>)}</ul></div>
-          <div className="lesson-blocks">{props.currentLesson.blocks.map((block) => <section key={block.id} id={`lesson-section-${block.id}`} tabIndex={-1} className={`lesson-block block-${block.type}`}><strong>{block.type === "heading" ? block.text : ""}</strong>{block.type !== "heading" && <p>{block.text}</p>}{block.citationIds.length > 0 && <div className="lesson-citations">{block.citationIds.map((citationId) => {
+          <div className="lesson-blocks">{props.currentLesson.blocks.map((block) => <section key={block.id} id={`lesson-section-${block.id}`} tabIndex={-1} className={`lesson-block block-${block.type}`}><strong>{block.type === "heading" ? block.text : ""}</strong>{block.type !== "heading" && <p>{block.text}</p>}{block.citationIds.length > 0 && <div className="lesson-citations" aria-label="Lesson section sources">{block.citationIds.map((citationId) => {
             const citation = citations.get(citationId);
             if (!citation) return null;
-            return citation.type === "quran" ? <button type="button" key={citation.id} onClick={() => props.onOpenQuranCitation(citation)}>{citation.label} · {citation.verseKey}</button> : <a href={citation.sourceUrl} target="_blank" rel="noreferrer" key={citation.id}>{citation.title} · {citation.locator}</a>;
+            return <LessonCitation key={citation.id} citation={citation} onOpenQuranCitation={props.onOpenQuranCitation} />;
           })}</div>}<button type="button" className="lesson-note-trigger" onClick={() => { setNoteSectionId(block.id); setNoteError(""); }}>Add private note for this section</button></section>)}</div>
           {props.currentLesson.knowledgeChecks.length > 0 && <section className="knowledge-checks" aria-labelledby="knowledge-checks-title"><h4 id="knowledge-checks-title">Knowledge checks</h4>{props.currentLesson.knowledgeChecks.map((check) => {
             const activeReviewTarget = props.activeEducationReview?.current;
             const currentTodayReview = Boolean(activeReviewTarget && props.currentLesson && activeReviewTarget.lessonId === props.currentLesson.id && activeReviewTarget.checkId === check.id);
-            return <article className={`${props.dueCheckIds.has(check.id) ? "due" : ""}${currentTodayReview ? " today-review-target" : ""}`} key={check.id}>{currentTodayReview && <small>NOW REVIEWING IN TODAY&apos;S STUDY</small>}<strong>{check.prompt}</strong><details><summary>Reveal reviewed answer</summary><p>{check.answer}</p></details><div aria-label={`Rate knowledge check ${check.id}`}>{(["again", "hard", "good", "easy"] as ReviewGrade[]).map((grade) => <button type="button" onClick={() => props.onRateKnowledgeCheck(props.currentLesson!.courseId, props.currentLesson!.moduleId, props.currentLesson!.id, check.id, grade)} key={grade}>{grade}</button>)}</div></article>;
+            return <article className={`${props.dueCheckIds.has(check.id) ? "due" : ""}${currentTodayReview ? " today-review-target" : ""}`} key={check.id}>{currentTodayReview && <small>NOW REVIEWING IN TODAY&apos;S STUDY</small>}<strong>{check.prompt}</strong><details><summary>Reveal reviewed answer</summary><p>{check.answer}</p>{check.citationIds.length > 0 && <div className="lesson-citations" aria-label="Knowledge-check provenance and supporting sources">{check.citationIds.map((citationId) => {
+              const citation = citations.get(citationId);
+              return citation ? <LessonCitation key={citation.id} citation={citation} onOpenQuranCitation={props.onOpenQuranCitation} /> : null;
+            })}</div>}</details><div aria-label={`Rate knowledge check ${check.id}`}>{(["again", "hard", "good", "easy"] as ReviewGrade[]).map((grade) => <button type="button" onClick={() => props.onRateKnowledgeCheck(props.currentLesson!.courseId, props.currentLesson!.moduleId, props.currentLesson!.id, check.id, grade)} key={grade}>{grade}</button>)}</div></article>;
           })}</section>}
           <section className="lesson-notes" aria-labelledby="lesson-notes-title"><header><div><span>PRIVATE NOTES</span><h4 id="lesson-notes-title">Notes for this lesson</h4></div><strong>{lessonNotes.length}</strong></header>{lessonNotes.map((note) => <article key={note.id}><small>{note.anchor.type === "lesson" && note.anchor.sectionId ? `Section ${note.anchor.sectionId}` : "Whole lesson"}</small><p dir="auto">{note.body}</p></article>)}<button type="button" onClick={() => { setNoteSectionId(null); setNoteError(""); }}>Add private lesson note</button></section>
           {noteSectionId !== undefined && <section className="lesson-note-editor" aria-labelledby="lesson-note-editor-title"><header><h4 id="lesson-note-editor-title">Private {noteSectionId ? `section ${noteSectionId}` : "lesson"} note</h4><button type="button" onClick={() => setNoteSectionId(undefined)} aria-label="Close lesson note editor">×</button></header><label><span>NOTE · PLAIN TEXT</span><textarea rows={5} maxLength={MAX_NOTE_BODY_CODE_POINTS * 2} value={noteBody} onChange={(event) => setNoteBody(event.target.value)} dir="auto" /></label><label><span>TAGS · COMMA SEPARATED</span><input maxLength={MAX_TAGS_PER_NOTE * (MAX_TAG_CODE_POINTS * 2 + 2)} value={noteTags} onChange={(event) => setNoteTags(event.target.value)} dir="auto" /></label>{noteError && <p role="alert">{noteError}</p>}<div><button type="button" className="learn-primary" onClick={() => void saveLessonNote()} disabled={noteSaving}>{noteSaving ? "Checking anchor…" : "Save private note"}</button><button type="button" onClick={() => setNoteSectionId(undefined)} disabled={noteSaving}>Cancel</button></div></section>}

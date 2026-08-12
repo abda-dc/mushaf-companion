@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:nasiha:foundations-of-iman-level-2",
+  "mappingStatus": "structural-only",
+  "courses": [
+    {
+      "id": "course:nasiha:foundations-of-iman:l2",
+      "title": "Foundations of Iman — Level 2",
+      "moduleIds": ["module:nasiha:foundations-of-faith:l2"]
+    }
+  ],
+  "modules": [
+    {
+      "id": "module:nasiha:foundations-of-faith:l2",
+      "courseId": "course:nasiha:foundations-of-iman:l2",
+      "title": "Foundations of Faith",
+      "lessonIds": [
+        "lesson:nasiha:six-pillars-of-iman:l2",
+        "lesson:nasiha:belief-in-messengers:l2",
+        "lesson:nasiha:revealed-books:l2",
+        "lesson:nasiha:last-day:l2",
+        "lesson:nasiha:qadr:l2"
+      ]
+    }
+  ],
+  "lessons": [
+    { "id": "lesson:nasiha:six-pillars-of-iman:l2", "moduleId": "module:nasiha:foundations-of-faith:l2", "courseId": "course:nasiha:foundations-of-iman:l2", "title": "The Six Pillars of Iman", "sequence": 1 },
+    { "id": "lesson:nasiha:belief-in-messengers:l2", "moduleId": "module:nasiha:foundations-of-faith:l2", "courseId": "course:nasiha:foundations-of-iman:l2", "title": "Belief in the Messengers", "sequence": 2 },
+    { "id": "lesson:nasiha:revealed-books:l2", "moduleId": "module:nasiha:foundations-of-faith:l2", "courseId": "course:nasiha:foundations-of-iman:l2", "title": "Belief in Allah's Revealed Books", "sequence": 3 },
+    { "id": "lesson:nasiha:last-day:l2", "moduleId": "module:nasiha:foundations-of-faith:l2", "courseId": "course:nasiha:foundations-of-iman:l2", "title": "Belief in the Last Day", "sequence": 4 },
+    { "id": "lesson:nasiha:qadr:l2", "moduleId": "module:nasiha:foundations-of-faith:l2", "courseId": "course:nasiha:foundations-of-iman:l2", "title": "Belief in Qadr", "sequence": 5 }
+  ]
+}

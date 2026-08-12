@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:nasiha:foundations-of-iman-level-2",
+  "title": "Foundations of Iman — Level 2",
+  "sourceStatus": "pending",
+  "productionEligible": false,
+  "sources": [
+    {
+      "id": "nasiha:foundations-of-iman-level-2",
+      "providerId": "nasiha-community-center:education",
+      "responsibleOrganization": "Nasiha Community Center",
+      "author": null,
+      "revision": null,
+      "sourceUrl": null,
+      "receivedAt": null,
+      "receivedDocumentReference": null
+    }
+  ]
+}
