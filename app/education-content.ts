@@ -74,6 +74,7 @@ export interface EducationQuranCitation {
   sourceUrl: string;
 }
 
+/** M9A schema-v1 compatibility only. Schema v2 does not reinterpret this generic source type. */
 export interface EducationSourceCitation {
   id: string;
   type: "source";
@@ -84,7 +85,63 @@ export interface EducationSourceCitation {
   sourceUrl: string;
 }
 
-export type EducationCitation = EducationQuranCitation | EducationSourceCitation;
+export type EducationLegacySourceCitation = EducationSourceCitation;
+
+export interface EducationHadithGrading {
+  grade: string;
+  grader: string;
+  reference: string;
+}
+
+export interface EducationHadithCitation {
+  id: string;
+  type: "hadith";
+  workId: string;
+  workTitle: string;
+  edition: string;
+  locator: string;
+  sourceUrl: string;
+  grading: EducationHadithGrading | null;
+}
+
+export interface EducationScholarlyCitation {
+  id: string;
+  type: "scholarly";
+  author: string;
+  workTitle: string;
+  edition: string;
+  locator: string;
+  sourceUrl: string;
+}
+
+export interface EducationCurriculumCitation {
+  id: string;
+  type: "curriculum";
+  workId: string;
+  title: string;
+  author: string;
+  responsibleOrganization: string;
+  revision: string;
+  locator: string;
+  sourceUrl: string;
+}
+
+export interface EducationAssessmentCitation {
+  id: string;
+  type: "assessment";
+  workId: string;
+  title: string;
+  revision: string;
+  locator: string;
+  responsibleOrganization: string;
+  sourceUrl: string | null;
+}
+
+export type EducationCatalogV1Citation = EducationQuranCitation | EducationLegacySourceCitation;
+export type EducationCatalogV2Citation = EducationQuranCitation | EducationHadithCitation | EducationScholarlyCitation | EducationCurriculumCitation | EducationAssessmentCitation;
+export type EducationCitation = EducationCatalogV1Citation | EducationCatalogV2Citation;
+
+export { EDUCATION_CITATION_LABELS } from "./education-citation-presentation.mjs";
 
 export interface EducationLessonBlock {
   id: string;
@@ -127,15 +184,25 @@ export interface EducationCourse {
   moduleIds: string[];
 }
 
-export interface EducationCatalog {
-  schemaVersion: 1;
+interface EducationCatalogBase {
   sourceId: string;
   sourceRevision: string;
   courses: EducationCourse[];
   modules: EducationModule[];
   lessons: EducationLesson[];
-  citations: EducationCitation[];
 }
+
+export interface EducationCatalogV1 extends EducationCatalogBase {
+  schemaVersion: 1;
+  citations: EducationCatalogV1Citation[];
+}
+
+export interface EducationCatalogV2 extends EducationCatalogBase {
+  schemaVersion: 2;
+  citations: EducationCatalogV2Citation[];
+}
+
+export type EducationCatalog = EducationCatalogV1 | EducationCatalogV2;
 
 export interface EducationProviderAudit {
   valid: boolean;
@@ -225,6 +292,10 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9:._/-]{1,159}$/;
 const VERSE_KEY = /^[1-9]\d{0,2}:[1-9]\d{0,2}$/;
 const CHECKSUM = /^[a-f0-9]{64}$/;
 const ISO_INSTANT = /^[1-9]\d{3}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}Z$/;
+export const EDUCATION_CATALOG_NORMALIZATION_VERSIONS = Object.freeze({
+  1: "education-catalog-json-v1",
+  2: "education-catalog-json-v2",
+} as const);
 const RIGHTS = new Set<EducationRight>(["permitted", "prohibited", "unknown"]);
 const BLOCK_TYPES = new Set<EducationLessonBlockType>(["heading", "paragraph", "list-item", "reflection"]);
 const MAX_COURSES = 100;
@@ -400,9 +471,24 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value);
 }
 
+function canonicalEducationCatalogV1Citation(citation: EducationCatalogV1Citation): EducationCatalogV1Citation {
+  return citation.type === "quran"
+    ? { id: citation.id, type: "quran", verseKey: citation.verseKey, label: citation.label, locator: citation.locator, sourceUrl: citation.sourceUrl }
+    : { id: citation.id, type: "source", workId: citation.workId, title: citation.title, edition: citation.edition, locator: citation.locator, sourceUrl: citation.sourceUrl };
+}
+
+function canonicalEducationCatalogV2Citation(citation: EducationCatalogV2Citation): EducationCatalogV2Citation {
+  switch (citation.type) {
+    case "quran": return { id: citation.id, type: "quran", verseKey: citation.verseKey, label: citation.label, locator: citation.locator, sourceUrl: citation.sourceUrl };
+    case "hadith": return { id: citation.id, type: "hadith", workId: citation.workId, workTitle: citation.workTitle, edition: citation.edition, locator: citation.locator, sourceUrl: citation.sourceUrl, grading: citation.grading ? { grade: citation.grading.grade, grader: citation.grading.grader, reference: citation.grading.reference } : null };
+    case "scholarly": return { id: citation.id, type: "scholarly", author: citation.author, workTitle: citation.workTitle, edition: citation.edition, locator: citation.locator, sourceUrl: citation.sourceUrl };
+    case "curriculum": return { id: citation.id, type: "curriculum", workId: citation.workId, title: citation.title, author: citation.author, responsibleOrganization: citation.responsibleOrganization, revision: citation.revision, locator: citation.locator, sourceUrl: citation.sourceUrl };
+    case "assessment": return { id: citation.id, type: "assessment", workId: citation.workId, title: citation.title, revision: citation.revision, locator: citation.locator, responsibleOrganization: citation.responsibleOrganization, sourceUrl: citation.sourceUrl };
+  }
+}
+
 function canonicalEducationCatalog(catalog: EducationCatalog): EducationCatalog {
-  return {
-    schemaVersion: 1,
+  const common = {
     sourceId: catalog.sourceId,
     sourceRevision: catalog.sourceRevision,
     courses: catalog.courses.map((course) => ({ id: course.id, title: course.title, summary: course.summary, moduleIds: [...course.moduleIds] })),
@@ -418,10 +504,10 @@ function canonicalEducationCatalog(catalog: EducationCatalog): EducationCatalog 
       blocks: lesson.blocks.map((block) => ({ id: block.id, type: block.type, text: block.text, citationIds: [...block.citationIds] })),
       knowledgeChecks: lesson.knowledgeChecks.map((check) => ({ id: check.id, prompt: check.prompt, answer: check.answer, citationIds: [...check.citationIds] })),
     })),
-    citations: catalog.citations.map((citation) => citation.type === "quran"
-      ? { id: citation.id, type: "quran", verseKey: citation.verseKey, label: citation.label, locator: citation.locator, sourceUrl: citation.sourceUrl }
-      : { id: citation.id, type: "source", workId: citation.workId, title: citation.title, edition: citation.edition, locator: citation.locator, sourceUrl: citation.sourceUrl }),
   };
+  return catalog.schemaVersion === 1
+    ? { schemaVersion: 1, ...common, citations: catalog.citations.map(canonicalEducationCatalogV1Citation) }
+    : { schemaVersion: 2, ...common, citations: catalog.citations.map(canonicalEducationCatalogV2Citation) };
 }
 
 export function serializeEducationCatalogSnapshot(catalog: EducationCatalog) {
@@ -434,7 +520,9 @@ export function validateEducationCatalog(value: unknown, metadata: EducationProv
   catch { return { valid: false, issues: ["education catalog could not be detached safely"], catalog: null }; }
   if (!isRecord(value)) return { valid: false, issues: ["education catalog is missing or malformed"], catalog: null };
   exactKeys(value, ["schemaVersion", "sourceId", "sourceRevision", "courses", "modules", "lessons", "citations"], "catalog", issues);
-  if (value.schemaVersion !== 1) issues.push("unsupported education catalog schema");
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) issues.push("unsupported education catalog schema");
+  const expectedNormalization = value.schemaVersion === 1 || value.schemaVersion === 2 ? EDUCATION_CATALOG_NORMALIZATION_VERSIONS[value.schemaVersion] : null;
+  if (expectedNormalization && metadata.integrity.normalizationVersion !== expectedNormalization) issues.push(`education catalog schema ${value.schemaVersion} requires normalization ${expectedNormalization}`);
   if (value.sourceId !== metadata.sourceId) issues.push("catalog source ID does not match provider metadata");
   if (value.sourceRevision !== metadata.revision) issues.push("catalog revision does not match provider metadata");
   const courses = Array.isArray(value.courses) ? value.courses : [];
@@ -470,16 +558,45 @@ export function validateEducationCatalog(value: unknown, metadata: EducationProv
   const citationIds = new Set<string>();
   citations.forEach((candidate, index) => {
     if (!isRecord(candidate)) { issues.push(`citations.${index} is malformed`); return; }
-    const common = ["id", "type", "verseKey", "label", "locator", "sourceUrl"] as const;
-    exactKeys(candidate, candidate.type === "source" ? ["id", "type", "workId", "title", "edition", "locator", "sourceUrl"] : common, `citations.${index}`, issues);
+    const path = `citations.${index}`;
+    const allowedKeys = candidate.type === "quran" ? ["id", "type", "verseKey", "label", "locator", "sourceUrl"]
+      : candidate.type === "source" ? ["id", "type", "workId", "title", "edition", "locator", "sourceUrl"]
+      : candidate.type === "hadith" ? ["id", "type", "workId", "workTitle", "edition", "locator", "sourceUrl", "grading"]
+      : candidate.type === "scholarly" ? ["id", "type", "author", "workTitle", "edition", "locator", "sourceUrl"]
+      : candidate.type === "curriculum" ? ["id", "type", "workId", "title", "author", "responsibleOrganization", "revision", "locator", "sourceUrl"]
+      : candidate.type === "assessment" ? ["id", "type", "workId", "title", "revision", "locator", "responsibleOrganization", "sourceUrl"]
+      : ["id", "type"];
+    exactKeys(candidate, allowedKeys, path, issues);
     if (!safeId(candidate.id) || citationIds.has(candidate.id)) issues.push(`citations.${index}.id is invalid or duplicated`);
     else citationIds.add(candidate.id);
-    if (!safeText(candidate.locator, 500) || !safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index} locator or URL is invalid`);
+    if (!safeText(candidate.locator, 500)) issues.push(`citations.${index}.locator is invalid`);
     if (candidate.type === "quran") {
+      if (!safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index}.sourceUrl is invalid`);
       if (typeof candidate.verseKey !== "string" || !VERSE_KEY.test(candidate.verseKey)) issues.push(`citations.${index}.verseKey is invalid`);
       if (!safeText(candidate.label, 500)) issues.push(`citations.${index}.label is invalid`);
     } else if (candidate.type === "source") {
+      if (value.schemaVersion !== 1) issues.push(`citations.${index}.type source is supported only by education catalog schema 1`);
+      if (!safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index}.sourceUrl is invalid`);
       if (!safeId(candidate.workId) || !safeText(candidate.title, 500) || !safeText(candidate.edition, 500)) issues.push(`citations.${index} source identity is invalid`);
+    } else if (candidate.type === "hadith") {
+      if (value.schemaVersion !== 2) issues.push(`citations.${index}.type hadith requires education catalog schema 2`);
+      if (!safeId(candidate.workId) || !safeText(candidate.workTitle, 500) || !safeText(candidate.edition, 500) || !safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index} hadith identity is invalid`);
+      if (candidate.grading !== null) {
+        if (!isRecord(candidate.grading)) issues.push(`citations.${index}.grading is malformed`);
+        else {
+          exactKeys(candidate.grading, ["grade", "grader", "reference"], `citations.${index}.grading`, issues);
+          if (!safeText(candidate.grading.grade, 300) || !safeText(candidate.grading.grader, 500) || !safeText(candidate.grading.reference, 1_000)) issues.push(`citations.${index}.grading is malformed`);
+        }
+      }
+    } else if (candidate.type === "scholarly") {
+      if (value.schemaVersion !== 2) issues.push(`citations.${index}.type scholarly requires education catalog schema 2`);
+      if (!safeText(candidate.author, 500) || !safeText(candidate.workTitle, 500) || !safeText(candidate.edition, 500) || !safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index} scholarly attribution is invalid`);
+    } else if (candidate.type === "curriculum") {
+      if (value.schemaVersion !== 2) issues.push(`citations.${index}.type curriculum requires education catalog schema 2`);
+      if (!safeId(candidate.workId) || !safeText(candidate.title, 500) || !safeText(candidate.author, 500) || !safeText(candidate.responsibleOrganization, 500) || !safeText(candidate.revision, 300) || !safeHttpsUrl(candidate.sourceUrl)) issues.push(`citations.${index} curriculum provenance is invalid`);
+    } else if (candidate.type === "assessment") {
+      if (value.schemaVersion !== 2) issues.push(`citations.${index}.type assessment requires education catalog schema 2`);
+      if (!safeId(candidate.workId) || !safeText(candidate.title, 500) || !safeText(candidate.revision, 300) || !safeText(candidate.responsibleOrganization, 500) || (candidate.sourceUrl !== null && !safeHttpsUrl(candidate.sourceUrl))) issues.push(`citations.${index} assessment provenance is invalid`);
     } else issues.push(`citations.${index}.type is invalid`);
   });
 

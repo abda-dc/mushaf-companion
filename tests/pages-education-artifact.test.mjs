@@ -45,3 +45,11 @@ test("Pages policy rejects an undeclared static text education payload outside c
 test("Pages policy rejects a non-empty education catalog embedded in compiled JavaScript", async (t) => {
   await rejectedFixture(t, "assets/index-adversarial.js", 'const catalog={schemaVersion:1,sourceId:"source:x",sourceRevision:"r1",courses:[{id:"c"}],modules:[{id:"m"}],lessons:[{id:"l",blocks:[{text:"payload"}],knowledgeChecks:[]}],citations:[]};');
 });
+
+test("Pages policy rejects a candidate-intake file even without lesson prose", async (t) => {
+  await rejectedFixture(t, "content/education/candidates/nasiha-level2-iman/source-manifest.json", '{"sourceStatus":"pending","productionEligible":false}');
+});
+
+test("Pages exact inventory rejects candidate-shaped data under a non-education-looking path", async (t) => {
+  await rejectedFixture(t, "assets/cache/data.json", '{"sourceStatus":"pending","productionEligible":false}');
+});

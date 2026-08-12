@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:nasiha:foundations-of-iman-level-2",
+  "rightsStatus": "unknown",
+  "owner": null,
+  "author": null,
+  "responsibleOrganization": "Nasiha Community Center",
+  "authorizedSignatory": null,
+  "policyReference": null,
+  "license": null,
+  "attribution": null,
+  "grants": {
+    "applicationUse": { "status": "unknown", "supportingReference": null },
+    "redistribution": { "status": "unknown", "supportingReference": null },
+    "bundling": { "status": "unknown", "supportingReference": null },
+    "offlineUse": { "status": "unknown", "supportingReference": null },
+    "modification": { "status": "unknown", "supportingReference": null }
+  }
+}
