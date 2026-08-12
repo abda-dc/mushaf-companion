@@ -20,6 +20,7 @@ export function audioStreamUrl(reciter, verseKey) {
   if (reciter === "abdul-rashid-sufi") return `https://api.kalamalah.com/api/abdul-rashid-sofi/murattal/${chapter.padStart(3, "0")}`;
   if (reciter === "aymen") return `https://everyayah.com/data/Ayman_Sowaid_64kbps/${file}`;
   if (reciter === "minshawi-kids") return `https://everyayah.com/data/Minshawy_Teacher_128kbps/${file}`;
+  if (reciter === "muhammad-ayyub") return `https://everyayah.com/data/Muhammad_Ayyoub_128kbps/${file}`;
   if (reciter === "saad") return `https://everyayah.com/data/Ghamadi_40kbps/${file}`;
   const folder = reciter === "alafasy" ? "Alafasy" : "AbdulBaset/Murattal";
   return `https://verses.quran.foundation/${folder}/mp3/${file}`;

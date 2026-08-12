@@ -1,4 +1,4 @@
-export type ReciterId = "alafasy" | "abdulbasit" | "saad" | "aymen" | "minshawi-kids" | "abdul-rashid-sufi";
+export type ReciterId = "alafasy" | "abdulbasit" | "saad" | "aymen" | "minshawi-kids" | "muhammad-ayyub" | "abdul-rashid-sufi";
 
 export type ReciterScope = "ayah" | "surah";
 
@@ -95,6 +95,7 @@ export const RECITERS: Array<{ id: ReciterId; name: string; initials: string; sc
   { id: "saad", name: "Saad Al-Ghamdi", initials: "SG", scope: "ayah" },
   { id: "aymen", name: "Dr. Aymen Suwayed", initials: "AS", scope: "ayah" },
   { id: "minshawi-kids", name: "Minshawi Kids Repeat", initials: "MK", scope: "ayah" },
+  { id: "muhammad-ayyub", name: "Sheikh Muhammad Ayyub", initials: "MY", scope: "ayah" },
   { id: "abdul-rashid-sufi", name: "Sheikh Abdul Rashid Ali Sufi", initials: "RS", scope: "surah" },
 ];
 

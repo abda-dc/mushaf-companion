@@ -152,3 +152,11 @@ test("portable restore retains valid notes when an unrelated optional domain is 
   assert.equal(restored.notes.notes[0].body, "Keep this private note");
   assert.deepEqual(restored.vocabulary.entries, []);
 });
+
+test("preserves Muhammad Ayyub as a supported reciter", () => {
+  const storage = memoryStorage();
+  const saved = savePreferences(storage, {
+    reader: { reciter: "muhammad-ayyub" },
+  });
+  assert.equal(saved.reader.reciter, "muhammad-ayyub");
+});

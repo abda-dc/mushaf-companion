@@ -82,3 +82,10 @@ test("audio manifest API follows pagination and rejects unsupported packs", asyn
     globalThis.fetch = originalFetch;
   }
 });
+
+test("builds Muhammad Ayyub verse URLs from EveryAyah", () => {
+  assert.equal(
+    audioStreamUrl("muhammad-ayyub", "2:255"),
+    "https://everyayah.com/data/Muhammad_Ayyoub_128kbps/002255.mp3",
+  );
+});

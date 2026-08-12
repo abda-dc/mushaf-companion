@@ -7,7 +7,7 @@ export const PREFERENCE_STORAGE_KEY = "mushaf:preferences-v7";
 export const PREFERENCE_SCHEMA_VERSION = 7;
 const PREVIOUS_PREFERENCE_STORAGE_KEYS = ["mushaf:preferences-v6", "mushaf:preferences-v5", "mushaf:preferences-v4", "mushaf:preferences-v3", "mushaf:preferences-v2"];
 
-const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "abdul-rashid-sufi"]);
+const RECITERS = new Set(["alafasy", "abdulbasit", "saad", "aymen", "minshawi-kids", "muhammad-ayyub", "abdul-rashid-sufi"]);
 const PAGE_SCALES = new Set(["compact", "comfortable", "large"]);
 const READING_FONTS = new Set(["uthman-taha", "amiri", "lateef", "scheherazade"]);
 const SPEEDS = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
