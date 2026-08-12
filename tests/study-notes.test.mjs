@@ -24,6 +24,7 @@ import {
 
 const AYAH = { type: "ayah", verseKey: "2:255", page: 42 };
 const WORD = { type: "word", verseKey: "2:255", wordPosition: 3, page: 42, line: 7, sourceWordId: 9001 };
+const LESSON = { type: "lesson", sourceId: "fixture:education-source", sourceRevision: "fixture-r1", courseId: "course:fixture", moduleId: "module:fixture", lessonId: "lesson:fixture", sectionId: "block:fixture" };
 const CREATED_AT = "2026-08-11T12:00:00.000Z";
 
 function add(state, anchor, body, tags = [], suffix = "000000000001") {
@@ -64,6 +65,26 @@ test("word notes require the complete trusted coordinate", () => {
     if (invalid.page === 43) assert.deepEqual(normalizeStudyAnchor(invalid), invalid, "a structurally valid page is retained until trusted navigation reconciliation");
     else assert.equal(normalizeStudyAnchor(invalid), null);
   }
+});
+
+test("lesson notes pin exact source revision and section while schema-v1 Quran notes migrate unchanged", async () => {
+  const created = add(undefined, LESSON, "Private synthetic lesson note.");
+  assert.deepEqual(created.note.anchor, LESSON);
+  assert.equal(studyAnchorKey(LESSON), "lesson|fixture:education-source|fixture-r1|course:fixture|module:fixture|lesson:fixture|block:fixture");
+  assert.deepEqual(await revalidateStudyAnchor(LESSON, { resolveLesson: async () => LESSON }), LESSON);
+  assert.equal(await revalidateStudyAnchor(LESSON, { resolveLesson: async () => ({ ...LESSON, sourceRevision: "fixture-r2" }) }), null);
+  assert.equal(searchStudyNotes(created.state, "lesson:fixture", "lesson").length, 1);
+
+  const legacy = { ...add(undefined, AYAH, "Legacy ayah note", [], "000000000099").note, schemaVersion: 1 };
+  const legacyWord = { ...add(undefined, WORD, "Legacy word note", [], "000000000098").note, schemaVersion: 1 };
+  const migrated = normalizeStudyNotes({ schemaVersion: 1, notes: [legacy, legacyWord] });
+  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.notes[0].schemaVersion, 2);
+  assert.deepEqual(migrated.notes[0].anchor, AYAH);
+  assert.equal(migrated.notes[1].schemaVersion, 2);
+  assert.deepEqual(migrated.notes[1].anchor, WORD, "schema-v1 exact-word anchors migrate without remapping");
+  assert.deepEqual(normalizeStudyNotes({ schemaVersion: 1, notes: [{ ...created.note, schemaVersion: 1 }] }).notes, [], "schema v1 cannot smuggle a lesson anchor");
+  assert.deepEqual(normalizeStudyNotes({ schemaVersion: 999, notes: [created.note] }).notes, [], "future note collections fail closed");
 });
 
 test("duplicate note IDs and impossible timestamps fail safe during restore", () => {

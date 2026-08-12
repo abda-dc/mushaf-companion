@@ -6,6 +6,8 @@ import { CONTENT_MANIFEST } from "../app/content-manifest.ts";
 import { findTranslationSource } from "../app/content/source-registry.ts";
 import { fingerprintQuranEncPackage } from "../app/content/providers/quranenc-translation.ts";
 import { readResponseBytesWithLimit } from "../app/content/providers/types.ts";
+import { createProductionEducationRegistry, PRODUCTION_EDUCATION_RELEASE } from "../app/education-content.ts";
+import { listPagesArtifactFiles, verifyEducationArtifactPolicy } from "./education-artifact-policy.mjs";
 
 const root = process.cwd();
 const outputDirectory = resolve(root, "_site");
@@ -35,6 +37,8 @@ if (!amharicSource?.provider.packageUrl || !amharicSource.provider.checkForUpdat
 if (amharicSource.license.redistribution !== "permitted_with_conditions" || amharicSource.license.offlineStorage !== "permitted") {
   throw new Error("The Amharic source registry does not authorize a Pages distribution package.");
 }
+const educationReleaseCheck = await createProductionEducationRegistry(async () => { throw new Error("A disabled education release must not resolve Quran references."); }).loadFirstApprovedCatalog();
+if (educationReleaseCheck.status !== "disabled") throw new Error(`GitHub Pages cannot bundle an unapproved education release: ${educationReleaseCheck.status === "ready" ? "an active catalog is not declared in the release manifest" : educationReleaseCheck.reason}`);
 
 await build({ configFile: resolve(root, "vite.pages.config.ts") });
 await mkdir(contentDirectory, { recursive: true });
@@ -87,6 +91,7 @@ const buildMetadata = {
   runtime: "pages",
   applicationIndexSha256: createHash("sha256").update(index).digest("hex"),
   contentRevision: CONTENT_MANIFEST.revision,
+  education: PRODUCTION_EDUCATION_RELEASE,
   amharic: {
     sourceId: amharicSource.sourceId,
     editionRevision: amharicSource.edition.revision,
@@ -97,6 +102,7 @@ const buildMetadata = {
   },
 };
 await writeFile(resolve(contentDirectory, "pages-build.json"), `${JSON.stringify(buildMetadata, null, 2)}\n`, "utf8");
+await verifyEducationArtifactPolicy(outputDirectory, await listPagesArtifactFiles(outputDirectory), buildMetadata.education);
 
 console.log(`Standalone GitHub Pages reader built at ${outputDirectory}`);
 console.log(`Verified Amharic package: ${fingerprint.records} ayat, ${fingerprint.rawChecksum}`);

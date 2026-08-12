@@ -1,22 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { extname, relative, resolve } from "node:path";
+import { listPagesArtifactFiles, verifyEducationArtifactPolicy } from "./education-artifact-policy.mjs";
 
 const root = process.cwd();
 const outputDirectory = resolve(root, process.argv[2] || "_site");
 const basePath = "/mushaf-companion/";
-
-async function filesUnder(directory) {
-  const entries = await readdir(directory);
-  const files = [];
-  for (const entry of entries) {
-    const path = join(directory, entry);
-    if ((await stat(path)).isDirectory()) files.push(...await filesUnder(path));
-    else files.push(path);
-  }
-  return files;
-}
 
 function artifactPath(urlPath) {
   assert.ok(urlPath.startsWith(basePath), `Asset path is outside ${basePath}: ${urlPath}`);
@@ -33,7 +23,20 @@ const [index, fallback, manifestText, serviceWorker, buildText, amharicBytes] = 
 ]);
 const manifest = JSON.parse(manifestText);
 const buildMetadata = JSON.parse(buildText);
-const files = await filesUnder(outputDirectory);
+const files = await listPagesArtifactFiles(outputDirectory);
+await verifyEducationArtifactPolicy(outputDirectory, files, buildMetadata.education);
+const contentDirectory = resolve(outputDirectory, "content");
+const declaredContentArtifacts = new Set([
+  resolve(contentDirectory, "content-manifest.json"),
+  resolve(contentDirectory, "pages-build.json"),
+  resolve(contentDirectory, "amharic_zain.xml"),
+  resolve(contentDirectory, "amharic_zain-update.txt"),
+]);
+const undeclaredContentArtifacts = files.filter((path) => {
+  const pathFromContent = relative(contentDirectory, path);
+  return pathFromContent && !pathFromContent.startsWith("..") && !declaredContentArtifacts.has(resolve(path));
+});
+assert.deepEqual(undeclaredContentArtifacts, [], "Pages artifact contains an undeclared content asset; educational content requires an explicit approved release declaration.");
 const textFiles = files.filter((path) => new Set([".html", ".js", ".css", ".json", ".webmanifest", ".txt", ".xml"]).has(extname(path)));
 const combined = (await Promise.all(textFiles.map((path) => readFile(path, "utf8")))).join("\n");
 
@@ -73,6 +76,18 @@ assert.equal(fallback, index, "404 fallback must boot the same reader applicatio
 
 assert.equal(buildMetadata.runtime, "pages");
 assert.equal(buildMetadata.basePath, basePath);
+assert.deepEqual(buildMetadata.education, {
+  status: "disabled",
+  bundled: false,
+  providerId: null,
+  sourceId: null,
+  revision: null,
+  courseCount: 0,
+  lessonCount: 0,
+  artifacts: [],
+  reason: "No approved guided education curriculum is configured.",
+});
+assert.ok(!files.some((path) => /content[\\/](?:education[\\/]|education(?:-catalog)?\.(?:json|jsonl|xml|html)$)/i.test(path)), "Pages artifact must not bundle an unapproved education catalog.");
 assert.equal(buildMetadata.amharic.records, 6236);
 assert.equal(buildMetadata.amharic.rawChecksum, "3b765a67dc43eb54fc08518c66964ea246209c1284def73d1a69d8c7663780f9");
 assert.equal(buildMetadata.amharic.normalizedChecksum, "77ac2ad5f35ba878b07bc7aed9f233ee418a6f43dbe4d095d6ae32f3153ffb13");

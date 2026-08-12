@@ -1,7 +1,8 @@
 import { calendarDayDifference, isValidCalendarDateKey, normalizeHifzProgress, toLocalDateKey } from "./hifz-state.mjs";
 import { dueVocabularyEntries, nextNewVocabularyIds, normalizeVocabularyProgress } from "./vocabulary-state.mjs";
+import { dueEducationReviews, nextEducationLesson, normalizeEducationProgress } from "./education-state.mjs";
 
-export const TODAY_STUDY_SCHEMA_VERSION = 1;
+export const TODAY_STUDY_SCHEMA_VERSION = 2;
 export const DEFAULT_TODAY_STUDY_PROGRESS = Object.freeze({
   schemaVersion: TODAY_STUDY_SCHEMA_VERSION,
   activityDates: [],
@@ -10,7 +11,7 @@ export const DEFAULT_TODAY_STUDY_PROGRESS = Object.freeze({
 });
 
 const SESSION_MINUTES = new Set([5, 10, 20]);
-const STEP_KINDS = new Set(["hifz-review", "vocabulary-review", "vocabulary-new", "reading"]);
+const STEP_KINDS = new Set(["hifz-review", "education-review", "vocabulary-review", "education-lesson", "vocabulary-new", "reading"]);
 const SAFE_ID = /^[a-z0-9][a-z0-9._:@/|-]{1,160}$/i;
 const VERSE_KEY = /^\d{1,3}:\d{1,3}$/;
 const MAX_STEPS = 20;
@@ -33,7 +34,34 @@ function dueHifzItems(progress, dateKey) {
   return [...reviewed, ...firstChecks];
 }
 
-export function buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds = [], reading, sessionMinutes = 10, date = new Date() }) {
+function educationReviewTargets(progress, catalog, dateKey) {
+  const normalized = normalizeEducationProgress(progress);
+  if (!catalog || normalized.sourceId !== catalog.sourceId || normalized.sourceRevision !== catalog.sourceRevision) return [];
+  return dueEducationReviews(normalized, dateKey).flatMap((check) => {
+    const lesson = catalog.lessons.find((item) => item.id === check.lessonId && item.knowledgeChecks.some((item) => item.id === check.checkId));
+    return lesson ? [{ sourceId: catalog.sourceId, sourceRevision: catalog.sourceRevision, courseId: lesson.courseId, moduleId: lesson.moduleId, lessonId: lesson.id, checkId: check.checkId }] : [];
+  });
+}
+
+export function remainingEducationReviewTargets(step, progress, date) {
+  if (!step || step.kind !== "education-review" || !Array.isArray(step.targets)) return [];
+  const dateKey = typeof date === "string" ? date : toLocalDateKey(date ?? new Date());
+  if (!isValidCalendarDateKey(dateKey)) return [];
+  const normalized = normalizeEducationProgress(progress);
+  const reviewed = new Set(normalized.reviewHistory
+    .filter((item) => item.reviewedAt === dateKey)
+    .map((item) => `${item.lessonId}\u0000${item.checkId}`));
+  return step.targets.filter((target) => {
+    if (!target || normalized.sourceId !== target.sourceId || normalized.sourceRevision !== target.sourceRevision) return true;
+    return !reviewed.has(`${target.lessonId}\u0000${target.checkId}`);
+  });
+}
+
+export function educationReviewStepComplete(step, progress, date) {
+  return Boolean(step?.kind === "education-review" && Array.isArray(step.targets) && step.targets.length && remainingEducationReviewTargets(step, progress, date).length === 0);
+}
+
+export function buildTodayStudyPlan({ hifzProgress, vocabularyProgress, educationProgress, educationCatalog = null, curriculumEntryIds = [], reading, sessionMinutes = 10, date = new Date() }) {
   const requestedDateKey = typeof date === "string" ? date : toLocalDateKey(date);
   const dateKey = isValidCalendarDateKey(requestedDateKey) ? requestedDateKey : toLocalDateKey();
   const minutes = SESSION_MINUTES.has(sessionMinutes) ? sessionMinutes : 10;
@@ -58,6 +86,17 @@ export function buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curricul
     addStep("hifz-review", `Review ${hifzTargets.length} Hifz ${hifzTargets.length === 1 ? "ayah" : "ayat"}`, hifzTargets, 2);
   }
 
+  const educationDueTargets = [];
+  for (const target of educationReviewTargets(educationProgress, educationCatalog, dateKey)) {
+    if (remaining < 2 || educationDueTargets.length >= MAX_TARGETS_PER_STEP) break;
+    educationDueTargets.push(target);
+    remaining -= 2;
+  }
+  if (educationDueTargets.length) {
+    remaining += educationDueTargets.length * 2;
+    addStep("education-review", `Review ${educationDueTargets.length} guided-learning ${educationDueTargets.length === 1 ? "check" : "checks"}`, educationDueTargets, 2);
+  }
+
   const vocabularyDueTargets = [];
   for (const entry of safeCurriculumIds.length ? dueVocabularyEntries(vocabularyProgress, dateKey) : []) {
     if (remaining < 1 || vocabularyDueTargets.length >= MAX_TARGETS_PER_STEP) break;
@@ -67,6 +106,11 @@ export function buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curricul
   if (vocabularyDueTargets.length) {
     remaining += vocabularyDueTargets.length;
     addStep("vocabulary-review", `Review ${vocabularyDueTargets.length} vocabulary ${vocabularyDueTargets.length === 1 ? "word" : "words"}`, vocabularyDueTargets, 1);
+  }
+
+  const nextLesson = educationCatalog ? nextEducationLesson(educationProgress, educationCatalog) : null;
+  if (nextLesson && nextLesson.estimatedMinutes <= remaining) {
+    addStep("education-lesson", `Continue ${nextLesson.title}`, [{ sourceId: educationCatalog.sourceId, sourceRevision: educationCatalog.sourceRevision, ...nextLesson }], nextLesson.estimatedMinutes, 1);
   }
 
   const normalizedVocabulary = normalizeVocabularyProgress(vocabularyProgress);
@@ -83,6 +127,8 @@ export function buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curricul
 
 function expectedMinutes(kind, targets) {
   if (kind === "hifz-review") return targets.length * 2;
+  if (kind === "education-review") return targets.length * 2;
+  if (kind === "education-lesson") return targets.reduce((sum, target) => sum + target.estimatedMinutes, 0);
   if (kind === "vocabulary-review" || kind === "vocabulary-new") return targets.length;
   if (kind === "reading") return targets.reduce((sum, target) => sum + target.pages * 3, 0);
   return 0;
@@ -92,6 +138,8 @@ function normalizeStep(step, dateKey) {
   if (!step || typeof step !== "object" || !STEP_KINDS.has(step.kind) || step.id !== `${dateKey}|${step.kind}` || !SAFE_ID.test(step.id) || typeof step.title !== "string" || !step.title.trim() || !Array.isArray(step.targets) || !step.targets.length || step.targets.length > MAX_TARGETS_PER_STEP) return null;
   const targets = step.targets.slice(0, MAX_TARGETS_PER_STEP);
   if (step.kind === "hifz-review" && targets.some((target) => !target || !VERSE_KEY.test(target.verseKey) || !Number.isInteger(target.page) || target.page < 1 || target.page > 604)) return null;
+  if (step.kind === "education-review" && targets.some((target) => !target || !SAFE_ID.test(target.sourceId) || typeof target.sourceRevision !== "string" || !target.sourceRevision.trim() || target.sourceRevision.length > 160 || !SAFE_ID.test(target.courseId) || !SAFE_ID.test(target.moduleId) || !SAFE_ID.test(target.lessonId) || !SAFE_ID.test(target.checkId))) return null;
+  if (step.kind === "education-lesson" && (targets.length !== 1 || targets.some((target) => !target || !SAFE_ID.test(target.sourceId) || typeof target.sourceRevision !== "string" || !target.sourceRevision.trim() || target.sourceRevision.length > 160 || !SAFE_ID.test(target.courseId) || !SAFE_ID.test(target.moduleId) || !SAFE_ID.test(target.lessonId) || !Number.isInteger(target.estimatedMinutes) || target.estimatedMinutes < 1 || target.estimatedMinutes > 120))) return null;
   if ((step.kind === "vocabulary-review" || step.kind === "vocabulary-new") && targets.some((target) => !target || typeof target.entryId !== "string" || !SAFE_ID.test(target.entryId))) return null;
   if (step.kind === "reading" && targets.some((target) => !target || !Number.isInteger(target.page) || target.page < 1 || target.page > 604 || !VERSE_KEY.test(target.verseKey) || !Number.isInteger(target.pages) || target.pages < 1 || target.pages > 7)) return null;
   const estimate = expectedMinutes(step.kind, targets);
@@ -112,7 +160,7 @@ function uniqueIds(value, validIds, excluded = new Set()) {
 }
 
 export function normalizeTodayStudyProgress(value) {
-  const source = value && typeof value === "object" && value.schemaVersion === TODAY_STUDY_SCHEMA_VERSION ? value : {};
+  const source = value && typeof value === "object" && (value.schemaVersion === 1 || value.schemaVersion === TODAY_STUDY_SCHEMA_VERSION) ? value : {};
   const activityDates = Array.isArray(source.activityDates) ? [...new Set(source.activityDates.slice(-MAX_ACTIVITY_DATES * 2).filter(isValidCalendarDateKey))].sort().slice(-MAX_ACTIVITY_DATES) : [];
   const completions = [];
   const completionIds = new Set();

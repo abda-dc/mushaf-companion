@@ -4,11 +4,14 @@ import test from "node:test";
 
 import { calculateStreak, normalizeHifzProgress, recordVerseReview } from "../app/hifz-state.mjs";
 import { recordVocabularyReview } from "../app/vocabulary-state.mjs";
+import { recordEducationKnowledgeReview } from "../app/education-state.mjs";
 import {
   buildTodayStudyPlan,
   completeTodayStudyStep,
   currentTodayStudyStep,
+  educationReviewStepComplete,
   normalizeTodayStudyProgress,
+  remainingEducationReviewTargets,
   skipTodayStudyStep,
   startOrResumeTodayStudy,
   startTodayStudyStep,
@@ -18,6 +21,8 @@ import {
 const CURRICULUM = { id: "foundation-125", sourceRevision: "fixture-r1" };
 const READING = { page: 42, verseKey: "2:255" };
 const STARTED_AT = "2026-08-10T12:00:00.000Z";
+const EDUCATION_IDENTITY = { sourceId: "fixture:education-source", sourceRevision: "fixture-r1" };
+const EDUCATION_CATALOG = { schemaVersion: 1, ...EDUCATION_IDENTITY, courses: [{ id: "course:fixture", moduleIds: ["module:fixture"] }], modules: [{ id: "module:fixture", courseId: "course:fixture", lessonIds: ["lesson:fixture"] }], lessons: [{ id: "lesson:fixture", courseId: "course:fixture", moduleId: "module:fixture", title: "Fixture lesson", estimatedMinutes: 3, knowledgeChecks: [{ id: "check:fixture" }] }], citations: [] };
 
 function dueProgress() {
   const hifzProgress = recordVerseReview(normalizeHifzProgress(null), { verseKey: "1:1", page: 1 }, "good", "2026-08-01");
@@ -30,6 +35,57 @@ test("Today's Study prioritizes due Hifz, due vocabulary, then new vocabulary", 
   const plan = buildTodayStudyPlan({ hifzProgress, vocabularyProgress, curriculumEntryIds: ["entry:1", "entry:2", "entry:3"], reading: READING, sessionMinutes: 5, date: "2026-08-10" });
   assert.deepEqual(plan.steps.map((step) => step.kind), ["hifz-review", "vocabulary-review", "vocabulary-new"]);
   assert.deepEqual(plan.steps.map((step) => step.estimatedMinutes), [2, 1, 2]);
+});
+
+test("Today's Study adds education review and lesson steps in deterministic due-before-new order", () => {
+  const { hifzProgress, vocabularyProgress } = dueProgress();
+  const educationProgress = recordEducationKnowledgeReview(undefined, EDUCATION_IDENTITY, { courseId: "course:fixture", moduleId: "module:fixture", lessonId: "lesson:fixture", checkId: "check:fixture" }, "good", "2026-08-01");
+  const plan = buildTodayStudyPlan({ hifzProgress, vocabularyProgress, educationProgress, educationCatalog: EDUCATION_CATALOG, curriculumEntryIds: ["entry:1", "entry:2", "entry:3"], reading: READING, sessionMinutes: 20, date: "2026-08-10" });
+  assert.deepEqual(plan.steps.map((step) => step.kind), ["hifz-review", "education-review", "vocabulary-review", "education-lesson", "vocabulary-new", "reading"]);
+  assert.ok(plan.totalEstimatedMinutes <= 20);
+  assert.equal(plan.steps[1].targets[0].sourceRevision, "fixture-r1");
+});
+
+test("grouped education review advances deterministically across checks and lessons and resumes the first remaining target", () => {
+  const catalog = {
+    schemaVersion: 1,
+    ...EDUCATION_IDENTITY,
+    courses: [{ id: "course:fixture", moduleIds: ["module:fixture"] }],
+    modules: [{ id: "module:fixture", courseId: "course:fixture", lessonIds: ["lesson:one", "lesson:two"] }],
+    lessons: [
+      { id: "lesson:one", courseId: "course:fixture", moduleId: "module:fixture", title: "Fixture one", estimatedMinutes: 3, knowledgeChecks: [{ id: "check:01" }, { id: "check:02" }] },
+      { id: "lesson:two", courseId: "course:fixture", moduleId: "module:fixture", title: "Fixture two", estimatedMinutes: 3, knowledgeChecks: [{ id: "check:03" }] },
+    ],
+    citations: [],
+  };
+  const target = (lessonId, checkId) => ({ courseId: "course:fixture", moduleId: "module:fixture", lessonId, checkId });
+  let educationProgress;
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:one", "check:01"), "good", "2026-08-01");
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:one", "check:02"), "good", "2026-08-01");
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:two", "check:03"), "good", "2026-08-01");
+  const plan = buildTodayStudyPlan({ hifzProgress: undefined, vocabularyProgress: undefined, educationProgress, educationCatalog: catalog, curriculumEntryIds: [], reading: READING, sessionMinutes: 20, date: "2026-08-10" });
+  const step = plan.steps.find((item) => item.kind === "education-review");
+  assert.deepEqual(step.targets.map((item) => item.checkId), ["check:01", "check:02", "check:03"]);
+  assert.equal(educationReviewStepComplete(step, educationProgress, "2026-08-10"), false);
+
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:one", "check:01"), "hard", "2026-08-10");
+  assert.deepEqual(remainingEducationReviewTargets(step, educationProgress, "2026-08-10").map((item) => item.checkId), ["check:02", "check:03"], "resume selects the first unreviewed check from the snapshot");
+  assert.equal(educationReviewStepComplete(step, educationProgress, "2026-08-10"), false);
+
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:one", "check:02"), "good", "2026-08-10");
+  assert.equal(remainingEducationReviewTargets(step, educationProgress, "2026-08-10")[0].lessonId, "lesson:two");
+  assert.equal(educationReviewStepComplete(step, educationProgress, "2026-08-10"), false);
+
+  educationProgress = recordEducationKnowledgeReview(educationProgress, EDUCATION_IDENTITY, target("lesson:two", "check:03"), "easy", "2026-08-10");
+  assert.deepEqual(remainingEducationReviewTargets(step, educationProgress, "2026-08-10"), []);
+  assert.equal(educationReviewStepComplete(step, educationProgress, "2026-08-10"), true);
+});
+
+test("schema-v1 Today’s Study sessions migrate losslessly to schema v2", () => {
+  const plan = buildTodayStudyPlan({ hifzProgress: undefined, vocabularyProgress: undefined, reading: READING, sessionMinutes: 5, date: "2026-08-10" });
+  const legacy = normalizeTodayStudyProgress({ schemaVersion: 1, activityDates: ["2026-08-10"], completions: [], activeSession: { dateKey: "2026-08-10", sessionMinutes: 5, startedAt: STARTED_AT, steps: plan.steps, startedStepIds: [], completedStepIds: [], skippedStepIds: [] } });
+  assert.equal(legacy.schemaVersion, 2);
+  assert.deepEqual(legacy.activeSession.steps, plan.steps);
 });
 
 test("ordinary Hifz/reading plans are valid and vocabulary-unavailable plans add no placeholders", () => {
