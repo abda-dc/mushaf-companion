@@ -103,7 +103,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(styles, /\.mobile-jump-trigger/);
   assert.match(styles, /\.jump-page-form/);
   assert.match(styles, /grid-template-columns: repeat\(7,1fr\)/);
-  assert.equal((styles.match(/grid-template-columns: repeat\(7,1fr\)/g) ?? []).length, 2);
+  assert.equal((styles.match(/grid-template-columns: repeat\(7,1fr\)/g) ?? []).length, 1, "the seven-item reading-assistance row remains unchanged");
+  assert.match(styles, /\.mobile-nav[^}]*grid-template-columns: repeat\(5,1fr\)/, "primary mobile navigation is the focused five-item layout");
   assert.match(styles, /\.audio-sheet/);
   assert.match(styles, /\.ayah-rosette::before/);
   assert.match(styles, /\.ayah-rosette::after/);

@@ -4,6 +4,7 @@ import type { QuranChapterInfo, QuranPage } from "../quran-data.ts";
 import type { TafsirDocument } from "../tafsir-source.mjs";
 import { appPath } from "../runtime-config.ts";
 import type { ReaderContentTransport, SearchResponse } from "./runtime-transport.types.ts";
+import type { EducationCatalogResult } from "../education-content.ts";
 
 const AMHARIC_SOURCE = findTranslationSource("quranenc:amharic_zain");
 
@@ -44,6 +45,9 @@ export function createServerReaderTransport(): ReaderContentTransport {
     },
     loadAudioManifest(type: AudioPackType, id: number, reciterId = "alafasy", signal?: AbortSignal) {
       return requestJson<AudioPackManifest>(appPath(`api/audio-manifest?type=${type}&id=${id}&reciter=${encodeURIComponent(reciterId)}`), signal, "The verified audio pack manifest is temporarily unavailable.");
+    },
+    loadEducationCatalog(signal) {
+      return requestJson<EducationCatalogResult>(appPath("api/education/catalog"), signal, "Guided education sources are temporarily unavailable.");
     },
     fetchTranslationPackSource(input, init) {
       const url = input instanceof Request ? input.url : String(input);
