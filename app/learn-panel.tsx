@@ -29,6 +29,8 @@ interface LearnPanelProps {
   onCompleteLesson: (courseId: string, moduleId: string, lessonId: string) => void;
   onRateKnowledgeCheck: (courseId: string, moduleId: string, lessonId: string, checkId: string, grade: ReviewGrade) => void;
   onOpenQuranCitation: (citation: Extract<EducationCitation, { type: "quran" }>) => void;
+  onOpenHadith: () => void;
+  onOpenFoundations?: () => void;
   onOpenHifz: () => void;
   onOpenVocabulary: () => void;
   onOpenTajweed: () => void;
@@ -125,6 +127,18 @@ export function LearnPanel(props: LearnPanelProps) {
         <button type="button" className="learn-primary" onClick={props.onTodayStudy} disabled={props.todayStudyDisabled}>{props.todayStudyAction} <span aria-hidden="true">→</span></button>
       </section>
 
+      <section className="guided-courses-card hadith-library-card" aria-labelledby="hadith-library-title">
+        <header><div><span>HADITH LIBRARY</span><h3 id="hadith-library-title">Primary Hadith Collections</h3></div><strong>11 available</strong></header>
+        <p>Source-verified Hadith records with approved English translations from HadeethEnc.com and cryptographic provenance across Sahih al-Bukhari, Sahih Muslim, and classical collections.</p>
+        <button type="button" className="learn-primary" onClick={props.onOpenHadith}>Browse Hadith Library <span aria-hidden="true">→</span></button>
+      </section>
+
+      <section className="guided-courses-card islamic-foundations-card" aria-labelledby="islamic-foundations-title">
+        <header><div><span>ISLAMIC FOUNDATIONS</span><h3 id="islamic-foundations-title">Reference Library</h3></div><strong>12 source-ready</strong></header>
+        <p>Vetted Qur&apos;an coordinates, authenticated Hadith citations with internal reader resolution, and approved scholarly references organized across core Islamic subjects.</p>
+        <button type="button" className="learn-primary" onClick={props.onOpenFoundations}>Browse Islamic Foundations <span aria-hidden="true">→</span></button>
+      </section>
+
       <section className={`guided-courses-card status-${props.catalogResult.status}`} aria-labelledby="guided-courses-title">
         <header><div><span>GUIDED COURSES</span><h3 id="guided-courses-title">{ready ? "Approved guided curricula" : "Guided courses awaiting approved curriculum"}</h3></div><strong>{ready ? `${catalog?.courses.length ?? 0} available` : "Unavailable"}</strong></header>
         <p>{ready ? sourceCurrent ? "Every course below passed source identity, rights, integrity, structured-content, and named scholarly-review gates." : "An approved catalog is available, but your existing progress is pinned to a different source revision. It has not been remapped." : "No Islamic lesson content is active. A provider must pass the approved source, rights, integrity, and named scholarly-review requirements before a course can appear."}</p>
@@ -171,6 +185,8 @@ export function LearnPanel(props: LearnPanelProps) {
       <section className="learn-progress-card" aria-labelledby="learning-progress-title"><div><span>LEARNING PROGRESS</span><h3 id="learning-progress-title">Your device-local progress</h3><p>Guided progress is stored separately from Hifz and vocabulary and pinned to its exact source revision.</p></div><strong>{progressPercent}%</strong><dl><div><dt>Lessons complete</dt><dd>{completedLessons} / {totalLessons}</dd></div><div><dt>Reviews due</dt><dd>{props.dueCheckIds.size}</dd></div><div><dt>Study rhythm</dt><dd>{props.studyStreak} days</dd></div></dl></section>
 
       <section className="learn-tool-grid" aria-label="Learning tools">
+        <button type="button" onClick={props.onOpenHadith}><span>HADITH LIBRARY</span><strong>11 Hadith available locally</strong><small>Sahih al-Bukhari &amp; Sahih Muslim</small></button>
+        <button type="button" onClick={props.onOpenFoundations}><span>ISLAMIC FOUNDATIONS</span><strong>12 topics source-ready</strong><small>10 core collections · 57 vetted references</small></button>
         <button type="button" onClick={props.onOpenHifz}><span>MY MUSHAF</span><strong>{props.hifzDue} Hifz reviews due</strong><small>{props.hifzMemorized} ayat mapped in the existing Hifz system</small></button>
         <button type="button" onClick={props.onOpenVocabulary} disabled={!props.vocabularyAvailable}><span>QURAN VOCABULARY</span><strong>{props.vocabularyAvailable ? `${props.vocabularyDue} reviews due` : "Awaiting approved source"}</strong><small>Foundation 125 remains owned by the vocabulary system</small></button>
         <button type="button" onClick={props.onOpenTajweed}><span>TAJWEED</span><strong>Open the verified color guide</strong><small>17 existing rule categories with anchored examples</small></button>
