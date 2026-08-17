@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:kfgqpc:warsh-an-nafi",
+  "artifactAcquired": false,
+  "publishedMd5Matched": false,
+  "publishedSha1Matched": false,
+  "localSha256Recorded": false,
+  "archiveInventoryAudited": false,
+  "packageReadmeAudited": false,
+  "rightsVerified": false,
+  "ayahIdentityAudited": false,
+  "numberingConventionAudited": false,
+  "pageBoundaryAudited": false,
+  "multiPageAyahHandlingAudited": false,
+  "lineGeometryAudited": false,
+  "fontAudited": false,
+  "runtimeAdapterApproved": false,
+  "audioCompatibilityApproved": false,
+  "productionEligible": false
+}

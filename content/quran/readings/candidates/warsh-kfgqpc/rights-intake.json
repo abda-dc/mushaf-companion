@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:kfgqpc:warsh-an-nafi",
+  "rightsStatus": "unknown",
+  "packageReadmeReceived": false,
+  "licenseTextReceived": false,
+  "attributionRequirement": null,
+  "grants": {
+    "applicationUse": {
+      "status": "unknown",
+      "supportingReference": null
+    },
+    "redistribution": {
+      "status": "unknown",
+      "supportingReference": null
+    },
+    "bundling": {
+      "status": "unknown",
+      "supportingReference": null
+    },
+    "offlineUse": {
+      "status": "unknown",
+      "supportingReference": null
+    },
+    "modification": {
+      "status": "unknown",
+      "supportingReference": null
+    }
+  }
+}
