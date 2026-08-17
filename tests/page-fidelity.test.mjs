@@ -13,9 +13,10 @@ test("locks representative Madani page geometry to official fixtures", async () 
 });
 
 test("page delivery enforces provenance, checksum, and fixed line slots", async () => {
-  const [route, source, data, styles, manifest] = await Promise.all([
+  const [route, source, editions, data, styles, manifest] = await Promise.all([
     readFile(new URL("../app/api/pages/[page]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/content/quran-runtime-source.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/content/quran-page-editions.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/quran-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/content-manifest.ts", import.meta.url), "utf8"),
@@ -23,7 +24,11 @@ test("page delivery enforces provenance, checksum, and fixed line slots", async 
   assert.match(source, /assertVerifiedStructure/);
   assert.match(source, /sha256Hex/);
   assert.match(route, /X-Quran-Content-Revision/);
-  assert.match(source, /translations: "20,57"/);
+  assert.match(source, /edition\.translationResourceId/);
+  assert.match(source, /edition\.transliterationResourceId/);
+  assert.match(editions, /mushafId: CONTENT_MANIFEST\.edition\.mushafId/);
+  assert.match(editions, /translationResourceId: CONTENT_MANIFEST\.resources\.translation\.id/);
+  assert.match(editions, /transliterationResourceId: CONTENT_MANIFEST\.resources\.transliteration\.id/);
   assert.match(data, /PageProvenance/);
   assert.match(styles, /grid-template-rows: repeat\(15/);
   assert.match(manifest, /Hafs 'an Asim/);

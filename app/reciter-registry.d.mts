@@ -1,6 +1,8 @@
+import type { RiwayahId } from "./reading-registry.mjs";
+
 export type ReciterScope = "ayah" | "surah";
 export type ReciterGroup = "default" | "other";
-export type ReciterRiwayah = "hafs";
+export type ReciterRiwayah = RiwayahId;
 export type ReciterStyle = "murattal" | "mujawwad" | "muallim";
 export type ReciterProvider = "quran-foundation" | "everyayah" | "kalamalah" | "mp3quran";
 
