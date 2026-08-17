@@ -67,8 +67,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../LICENSE", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /const ACTIVE_PAGE_EDITION = resolveQuranPageEdition\(ACTIVE_READING_ID\)/);
-  assert.match(page, /const TOTAL_PAGES = ACTIVE_PAGE_EDITION\.pages/);
+  assert.match(page, /const \[activeReadingId, setActiveReadingId\] = useState<ReadingId>\(DEFAULT_READING_ID\)/);
+  assert.match(page, /const activePageEdition = resolveQuranPageEdition\(activeReadingId\)/);
+  assert.match(page, /const totalPages = activePageEdition\.pages/);
   assert.match(page, /loadPreferences\(localStorage\)/);
   assert.match(page, /savePreferences\(localStorage/);
   assert.match(page, /new URL\(window\.location\.href\)\.searchParams\.get\("page"\)/);
@@ -76,15 +77,15 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /event\.key === "ArrowLeft"/);
   assert.match(page, /handlePointerDown/);
   assert.match(page, /handlePointerUp/);
-  assert.match(page, /type="number" min="1" max=\{TOTAL_PAGES\}/);
+  assert.match(page, /type="number" min="1" max=\{totalPages\}/);
   assert.match(page, /Open page jump\. Current page/);
   assert.match(page, /Jump in the mushaf/);
   assert.match(page, /JUZ_START_PAGES/);
   assert.match(page, /Recent pages/);
   assert.match(page, /Saved places/);
   assert.match(page, /setRecentPages/);
-  assert.match(page, /contentTransport\.loadPageForReading\(ACTIVE_READING_ID, page\)/);
-  assert.match(page, /quranPageCacheKey\(ACTIVE_READING_ID, page\)/);
+  assert.match(page, /contentTransport\.loadPageForReading\(activeReadingId, page\)/);
+  assert.match(page, /quranPageCacheKey\(activeReadingId, page\)/);
   assert.match(page, /pageCacheRef/);
   assert.match(runtimeSource, /mushaf: String\(edition\.mushafId\)/);
   assert.match(runtimeSource, /edition\.wordTextField/);

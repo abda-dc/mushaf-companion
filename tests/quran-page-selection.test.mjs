@@ -40,13 +40,13 @@ test("M11.3 Pages transport rejects an unsupported reading before provider acces
 test("M11.3 reader cache and verification identity include the active reading", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /const ACTIVE_READING_ID: ReadingId = DEFAULT_READING_ID/);
-  assert.match(page, /resolveQuranPageEdition\(ACTIVE_READING_ID\)/);
+  assert.match(page, /useState<ReadingId>\(DEFAULT_READING_ID\)/);
+  assert.match(page, /resolveQuranPageEdition\(activeReadingId\)/);
   assert.match(page, /new Map<string, QuranPage>\(\)/);
   assert.match(page, /function quranPageCacheKey\(readingId: ReadingId, page: number\)/);
   assert.match(page, /\$\{readingId\}:\$\{page\}/);
-  assert.match(page, /loadPageForReading\(ACTIVE_READING_ID, page\)/);
-  assert.match(page, /isVerifiedPage\(data, page, ACTIVE_READING_ID\)/);
+  assert.match(page, /loadPageForReading\(activeReadingId, page\)/);
+  assert.match(page, /isVerifiedPage\(data, page, activeReadingId\)/);
 });
 
 test("M11.3 page API defaults to Hafs but rejects unknown reading identities", async () => {
