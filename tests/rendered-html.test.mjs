@@ -67,7 +67,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../LICENSE", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /TOTAL_PAGES = 604/);
+  assert.match(page, /const ACTIVE_PAGE_EDITION = resolveQuranPageEdition\(ACTIVE_READING_ID\)/);
+  assert.match(page, /const TOTAL_PAGES = ACTIVE_PAGE_EDITION\.pages/);
   assert.match(page, /loadPreferences\(localStorage\)/);
   assert.match(page, /savePreferences\(localStorage/);
   assert.match(page, /new URL\(window\.location\.href\)\.searchParams\.get\("page"\)/);
@@ -82,7 +83,8 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /Recent pages/);
   assert.match(page, /Saved places/);
   assert.match(page, /setRecentPages/);
-  assert.match(page, /contentTransport\.loadPage\(page\)/);
+  assert.match(page, /contentTransport\.loadPageForReading\(ACTIVE_READING_ID, page\)/);
+  assert.match(page, /quranPageCacheKey\(ACTIVE_READING_ID, page\)/);
   assert.match(page, /pageCacheRef/);
   assert.match(runtimeSource, /mushaf: String\(edition\.mushafId\)/);
   assert.match(runtimeSource, /edition\.wordTextField/);

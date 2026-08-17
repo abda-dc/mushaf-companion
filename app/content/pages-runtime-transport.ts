@@ -3,6 +3,7 @@ import { appPath } from "../runtime-config.ts";
 import {
   fetchAudioManifestFromSource,
   fetchChaptersFromSource,
+  fetchQuranPageForReadingFromSource,
   fetchQuranPageFromSource,
   fetchTafsirFromSource,
   lookupVerseFromSource,
@@ -19,6 +20,9 @@ export function createPagesReaderTransport(fetchImpl: typeof fetch = fetch): Rea
     contentManifestUrl: appPath("content/content-manifest.json"),
     loadPage(page, signal) {
       return fetchQuranPageFromSource(page, fetchImpl, signal);
+    },
+    loadPageForReading(readingId, page, signal) {
+      return fetchQuranPageForReadingFromSource(readingId, page, fetchImpl, signal);
     },
     search(query, signal) {
       return searchQuranSource(query, fetchImpl, signal);

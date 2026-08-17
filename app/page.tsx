@@ -25,6 +25,8 @@ import { StudyNotesIndex } from "./study-notes-ui";
 import { LearnPanel } from "./learn-panel";
 import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
+import { resolveQuranPageEdition } from "./content/quran-page-editions";
+import { DEFAULT_READING_ID, type ReadingId } from "./reading-registry.mjs";
 import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
 import {
@@ -133,8 +135,9 @@ interface HifzLoop {
   pauseMs: HifzPauseMs;
 }
 
-const TOTAL_PAGES = 604;
-const PAGE_DATA_REVISION = "2026-08-06-phase-three";
+const ACTIVE_READING_ID: ReadingId = DEFAULT_READING_ID;
+const ACTIVE_PAGE_EDITION = resolveQuranPageEdition(ACTIVE_READING_ID);
+const TOTAL_PAGES = ACTIVE_PAGE_EDITION.pages;
 const JUZ_START_PAGES = [1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 201, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582] as const;
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
@@ -178,19 +181,28 @@ function clampPage(value: number) {
   return Math.min(TOTAL_PAGES, Math.max(1, Math.round(value)));
 }
 
-function isVerifiedPage(value: unknown, expectedPage: number): value is QuranPage {
+function quranPageCacheKey(readingId: ReadingId, page: number) {
+  return `${readingId}:${page}`;
+}
+
+function isVerifiedPage(
+  value: unknown,
+  expectedPage: number,
+  readingId: ReadingId = ACTIVE_READING_ID,
+): value is QuranPage {
   if (!value || typeof value !== "object") return false;
+  const edition = resolveQuranPageEdition(readingId);
   const page = value as Partial<QuranPage>;
   return page.page === expectedPage
     && Array.isArray(page.lines)
-    && page.lines.length === 15
+    && page.lines.length === edition.lineCount
     && page.lines.every((line, index) => line.number === index + 1 && Array.isArray(line.words))
     && Array.isArray(page.verses)
     && page.verses.length > 0
     && page.verses.every((verse) => /^\d{1,3}:\d{1,3}$/.test(verse.key))
     && page.provenance?.verified === true
-    && page.provenance.manifestRevision === PAGE_DATA_REVISION
-    && page.provenance.mushafId === 1
+    && page.provenance.manifestRevision === edition.manifestRevision
+    && page.provenance.mushafId === edition.mushafId
     && /^[a-f0-9]{64}$/.test(page.provenance.pageChecksum ?? "");
 }
 
@@ -300,7 +312,7 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const playingRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const pageCacheRef = useRef(new Map<number, QuranPage>());
+  const pageCacheRef = useRef(new Map<string, QuranPage>());
   const lastGoodPageRef = useRef(FALLBACK_PAGE);
   const pendingVerseRef = useRef<string | null>(null);
   const pendingWordRef = useRef<WordCoordinate | null>(null);
@@ -457,7 +469,8 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     let cancelled = false;
-    const cached = pageCacheRef.current.get(page);
+    const cacheKey = quranPageCacheKey(ACTIVE_READING_ID, page);
+    const cached = pageCacheRef.current.get(cacheKey);
     const applyPage = (data: QuranPage) => {
       if (cancelled) return;
       lastGoodPageRef.current = data;
@@ -506,14 +519,19 @@ export default function Home() {
       return () => { cancelled = true; };
     }
     setLoadingPage(true);
-    contentTransport.loadPage(page)
+    contentTransport.loadPageForReading(ACTIVE_READING_ID, page)
       .then((data) => {
-        if (!isVerifiedPage(data, page)) throw new Error("Page integrity check failed");
-        pageCacheRef.current.set(page, data);
+        if (!isVerifiedPage(data, page, ACTIVE_READING_ID)) throw new Error("Page integrity check failed");
+        pageCacheRef.current.set(cacheKey, data);
         applyPage(data);
-        [page - 1, page + 1].filter((item) => item >= 1 && item <= TOTAL_PAGES && !pageCacheRef.current.has(item)).forEach((item) => {
-          contentTransport.loadPage(item).then((next) => {
-            if (isVerifiedPage(next, item)) pageCacheRef.current.set(item, next);
+        [page - 1, page + 1].filter((item) => {
+          if (item < 1 || item > TOTAL_PAGES) return false;
+          return !pageCacheRef.current.has(quranPageCacheKey(ACTIVE_READING_ID, item));
+        }).forEach((item) => {
+          contentTransport.loadPageForReading(ACTIVE_READING_ID, item).then((next) => {
+            if (isVerifiedPage(next, item, ACTIVE_READING_ID)) {
+              pageCacheRef.current.set(quranPageCacheKey(ACTIVE_READING_ID, item), next);
+            }
           }).catch(() => undefined);
         });
       })
@@ -1416,17 +1434,18 @@ export default function Home() {
     try {
       const anchor = await revalidateStudyAnchor(capturedAnchor, {
         resolveVerse: async (verseKey) => {
-          const cachedPage = pageCacheRef.current.get(capturedAnchor.page) ?? (pageData.page === capturedAnchor.page ? pageData : null);
-          if (cachedPage && isVerifiedPage(cachedPage, capturedAnchor.page) && cachedPage.verses.some((verse) => verse.key === verseKey)) {
+          const cachedPage = pageCacheRef.current.get(quranPageCacheKey(ACTIVE_READING_ID, capturedAnchor.page)) ?? (pageData.page === capturedAnchor.page ? pageData : null);
+          if (cachedPage && isVerifiedPage(cachedPage, capturedAnchor.page, ACTIVE_READING_ID) && cachedPage.verses.some((verse) => verse.key === verseKey)) {
             return { verseKey, page: capturedAnchor.page };
           }
           return contentTransport.lookupVerse(verseKey);
         },
         resolveWord: async (wordAnchor) => {
-          const cachedPage = pageCacheRef.current.get(wordAnchor.page);
-          const trustedPage = cachedPage ?? await contentTransport.loadPage(wordAnchor.page);
-          if (!isVerifiedPage(trustedPage, wordAnchor.page)) return null;
-          if (!cachedPage) pageCacheRef.current.set(wordAnchor.page, trustedPage);
+          const wordCacheKey = quranPageCacheKey(ACTIVE_READING_ID, wordAnchor.page);
+          const cachedPage = pageCacheRef.current.get(wordCacheKey);
+          const trustedPage = cachedPage ?? await contentTransport.loadPageForReading(ACTIVE_READING_ID, wordAnchor.page);
+          if (!isVerifiedPage(trustedPage, wordAnchor.page, ACTIVE_READING_ID)) return null;
+          if (!cachedPage) pageCacheRef.current.set(wordCacheKey, trustedPage);
           const word = pageWordForCoordinate(trustedPage, wordAnchor);
           const coordinate = word ? coordinateForPageWord(trustedPage, word) : null;
           return coordinate?.sourceWordId === undefined ? null : { type: "word" as const, ...coordinate, sourceWordId: coordinate.sourceWordId };

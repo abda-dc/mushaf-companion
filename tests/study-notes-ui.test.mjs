@@ -82,8 +82,8 @@ test("note save revalidation uses the trusted loaded-page cache before the netwo
   const start = page.indexOf("async function createPrivateNote");
   const end = page.indexOf("function updatePrivateNote", start);
   const source = page.slice(start, end);
-  assert.match(source, /pageCacheRef\.current\.get\(capturedAnchor\.page\)/);
-  assert.match(source, /isVerifiedPage\(cachedPage, capturedAnchor\.page\)/);
+  assert.match(source, /pageCacheRef\.current\.get\(quranPageCacheKey\(ACTIVE_READING_ID, capturedAnchor\.page\)\)/);
+  assert.match(source, /isVerifiedPage\(cachedPage, capturedAnchor\.page, ACTIVE_READING_ID\)/);
   assert.match(source, /cachedPage\.verses\.some/);
   assert.match(source, /contentTransport\.lookupVerse\(verseKey\)/, "uncached anchors retain a trusted transport fallback");
   assert.doesNotMatch(source, /\/api\//);
