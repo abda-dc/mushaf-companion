@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 13 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 17 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 13);
+  assert.equal(allRecords.length, 17);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -164,7 +164,7 @@ test("10. Deterministic metadata search across canonical number, label, narrator
   assert.equal(umarResults[0].id, "muslim:8");
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 6); // 4485, 528, 1397, 1521, 2856, 2736
+  assert.equal(bukhariResults.length, 9); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);
@@ -238,4 +238,38 @@ test("12. Strict Domain Separation: No dependencies on Education, Today Study, E
       );
     }
   }
+});
+
+test("13. Resolver resolves Batch 4 Qur'an and Sunnah Hadith targets", () => {
+  // 1. Qur'an: bukhari:5027 (HadeethEnc 5913)
+  const res5027 = resolveHadithReference({ collectionId: "bukhari", number: "5027" });
+  assert.equal(res5027.status, "resolved-translation-approved");
+  assert.equal(res5027.target, "hadith:bukhari:5027");
+  assert.equal(res5027.record?.id, "bukhari:5027");
+  assert.equal(res5027.record?.narrator, "Uthman ibn Affan");
+  assert.equal(res5027.sourceRecord?.providerRecordId, "5913");
+
+  // 2. Sunnah: muslim:1401 (HadeethEnc 6078)
+  const res1401 = resolveHadithReference({ collectionId: "muslim", number: "1401" });
+  assert.equal(res1401.status, "resolved-translation-approved");
+  assert.equal(res1401.target, "hadith:muslim:1401");
+  assert.equal(res1401.record?.id, "muslim:1401");
+  assert.equal(res1401.record?.narrator, "Anas ibn Malik");
+  assert.equal(res1401.sourceRecord?.providerRecordId, "6078");
+
+  // 3. Hadith: bukhari:3461 (HadeethEnc 3686)
+  const res3461 = resolveHadithReference({ collectionId: "bukhari", number: "3461" });
+  assert.equal(res3461.status, "resolved-translation-approved");
+  assert.equal(res3461.target, "hadith:bukhari:3461");
+  assert.equal(res3461.record?.id, "bukhari:3461");
+  assert.equal(res3461.record?.narrator, "Abdullah ibn Amr");
+  assert.equal(res3461.sourceRecord?.providerRecordId, "3686");
+
+  // 4. Relationship: bukhari:7137 (HadeethEnc 6383)
+  const res7137 = resolveHadithReference({ collectionId: "bukhari", number: "7137" });
+  assert.equal(res7137.status, "resolved-translation-approved");
+  assert.equal(res7137.target, "hadith:bukhari:7137");
+  assert.equal(res7137.record?.id, "bukhari:7137");
+  assert.equal(res7137.record?.narrator, "Abu Hurayrah");
+  assert.equal(res7137.sourceRecord?.providerRecordId, "6383");
 });

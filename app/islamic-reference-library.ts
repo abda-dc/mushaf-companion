@@ -164,6 +164,7 @@ const SAFE_ID = /^[a-z0-9](?:[a-z0-9:._/-]{0,158}[a-z0-9])?$/;
 const VERSE_KEY = /^(?:[1-9]|[1-9]\d|1(?:0\d|1[0-4])):[1-9]\d{0,2}$/;
 
 const APPROVED_QURAN_VERSE_KEYS = new Set([
+  "2:2",
   "2:43",
   "2:177",
   "2:183",
@@ -175,6 +176,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "3:18",
   "3:97",
   "4:48",
+  "4:59",
   "4:103",
   "4:136",
   "4:163",
@@ -188,20 +190,25 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "7:54",
   "7:180",
   "9:60",
+  "15:9",
   "16:36",
+  "16:44",
   "21:25",
   "22:7",
   "22:27",
   "23:15",
   "23:16",
   "31:13",
+  "33:21",
   "35:1",
   "39:62",
   "42:11",
   "47:19",
+  "49:6",
   "51:56",
   "54:49",
   "57:22",
+  "59:7",
   "59:22",
   "76:30",
   "99:1",
@@ -769,7 +776,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v3",
+  revision: "m9r-v4",
   collections: [
     {
       id: "islam",
@@ -1316,12 +1323,120 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to the Qur'an and Sunnah.",
       references: [],
       topics: [
-        plannedTopic("quran-and-sunnah-quran", "Qur'an"),
-        plannedTopic("quran-and-sunnah-sunnah", "Sunnah"),
-        plannedTopic("quran-and-sunnah-hadith", "Hadith"),
-        plannedTopic(
+        referenceReadyTopic(
+          "quran-and-sunnah-quran",
+          "Qur'an",
+          [
+            quranReference(
+              "quran:quran-sunnah-quran:15-9",
+              ["15:9"],
+              "15:9",
+            ),
+            quranReference(
+              "quran:quran-sunnah-quran:2-2",
+              ["2:2"],
+              "2:2",
+            ),
+            hadithReference(
+              "hadith:quran-sunnah-quran:hadeethenc-5913",
+              "The best of you are those who learn the Qur’an and teach it",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "5027",
+              "Uthman ibn Affan",
+              "5913",
+              "Sahih al-Bukhari 5027",
+            ),
+            scholarlyReference(
+              "scholarly:quran-sunnah-quran:uthaymin-creed",
+              "Belief in the Revealed Books",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "quran-and-sunnah-sunnah",
+          "Sunnah",
+          [
+            quranReference(
+              "quran:quran-sunnah-sunnah:33-21",
+              ["33:21"],
+              "33:21",
+            ),
+            quranReference(
+              "quran:quran-sunnah-sunnah:59-7",
+              ["59:7"],
+              "59:7",
+            ),
+            hadithReference(
+              "hadith:quran-sunnah-sunnah:hadeethenc-6078",
+              "Adherence to the Prophetic Sunnah",
+              "muslim",
+              "Sahih Muslim",
+              "1401",
+              "Anas ibn Malik",
+              "6078",
+              "Sahih Muslim 1401",
+            ),
+            scholarlyReference(
+              "scholarly:quran-sunnah-sunnah:uthaymin-creed",
+              "Objectives of the Islamic Creed — following the messengers' example",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "quran-and-sunnah-hadith",
+          "Hadith",
+          [
+            quranReference(
+              "quran:quran-sunnah-hadith:49-6",
+              ["49:6"],
+              "49:6",
+            ),
+            hadithReference(
+              "hadith:quran-sunnah-hadith:hadeethenc-3686",
+              "Convey from me even if one verse",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "3461",
+              "Abdullah ibn Amr",
+              "3686",
+              "Sahih al-Bukhari 3461",
+            ),
+            scholarlyReference(
+              "scholarly:quran-sunnah-hadith:uthaymin-creed",
+              "Belief in the Messengers — authentic reports",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
           "quran-and-sunnah-relationship-between-quran-and-sunnah",
           "Relationship Between Qur'an and Sunnah",
+          [
+            quranReference(
+              "quran:quran-sunnah-relationship:16-44",
+              ["16:44"],
+              "16:44",
+            ),
+            quranReference(
+              "quran:quran-sunnah-relationship:4-59",
+              ["4:59"],
+              "4:59",
+            ),
+            hadithReference(
+              "hadith:quran-sunnah-relationship:hadeethenc-6383",
+              "Whoever obeys me has obeyed Allah",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "7137",
+              "Abu Hurayrah",
+              "6383",
+              "Sahih al-Bukhari 7137",
+            ),
+            scholarlyReference(
+              "scholarly:quran-sunnah-relationship:uthaymin-creed",
+              "Foundations of the Islamic Creed",
+            ),
+          ],
         ),
       ],
     },

@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 13
+  "recordCount": 17
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -44,6 +44,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/3272",
     "sha256": "901c9d829629724d7a73805fad966faa5a2dba4c066e5e4c1164d19288de2e6e",
     "charCount": 385
+  },
+  "3686": {
+    "id": "3686",
+    "title": "Convey from me even if one verse, and narrate from the Children of Israel, and there is no sin in doing that. And whoever intentionally tells a lie about me, let him occupy his seat in Hellfire",
+    "hadith_text": "‘Abdullāh ibn ‘Amr (may Allah be pleased with him) reported: The Prophet (may Allah's peace and blessings be upon him) said: \"Convey from me even if one verse, and narrate from the Children of Israel, and there is no sin in doing that. And whoever intentionally tells a lie about me, let him occupy his seat in Hellfire.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Al-Bukhāri]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3686",
+    "sha256": "17e90e7a8fb962ecb80c1c2a67ceefc72f292db750feee491cbeb7ba8c5ba1de",
+    "charCount": 321
   },
   "3689": {
     "id": "3689",
@@ -99,6 +110,39 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/5493",
     "sha256": "a249a17d98eaccd187c1566608690c8519f1dfd9a30e729ed7b5f3d1d9b05a49",
     "charCount": 543
+  },
+  "5913": {
+    "id": "5913",
+    "title": "The best of you are those who learn the Qur’an and teach it",
+    "hadith_text": "‘Uthmān ibn ‘Affān (may Allah be pleased with him) reported: The Prophet (may Allah’s peace and blessings be upon him) said: \"The best of you are those who learn the Qur’an and teach it.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Al-Bukhāri]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5913",
+    "sha256": "698fbdc17c7be97dd7efd21fffae41cac1325c9136356edfb7cfbfd07b0a8cbf",
+    "charCount": 187
+  },
+  "6078": {
+    "id": "6078",
+    "title": "What is the matter with those people who said such-and-such? But indeed, I pray and sleep, I fast and break the fast, and I marry women. Whoever turns away from my Sunnah does not belong to me",
+    "hadith_text": "Anas (may Allah be pleased with him) reported: A group from among the Prophet's Companions asked the wives of the Prophet (may Allah's peace and blessings be upon him) about his deeds in private. Some of them said: I will not marry women. Others said: I will not eat meat. Some others said: I will not sleep on a bed. So, he praised Allah and commended Him and said: \"What is the matter with those people who said such-and-such? But indeed, I pray and sleep, I fast and break the fast, and I marry women. Whoever turns away from my Sunnah does not belong to me.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/6078",
+    "sha256": "8cb1ac5ae45ec84fd3771e76595f8418fd1f927d04a19ef2851eb528692ece7d",
+    "charCount": 562
+  },
+  "6383": {
+    "id": "6383",
+    "title": "Whoever obeys me has obeyed Allah, and whoever disobeys me has disobeyed Allah; and whoever obeys the leader has obeyed me, and whoever disobeys the leader has disobeyed me",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: \"Whoever obeys me has obeyed Allah, and whoever disobeys me has disobeyed Allah; and whoever obeys the leader has obeyed me, and whoever disobeys the leader has disobeyed me.\"",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Bukhari & Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/6383",
+    "sha256": "77e448a101c38d03c481e9c8c3556e3e972e06a43ccfd3869e9c918a61b6f3db",
+    "charCount": 298
   },
   "64673": {
     "id": "64673",

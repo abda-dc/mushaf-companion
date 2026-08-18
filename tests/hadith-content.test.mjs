@@ -35,12 +35,12 @@ test("1. Dataset manifest is present, valid, and deeply frozen", () => {
   assert.equal(HADEETHENC_DATASET_MANIFEST.attribution, "HadeethEnc.com");
   assert.equal(HADEETHENC_DATASET_MANIFEST.contentScope, "translated-hadith-text");
   assert.equal(HADEETHENC_DATASET_MANIFEST.workbookChecksum, "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218");
-  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 13);
+  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 17);
   assert.ok(Object.isFrozen(HADEETHENC_DATASET_MANIFEST));
 });
 
-test("2. Exactly 13 translations are activated with translation-approved state", () => {
-  assert.equal(SEEDED_HADITH_RECORDS.length, 13);
+test("2. Exactly 17 translations are activated with translation-approved state", () => {
+  assert.equal(SEEDED_HADITH_RECORDS.length, 17);
   for (const record of SEEDED_HADITH_RECORDS) {
     assert.equal(record.activation, "translation-approved", `Record ${record.id} should be translation-approved`);
     assert.ok(record.text, `Record ${record.id} text should exist`);
@@ -59,11 +59,11 @@ test("2. Exactly 13 translations are activated with translation-approved state",
   }
 });
 
-test("3. Only the approved 13 provider IDs are activated", () => {
+test("3. Only the approved 17 provider IDs are activated", () => {
   const activatedProviderIds = SEEDED_HADITH_RECORDS.map((r) => r.text?.translations[0]?.providerRecordId);
   const expectedSet = new Set(APPROVED_HADEETHENC_IDS);
 
-  assert.equal(activatedProviderIds.length, 13);
+  assert.equal(activatedProviderIds.length, 17);
   for (const pid of activatedProviderIds) {
     assert.ok(expectedSet.has(pid), `Provider ID '${pid}' is not in approved list`);
   }
@@ -430,6 +430,90 @@ test("21. HadeethEnc 64673 resolves to Sahih al-Bukhari 2736 with exact translat
   assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/64673");
   assert.equal(translation.checksum, "8fddebc2783d825b8d6434e52c187f2564df65c99c41538e5b51ee49b22cbddf");
   assert.equal(translation.text.length, 243);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
+});
+
+test("22. HadeethEnc 5913 resolves to Sahih al-Bukhari 5027 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("bukhari:5027");
+  assert.ok(record, "bukhari:5027 must exist in seeded records");
+  assert.equal(record.collectionId, "bukhari");
+  assert.equal(record.canonicalNumber, "5027");
+  assert.equal(record.canonicalLabel, "Sahih al-Bukhari 5027");
+  assert.equal(record.narrator, "Uthman ibn Affan");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "5913");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/5913");
+  assert.equal(translation.checksum, "698fbdc17c7be97dd7efd21fffae41cac1325c9136356edfb7cfbfd07b0a8cbf");
+  assert.equal(translation.text.length, 187);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
+});
+
+test("23. HadeethEnc 6078 resolves to Sahih Muslim 1401 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("muslim:1401");
+  assert.ok(record, "muslim:1401 must exist in seeded records");
+  assert.equal(record.collectionId, "muslim");
+  assert.equal(record.canonicalNumber, "1401");
+  assert.equal(record.canonicalLabel, "Sahih Muslim 1401");
+  assert.equal(record.narrator, "Anas ibn Malik");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "6078");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/6078");
+  assert.equal(translation.checksum, "8cb1ac5ae45ec84fd3771e76595f8418fd1f927d04a19ef2851eb528692ece7d");
+  assert.equal(translation.text.length, 562);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
+});
+
+test("24. HadeethEnc 3686 resolves to Sahih al-Bukhari 3461 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("bukhari:3461");
+  assert.ok(record, "bukhari:3461 must exist in seeded records");
+  assert.equal(record.collectionId, "bukhari");
+  assert.equal(record.canonicalNumber, "3461");
+  assert.equal(record.canonicalLabel, "Sahih al-Bukhari 3461");
+  assert.equal(record.narrator, "Abdullah ibn Amr");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "3686");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/3686");
+  assert.equal(translation.checksum, "17e90e7a8fb962ecb80c1c2a67ceefc72f292db750feee491cbeb7ba8c5ba1de");
+  assert.equal(translation.text.length, 321);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
+});
+
+test("25. HadeethEnc 6383 resolves to Sahih al-Bukhari 7137 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("bukhari:7137");
+  assert.ok(record, "bukhari:7137 must exist in seeded records");
+  assert.equal(record.collectionId, "bukhari");
+  assert.equal(record.canonicalNumber, "7137");
+  assert.equal(record.canonicalLabel, "Sahih al-Bukhari 7137");
+  assert.equal(record.narrator, "Abu Hurayrah");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "6383");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/6383");
+  assert.equal(translation.checksum, "77e448a101c38d03c481e9c8c3556e3e972e06a43ccfd3869e9c918a61b6f3db");
+  assert.equal(translation.text.length, 298);
   assert.equal(translation.rightsPolicy, "approved-redistribution");
   assert.equal(translation.attribution, "HadeethEnc.com");
 });
