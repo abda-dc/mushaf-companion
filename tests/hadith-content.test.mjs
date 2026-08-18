@@ -35,12 +35,12 @@ test("1. Dataset manifest is present, valid, and deeply frozen", () => {
   assert.equal(HADEETHENC_DATASET_MANIFEST.attribution, "HadeethEnc.com");
   assert.equal(HADEETHENC_DATASET_MANIFEST.contentScope, "translated-hadith-text");
   assert.equal(HADEETHENC_DATASET_MANIFEST.workbookChecksum, "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218");
-  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 11);
+  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 13);
   assert.ok(Object.isFrozen(HADEETHENC_DATASET_MANIFEST));
 });
 
-test("2. Exactly 11 translations are activated with translation-approved state", () => {
-  assert.equal(SEEDED_HADITH_RECORDS.length, 11);
+test("2. Exactly 13 translations are activated with translation-approved state", () => {
+  assert.equal(SEEDED_HADITH_RECORDS.length, 13);
   for (const record of SEEDED_HADITH_RECORDS) {
     assert.equal(record.activation, "translation-approved", `Record ${record.id} should be translation-approved`);
     assert.ok(record.text, `Record ${record.id} text should exist`);
@@ -59,11 +59,11 @@ test("2. Exactly 11 translations are activated with translation-approved state",
   }
 });
 
-test("3. Only the approved 11 provider IDs are activated", () => {
+test("3. Only the approved 13 provider IDs are activated", () => {
   const activatedProviderIds = SEEDED_HADITH_RECORDS.map((r) => r.text?.translations[0]?.providerRecordId);
   const expectedSet = new Set(APPROVED_HADEETHENC_IDS);
 
-  assert.equal(activatedProviderIds.length, 11);
+  assert.equal(activatedProviderIds.length, 13);
   for (const pid of activatedProviderIds) {
     assert.ok(expectedSet.has(pid), `Provider ID '${pid}' is not in approved list`);
   }
@@ -390,4 +390,46 @@ test("19. Seeded production records and exports are deeply frozen", () => {
       assert.ok(Object.isFrozen(record.text.translations[0]));
     }
   }
+});
+
+test("20. HadeethEnc 65007 resolves to Sahih al-Bukhari 2856 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("bukhari:2856");
+  assert.ok(record, "bukhari:2856 must exist in seeded records");
+  assert.equal(record.collectionId, "bukhari");
+  assert.equal(record.canonicalNumber, "2856");
+  assert.equal(record.canonicalLabel, "Sahih al-Bukhari 2856");
+  assert.equal(record.narrator, "Mu'adh ibn Jabal");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "65007");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/65007");
+  assert.equal(translation.checksum, "bac4903c9922728d6b4c2e7662e52f061212a6d9d913ca90415421af73c4148f");
+  assert.equal(translation.text.length, 751);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
+});
+
+test("21. HadeethEnc 64673 resolves to Sahih al-Bukhari 2736 with exact translation hash and null Arabic", () => {
+  const record = getHadithRecord("bukhari:2736");
+  assert.ok(record, "bukhari:2736 must exist in seeded records");
+  assert.equal(record.collectionId, "bukhari");
+  assert.equal(record.canonicalNumber, "2736");
+  assert.equal(record.canonicalLabel, "Sahih al-Bukhari 2736");
+  assert.equal(record.narrator, "Abu Hurayrah");
+  assert.equal(record.activation, "translation-approved");
+  assert.equal(record.text?.arabic, null);
+  assert.equal(record.text?.translations.length, 1);
+
+  const translation = record.text.translations[0];
+  assert.equal(translation.provider, "hadeethenc");
+  assert.equal(translation.providerRecordId, "64673");
+  assert.equal(translation.sourceUrl, "https://hadeethenc.com/en/browse/hadith/64673");
+  assert.equal(translation.checksum, "8fddebc2783d825b8d6434e52c187f2564df65c99c41538e5b51ee49b22cbddf");
+  assert.equal(translation.text.length, 243);
+  assert.equal(translation.rightsPolicy, "approved-redistribution");
+  assert.equal(translation.attribution, "HadeethEnc.com");
 });

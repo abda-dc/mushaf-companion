@@ -1,7 +1,7 @@
 /**
- * M9H-2A HadeethEnc English Translation Ingestion Script
+ * M9H HadeethEnc English Translation Ingestion Script
  *
- * Extracts and verifies the exact English hadith translations for the 11 approved
+ * Extracts and verifies the exact English hadith translations for approved
  * records from the official HadeethEnc Excel workbook (v1.25.0).
  *
  * NOTE: The source workbook is strictly read-only and is NOT modified.
@@ -24,6 +24,8 @@ export const APPROVED_HADEETHENC_IDS = Object.freeze([
   "3689",
   "65003",
   "2758",
+  "65007",
+  "64673",
 ]);
 
 const EXPECTED_MANIFEST = {
@@ -101,7 +103,7 @@ function parseSharedStrings(xmlString) {
 }
 
 /**
- * Ingests the 11 approved HadeethEnc records from the given workbook path.
+ * Ingests the approved HadeethEnc records from the given workbook path.
  *
  * @param {string} workbookPath
  * @returns {object}
@@ -224,7 +226,7 @@ export function ingestHadeethEncWorkbook(workbookPath) {
     }
   }
 
-  // Ensure all 11 approved IDs were found
+  // Ensure all approved IDs were found
   for (const requiredId of APPROVED_HADEETHENC_IDS) {
     if (!extractedRecords.has(requiredId)) {
       throw new Error(`Required approved HadeethEnc ID '${requiredId}' was not found in workbook`);

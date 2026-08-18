@@ -32,7 +32,7 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 15);
+  assert.equal(hadithRefs.length, 18);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
@@ -318,11 +318,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 57 references", () => {
+test("18. M9R reference IDs remain globally unique across all 73 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 57);
+  assert.equal(ids.length, 73);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -418,7 +418,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 29);
+  assert.equal(quranRefs.length, 38);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -427,7 +427,7 @@ test("24. Quran references remain unaffected by Hadith integration", () => {
 
 test("25. Scholarly external references remain unaffected by Hadith integration", () => {
   const scholarlyRefs = getAllM9RReferences().filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 13);
+  assert.equal(scholarlyRefs.length, 17);
   for (const ref of scholarlyRefs) {
     assert.equal(ref.action, "external-link");
     assert.equal(ref.sourceName, "Alharamain's Message");
@@ -436,40 +436,78 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 2 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 3 Tawhid additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 12);
+  assert.equal(readyTopics.length, 16);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 37);
+  assert.equal(plannedTopics.length, 33);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 57);
-  assert.equal(getM9RHadithReferences().length, 15);
+  assert.equal(allRefs.length, 73);
+  assert.equal(getM9RHadithReferences().length, 18);
 
-  // Exactly 11 unique Hadith internal targets (Muslim 8 reused)
+  // Exactly 13 unique Hadith internal targets (Muslim 8 and Bukhari 2856 reused)
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 11);
+  assert.equal(uniqueTargets.size, 13);
 });
 
-test("27. M9H collection/content counts remain strictly unchanged", () => {
+test("27. M9H collection/content counts reflect approved seeded records", () => {
   const collections = listHadithCollections();
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 11);
+  assert.equal(records.length, 13);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 11);
+  assert.equal(approved.length, 13);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
 
-test("28. Core M9H modules have no M9R dependency", async () => {
+test("28. Tawhid Hadith references resolve correctly through bridge and support multi-citation reuse of 65007", () => {
+  const tawhidCollection = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.find((c) => c.id === "tawhid");
+  assert.ok(tawhidCollection);
+
+  // Tawhid Worship: Bukhari 2856 / 65007
+  const worshipHadith = tawhidCollection.topics.find((t) => t.id === "tawhid-worship-of-allah-alone")?.references.find((r) => r.type === "hadith");
+  assert.ok(worshipHadith);
+  assert.equal(worshipHadith.id, "hadith:tawhid-worship:hadeethenc-65007");
+  const worshipResult = resolveIslamicReferenceHadith(worshipHadith);
+  assert.equal(worshipResult.status, "resolved");
+  assert.equal(worshipResult.target, "hadith:bukhari:2856");
+  assert.equal(worshipResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 2856");
+  assert.equal(worshipResult.hadithResolution?.record?.narrator, "Mu'adh ibn Jabal");
+
+  // Tawhid Names: Bukhari 2736 / 64673
+  const namesHadith = tawhidCollection.topics.find((t) => t.id === "tawhid-names-and-attributes")?.references.find((r) => r.type === "hadith");
+  assert.ok(namesHadith);
+  assert.equal(namesHadith.id, "hadith:tawhid-names:hadeethenc-64673");
+  const namesResult = resolveIslamicReferenceHadith(namesHadith);
+  assert.equal(namesResult.status, "resolved");
+  assert.equal(namesResult.target, "hadith:bukhari:2736");
+  assert.equal(namesResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 2736");
+  assert.equal(namesResult.hadithResolution?.record?.narrator, "Abu Hurayrah");
+
+  // Tawhid Shirk: Bukhari 2856 / 65007 (Reused record, distinct M9R ID)
+  const shirkHadith = tawhidCollection.topics.find((t) => t.id === "tawhid-shirk")?.references.find((r) => r.type === "hadith");
+  assert.ok(shirkHadith);
+  assert.equal(shirkHadith.id, "hadith:tawhid-shirk:hadeethenc-65007");
+  const shirkResult = resolveIslamicReferenceHadith(shirkHadith);
+  assert.equal(shirkResult.status, "resolved");
+  assert.equal(shirkResult.target, "hadith:bukhari:2856");
+  assert.equal(shirkResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 2856");
+
+  // Verify two distinct M9R citation IDs resolve to the same underlying M9H record
+  assert.notEqual(worshipHadith.id, shirkHadith.id);
+  assert.equal(worshipResult.hadithResolution?.record?.id, shirkResult.hadithResolution?.record?.id);
+});
+
+test("29. Core M9H modules have no M9R dependency", async () => {
   const [registryCode, contentCode, resolverCode] = await Promise.all([
     readFile(new URL("../app/hadith-registry.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/hadith-content.mjs", import.meta.url), "utf8"),
@@ -482,7 +520,7 @@ test("28. Core M9H modules have no M9R dependency", async () => {
   assert.doesNotMatch(resolverCode, forbiddenM9R);
 });
 
-test("29. Bridge module does not duplicate Hadith text", async () => {
+test("30. Bridge module does not duplicate Hadith text", async () => {
   const bridgeCode = await readFile(
     new URL("../app/islamic-reference-hadith-bridge.mjs", import.meta.url),
     "utf8"
@@ -490,7 +528,7 @@ test("29. Bridge module does not duplicate Hadith text", async () => {
   assert.doesNotMatch(bridgeCode, /‘Umar ibn al-Khattāb|Messenger of Allah|Prophet/i);
 });
 
-test("30. Bridge uses M9H resolver and formatHadithTarget rather than a second resolver", async () => {
+test("31. Bridge uses M9H resolver and formatHadithTarget rather than a second resolver", async () => {
   const bridgeCode = await readFile(
     new URL("../app/islamic-reference-hadith-bridge.mjs", import.meta.url),
     "utf8"
@@ -499,14 +537,14 @@ test("30. Bridge uses M9H resolver and formatHadithTarget rather than a second r
   assert.match(bridgeCode, /formatHadithTarget/);
 });
 
-test("31. Validated production reference library is deeply frozen", () => {
+test("32. Validated production reference library is deeply frozen", () => {
   assert.ok(Object.isFrozen(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY));
   assert.ok(Object.isFrozen(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections));
   assert.ok(Object.isFrozen(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections[0].references));
   assert.ok(Object.isFrozen(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections[1].references));
 });
 
-test("32. Strict Domain Separation: No EducationProgress dependency", async () => {
+test("33. Strict Domain Separation: No EducationProgress dependency", async () => {
   const bridgeCode = await readFile(
     new URL("../app/islamic-reference-hadith-bridge.mjs", import.meta.url),
     "utf8"
@@ -514,7 +552,7 @@ test("32. Strict Domain Separation: No EducationProgress dependency", async () =
   assert.doesNotMatch(bridgeCode, /EducationProgress|education-state/i);
 });
 
-test("33. Strict Domain Separation: No Today Study dependency", async () => {
+test("34. Strict Domain Separation: No Today Study dependency", async () => {
   const bridgeCode = await readFile(
     new URL("../app/islamic-reference-hadith-bridge.mjs", import.meta.url),
     "utf8"
@@ -522,7 +560,7 @@ test("33. Strict Domain Separation: No Today Study dependency", async () => {
   assert.doesNotMatch(bridgeCode, /today-study|TodayStudy/i);
 });
 
-test("34. Strict Domain Separation: No Evidence dependency", async () => {
+test("35. Strict Domain Separation: No Evidence dependency", async () => {
   const bridgeCode = await readFile(
     new URL("../app/islamic-reference-hadith-bridge.mjs", import.meta.url),
     "utf8"

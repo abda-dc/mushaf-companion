@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 11 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 13 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 11);
+  assert.equal(allRecords.length, 13);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -164,11 +164,15 @@ test("10. Deterministic metadata search across canonical number, label, narrator
   assert.equal(umarResults[0].id, "muslim:8");
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 4); // 4485, 528, 1397, 1521
+  assert.equal(bukhariResults.length, 6); // 4485, 528, 1397, 1521, 2856, 2736
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);
   assert.equal(specificNumber[0].id, "bukhari:4485");
+
+  const muadhResults = searchHadithMetadata("Mu'adh");
+  assert.equal(muadhResults.length, 1);
+  assert.equal(muadhResults[0].id, "bukhari:2856");
 
   const emptySearch = searchHadithMetadata("");
   assert.deepEqual(emptySearch, []);
@@ -177,7 +181,31 @@ test("10. Deterministic metadata search across canonical number, label, narrator
   assert.deepEqual(noMatch, []);
 });
 
-test("11. Strict Domain Separation: No dependencies on Education, Today Study, Evidence, or M9R", async () => {
+test("11. Resolver resolves Tawhid Hadith targets bukhari:2856 and bukhari:2736", () => {
+  const res2856 = resolveHadithReference({ collectionId: "bukhari", number: "2856" });
+  assert.equal(res2856.status, "resolved-translation-approved");
+  assert.equal(res2856.target, "hadith:bukhari:2856");
+  assert.equal(res2856.record?.id, "bukhari:2856");
+  assert.equal(res2856.record?.narrator, "Mu'adh ibn Jabal");
+  assert.equal(res2856.sourceRecord?.providerRecordId, "65007");
+
+  const res2736 = resolveHadithReference({ collectionId: "bukhari", number: "2736" });
+  assert.equal(res2736.status, "resolved-translation-approved");
+  assert.equal(res2736.target, "hadith:bukhari:2736");
+  assert.equal(res2736.record?.id, "bukhari:2736");
+  assert.equal(res2736.record?.narrator, "Abu Hurayrah");
+  assert.equal(res2736.sourceRecord?.providerRecordId, "64673");
+
+  const label2856 = resolveHadithReferenceByCanonicalLabel("Sahih al-Bukhari 2856");
+  assert.equal(label2856.status, "resolved-translation-approved");
+  assert.equal(label2856.record?.id, "bukhari:2856");
+
+  const label2736 = resolveHadithReferenceByCanonicalLabel("Sahih al-Bukhari 2736");
+  assert.equal(label2736.status, "resolved-translation-approved");
+  assert.equal(label2736.record?.id, "bukhari:2736");
+});
+
+test("12. Strict Domain Separation: No dependencies on Education, Today Study, Evidence, or M9R", async () => {
   const filesToCheck = [
     "app/hadith-registry.mjs",
     "app/hadith-content.mjs",
