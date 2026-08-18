@@ -3,6 +3,8 @@
 import type { EducationCatalog, EducationCatalogResult, EducationCitation, EducationLesson } from "./education-content.ts";
 import { describeEducationCitation } from "./education-citation-presentation.mjs";
 import type { EducationProgress } from "./education-state.mjs";
+import { listHadithRecords } from "./hadith-content.mjs";
+import { listCollectionsForUi } from "./islamic-foundations-ui-state.mjs";
 import type { ReviewGrade } from "./review-schedule.mjs";
 import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { MAX_NOTE_BODY_CODE_POINTS, MAX_TAGS_PER_NOTE, MAX_TAG_CODE_POINTS, type LessonStudyAnchor, type StudyNote } from "./study-notes.mjs";
@@ -79,6 +81,11 @@ export function LearnPanel(props: LearnPanelProps) {
   const totalLessons = catalog?.lessons.length ?? 0;
   const progressPercent = totalLessons ? Math.round(completedLessons / totalLessons * 100) : 0;
   const lessonNotes = props.currentLesson && ready ? props.notes.filter((note) => note.anchor.type === "lesson" && note.anchor.sourceId === ready.metadata.sourceId && note.anchor.sourceRevision === ready.metadata.revision && note.anchor.lessonId === props.currentLesson?.id) : [];
+  const hadithAvailableCount = listHadithRecords().length;
+  const foundationsCollections = listCollectionsForUi();
+  const foundationsReadyTopicsCount = foundationsCollections.reduce((sum, c) => sum + c.readyTopicsCount, 0);
+  const foundationsTotalReferencesCount = foundationsCollections.reduce((sum, c) => sum + c.totalReferencesCount, 0);
+  const foundationsCollectionsCount = foundationsCollections.length;
 
   function trapFocus(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key === "Escape") {
@@ -128,13 +135,13 @@ export function LearnPanel(props: LearnPanelProps) {
       </section>
 
       <section className="guided-courses-card hadith-library-card" aria-labelledby="hadith-library-title">
-        <header><div><span>HADITH LIBRARY</span><h3 id="hadith-library-title">Primary Hadith Collections</h3></div><strong>11 available</strong></header>
+        <header><div><span>HADITH LIBRARY</span><h3 id="hadith-library-title">Primary Hadith Collections</h3></div><strong>{hadithAvailableCount} available</strong></header>
         <p>Source-verified Hadith records with approved English translations from HadeethEnc.com and cryptographic provenance across Sahih al-Bukhari, Sahih Muslim, and classical collections.</p>
         <button type="button" className="learn-primary" onClick={props.onOpenHadith}>Browse Hadith Library <span aria-hidden="true">→</span></button>
       </section>
 
       <section className="guided-courses-card islamic-foundations-card" aria-labelledby="islamic-foundations-title">
-        <header><div><span>ISLAMIC FOUNDATIONS</span><h3 id="islamic-foundations-title">Reference Library</h3></div><strong>12 source-ready</strong></header>
+        <header><div><span>ISLAMIC FOUNDATIONS</span><h3 id="islamic-foundations-title">Reference Library</h3></div><strong>{foundationsReadyTopicsCount} source-ready</strong></header>
         <p>Vetted Qur&apos;an coordinates, authenticated Hadith citations with internal reader resolution, and approved scholarly references organized across core Islamic subjects.</p>
         <button type="button" className="learn-primary" onClick={props.onOpenFoundations}>Browse Islamic Foundations <span aria-hidden="true">→</span></button>
       </section>
@@ -185,8 +192,8 @@ export function LearnPanel(props: LearnPanelProps) {
       <section className="learn-progress-card" aria-labelledby="learning-progress-title"><div><span>LEARNING PROGRESS</span><h3 id="learning-progress-title">Your device-local progress</h3><p>Guided progress is stored separately from Hifz and vocabulary and pinned to its exact source revision.</p></div><strong>{progressPercent}%</strong><dl><div><dt>Lessons complete</dt><dd>{completedLessons} / {totalLessons}</dd></div><div><dt>Reviews due</dt><dd>{props.dueCheckIds.size}</dd></div><div><dt>Study rhythm</dt><dd>{props.studyStreak} days</dd></div></dl></section>
 
       <section className="learn-tool-grid" aria-label="Learning tools">
-        <button type="button" onClick={props.onOpenHadith}><span>HADITH LIBRARY</span><strong>11 Hadith available locally</strong><small>Sahih al-Bukhari &amp; Sahih Muslim</small></button>
-        <button type="button" onClick={props.onOpenFoundations}><span>ISLAMIC FOUNDATIONS</span><strong>12 topics source-ready</strong><small>10 core collections · 57 vetted references</small></button>
+        <button type="button" onClick={props.onOpenHadith}><span>HADITH LIBRARY</span><strong>{hadithAvailableCount} Hadith available locally</strong><small>Sahih al-Bukhari &amp; Sahih Muslim</small></button>
+        <button type="button" onClick={props.onOpenFoundations}><span>ISLAMIC FOUNDATIONS</span><strong>{foundationsReadyTopicsCount} topics source-ready</strong><small>{foundationsCollectionsCount} core collections · {foundationsTotalReferencesCount} vetted references</small></button>
         <button type="button" onClick={props.onOpenHifz}><span>MY MUSHAF</span><strong>{props.hifzDue} Hifz reviews due</strong><small>{props.hifzMemorized} ayat mapped in the existing Hifz system</small></button>
         <button type="button" onClick={props.onOpenVocabulary} disabled={!props.vocabularyAvailable}><span>QURAN VOCABULARY</span><strong>{props.vocabularyAvailable ? `${props.vocabularyDue} reviews due` : "Awaiting approved source"}</strong><small>Foundation 125 remains owned by the vocabulary system</small></button>
         <button type="button" onClick={props.onOpenTajweed}><span>TAJWEED</span><strong>Open the verified color guide</strong><small>17 existing rule categories with anchored examples</small></button>

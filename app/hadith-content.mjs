@@ -968,6 +968,66 @@ const RAW_SEEDED_RECORDS = [
     provenance: null,
     activation: "translation-approved",
   },
+  // 12. Sahih al-Bukhari 2856 (Tawhid / Allah's Right Over Servants)
+  {
+    id: "bukhari:2856",
+    collectionId: "bukhari",
+    canonicalNumber: "2856",
+    canonicalLabel: "Sahih al-Bukhari 2856",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Mu'adh ibn Jabal",
+    text: buildHadeethEncTranslation("65007"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "65007",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/65007",
+        grading: {
+          grade: "Authentic",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/65007",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 13. Sahih al-Bukhari 2736 (Tawhid / Ninety-nine Names of Allah)
+  {
+    id: "bukhari:2736",
+    collectionId: "bukhari",
+    canonicalNumber: "2736",
+    canonicalLabel: "Sahih al-Bukhari 2736",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Abu Hurayrah",
+    text: buildHadeethEncTranslation("64673"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "64673",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/64673",
+        grading: {
+          grade: "Authentic hadith",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/64673",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
 ];
 
 const VALID_COLLECTION_ID_SET = new Set(CORE_HADITH_COLLECTION_IDS);

@@ -174,6 +174,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "3:4",
   "3:18",
   "3:97",
+  "4:48",
   "4:103",
   "4:136",
   "4:163",
@@ -184,14 +185,21 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "5:46",
   "5:47",
   "5:48",
+  "7:54",
+  "7:180",
   "9:60",
+  "16:36",
   "21:25",
   "22:7",
   "22:27",
   "23:15",
   "23:16",
+  "31:13",
   "35:1",
+  "39:62",
+  "42:11",
   "47:19",
+  "51:56",
   "54:49",
   "57:22",
   "59:22",
@@ -204,6 +212,10 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "99:6",
   "99:7",
   "99:8",
+  "112:1",
+  "112:2",
+  "112:3",
+  "112:4",
 ]);
 
 const HADEETHENC_RECORD_ID = /^[1-9]\d*$/;
@@ -757,7 +769,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v2",
+  revision: "m9r-v3",
   collections: [
     {
       id: "islam",
@@ -1181,10 +1193,121 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to Tawhid.",
       references: [],
       topics: [
-        plannedTopic("tawhid-worship-of-allah-alone", "Worship of Allah Alone"),
-        plannedTopic("tawhid-allahs-lordship", "Allah's Lordship"),
-        plannedTopic("tawhid-names-and-attributes", "Names and Attributes"),
-        plannedTopic("tawhid-shirk", "Shirk"),
+        referenceReadyTopic(
+          "tawhid-worship-of-allah-alone",
+          "Worship of Allah Alone",
+          [
+            quranReference(
+              "quran:tawhid-worship:51-56",
+              ["51:56"],
+              "51:56",
+            ),
+            quranReference(
+              "quran:tawhid-worship:16-36",
+              ["16:36"],
+              "16:36",
+            ),
+            hadithReference(
+              "hadith:tawhid-worship:hadeethenc-65007",
+              "Allah's right upon His servants",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "2856",
+              "Mu'adh ibn Jabal",
+              "65007",
+              "Sahih al-Bukhari 2856",
+            ),
+            scholarlyReference(
+              "scholarly:tawhid-worship:uthaymin-creed",
+              "Belief in Allah Almighty — His divinity",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "tawhid-allahs-lordship",
+          "Allah's Lordship",
+          [
+            quranReference(
+              "quran:tawhid-lordship:7-54",
+              ["7:54"],
+              "7:54",
+            ),
+            quranReference(
+              "quran:tawhid-lordship:39-62",
+              ["39:62"],
+              "39:62",
+            ),
+            scholarlyReference(
+              "scholarly:tawhid-lordship:uthaymin-creed",
+              "Belief in Allah Almighty — His lordship",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "tawhid-names-and-attributes",
+          "Names and Attributes",
+          [
+            quranReference(
+              "quran:tawhid-names:42-11",
+              ["42:11"],
+              "42:11",
+            ),
+            quranReference(
+              "quran:tawhid-names:7-180",
+              ["7:180"],
+              "7:180",
+            ),
+            quranReference(
+              "quran:tawhid-names:112",
+              ["112:1", "112:2", "112:3", "112:4"],
+              "Surah 112",
+            ),
+            hadithReference(
+              "hadith:tawhid-names:hadeethenc-64673",
+              "Ninety-nine Names of Allah",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "2736",
+              "Abu Hurayrah",
+              "64673",
+              "Sahih al-Bukhari 2736",
+            ),
+            scholarlyReference(
+              "scholarly:tawhid-names:uthaymin-creed",
+              "Belief in Allah Almighty — His names and attributes",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "tawhid-shirk",
+          "Shirk",
+          [
+            quranReference(
+              "quran:tawhid-shirk:4-48",
+              ["4:48"],
+              "4:48",
+            ),
+            quranReference(
+              "quran:tawhid-shirk:31-13",
+              ["31:13"],
+              "31:13",
+            ),
+            hadithReference(
+              "hadith:tawhid-shirk:hadeethenc-65007",
+              "Allah's right upon His servants",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "2856",
+              "Mu'adh ibn Jabal",
+              "65007",
+              "Sahih al-Bukhari 2856",
+            ),
+            scholarlyReference(
+              "scholarly:tawhid-shirk:uthaymin-creed",
+              "Belief in Allah Almighty — His divinity",
+            ),
+          ],
+        ),
       ],
     },
     {

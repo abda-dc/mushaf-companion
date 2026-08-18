@@ -53,16 +53,16 @@ The interface operates with a clean hierarchical drill-down navigation model:
 ### 1. Library Browser View
 - **Hero & Statistics**: Truthfully displays the global summary:
   - 10 Collections
-  - 12 Topics Source-Ready
-  - 37 Topics Planned
-  - 57 Vetted References
+  - 16 Topics Source-Ready
+  - 33 Topics Planned
+  - 73 Vetted References
 - **Local Search**: Fast, client-side search matching collection titles, descriptions, topic titles, topic descriptions, and citation locators (e.g. `2:255`, `Sahih Muslim 8`, `Belief in Allah`).
 - **Collection Cards**: Each of the 10 core collections displays:
   - Collection title and neutral description.
   - Dynamic readiness badge:
-    - `SOURCE-READY` (e.g. Islam: 5 of 5 topics; Iman: 6 of 6 topics).
+    - `SOURCE-READY` (e.g. Islam: 5 of 5 topics; Iman: 6 of 6 topics; Tawhid: 4 of 4 topics).
     - `PARTIALLY READY` (e.g. Ihsan: 1 source-ready · 3 planned).
-    - `PLANNED` (e.g. Tawhid, Akhirah: N topics planned).
+    - `PLANNED` (e.g. Akhirah: N topics planned).
   - Clicking any collection opens its Collection Detail view.
 
 ### 2. Collection Detail View

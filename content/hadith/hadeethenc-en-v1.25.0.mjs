@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 11
+  "recordCount": 13
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -100,6 +100,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "a249a17d98eaccd187c1566608690c8519f1dfd9a30e729ed7b5f3d1d9b05a49",
     "charCount": 543
   },
+  "64673": {
+    "id": "64673",
+    "title": "Verily, Allah has ninety-nine names, one-hundred minus one. Whoever memorizes them all will enter Paradise",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Verily, Allah has ninety-nine names, one-hundred minus one. Whoever memorizes them all will enter Paradise.\"",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Bukhari & Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/64673",
+    "sha256": "8fddebc2783d825b8d6434e52c187f2564df65c99c41538e5b51ee49b22cbddf",
+    "charCount": 243
+  },
   "65000": {
     "id": "65000",
     "title": "Islam is built on five",
@@ -121,6 +132,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/65003",
     "sha256": "6fee64c862636b57aff7e33cd22e0d1242c256ab594133836042ef5f648a0eb3",
     "charCount": 405
+  },
+  "65007": {
+    "id": "65007",
+    "title": "Allah's right upon His servants is that they should worship Him and associate no partners with Him. And the right of the servants upon Allah is that He should not punish whoever associates no partners with Him",
+    "hadith_text": "Mu‘ādh (may Allah be pleased with him) reported: I was riding behind the Prophet (may Allah’s peace and blessings be upon him) on a donkey called ‘Ufayr. The Prophet (may Allah’s peace and blessings be upon him) asked: \"O Mu‘ādh, do you know what Allah's right upon His servants is, and what the right of His servants upon Him is?\" I replied: \"Allah and His Messenger know best.\" He said: \"Allah's right upon His servants is that they should worship Him and associate no partners with Him. And the right of the servants upon Allah is that He should not punish whoever associates no partners with Him.\" I said: \"O Messenger of Allah, should I not inform the people of this good news?\" He said: \"Do not inform them of it, lest they depend on it solely.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/65007",
+    "sha256": "bac4903c9922728d6b4c2e7662e52f061212a6d9d913ca90415421af73c4148f",
+    "charCount": 751
   },
   "65038": {
     "id": "65038",

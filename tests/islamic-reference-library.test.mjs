@@ -55,6 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v3");
 });
 
 test("production library validates successfully", () => {
@@ -158,19 +159,19 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 37);
-  assert.equal(ready.length, 12);
+  assert.equal(planned.length, 33);
+  assert.equal(ready.length, 16);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "tawhid-worship-of-allah-alone");
+  const planned = findTopic(library, "quran-and-sunnah-quran");
   planned.references.push(
     structuredClone(findCollection(library, "iman").references[0]),
   );
-  planned.references[0].id = "quran:tawhid-worship:2-177";
+  planned.references[0].id = "quran:quran-sunnah:2-177";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -235,11 +236,70 @@ test("all scholarly references for A Glimpse into the Islamic Creed use /en/cont
     ...c.topics.flatMap((t) => t.references),
   ]);
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 13);
+  assert.equal(scholarlyRefs.length, 17);
   for (const ref of scholarlyRefs) {
     assert.equal(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/81");
     assert.notEqual(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/381");
   }
+});
+
+test("all four Tawhid topics are reference-ready with vetted sources", () => {
+  const tawhid = findCollection(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "tawhid");
+  assert.equal(tawhid.topics.length, 4);
+  assert.equal(tawhid.references.length, 0);
+
+  const worship = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "tawhid-worship-of-allah-alone");
+  assert.equal(worship.status, "reference-ready");
+  assert.equal(worship.references.length, 4);
+  assert.deepEqual(worship.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys), ["51:56", "16:36"]);
+  const worshipHadith = worship.references.find((r) => r.type === "hadith");
+  assert.ok(worshipHadith);
+  assert.equal(worshipHadith.collectionId, "bukhari");
+  assert.equal(worshipHadith.locator, "2856");
+  assert.equal(worshipHadith.sourceRecordId, "65007");
+  const worshipScholarly = worship.references.find((r) => r.type === "scholarly");
+  assert.ok(worshipScholarly);
+  assert.equal(worshipScholarly.locator, "Belief in Allah Almighty — His divinity");
+
+  const lordship = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "tawhid-allahs-lordship");
+  assert.equal(lordship.status, "reference-ready");
+  assert.equal(lordship.references.length, 3);
+  assert.deepEqual(lordship.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys), ["7:54", "39:62"]);
+  assert.equal(lordship.references.some((r) => r.type === "hadith"), false);
+  const lordshipScholarly = lordship.references.find((r) => r.type === "scholarly");
+  assert.ok(lordshipScholarly);
+  assert.equal(lordshipScholarly.locator, "Belief in Allah Almighty — His lordship");
+
+  const names = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "tawhid-names-and-attributes");
+  assert.equal(names.status, "reference-ready");
+  assert.equal(names.references.length, 5);
+  const namesQuran = names.references.filter((r) => r.type === "quran");
+  assert.equal(namesQuran.length, 3);
+  assert.deepEqual(namesQuran[0].verseKeys, ["42:11"]);
+  assert.deepEqual(namesQuran[1].verseKeys, ["7:180"]);
+  assert.deepEqual(namesQuran[2].verseKeys, ["112:1", "112:2", "112:3", "112:4"]);
+  assert.equal(namesQuran[2].locator, "Surah 112");
+  const namesHadith = names.references.find((r) => r.type === "hadith");
+  assert.ok(namesHadith);
+  assert.equal(namesHadith.collectionId, "bukhari");
+  assert.equal(namesHadith.locator, "2736");
+  assert.equal(namesHadith.sourceRecordId, "64673");
+  const namesScholarly = names.references.find((r) => r.type === "scholarly");
+  assert.ok(namesScholarly);
+  assert.equal(namesScholarly.locator, "Belief in Allah Almighty — His names and attributes");
+
+  const shirk = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "tawhid-shirk");
+  assert.equal(shirk.status, "reference-ready");
+  assert.equal(shirk.references.length, 4);
+  assert.deepEqual(shirk.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys), ["4:48", "31:13"]);
+  const shirkHadith = shirk.references.find((r) => r.type === "hadith");
+  assert.ok(shirkHadith);
+  assert.equal(shirkHadith.collectionId, "bukhari");
+  assert.equal(shirkHadith.locator, "2856");
+  assert.equal(shirkHadith.sourceRecordId, "65007");
+  const shirkScholarly = shirk.references.find((r) => r.type === "scholarly");
+  assert.ok(shirkScholarly);
+  assert.equal(shirkScholarly.locator, "Belief in Allah Almighty — His divinity");
 });
 
 test("the migrated Iman overview sources are collection-level references", () => {
