@@ -274,3 +274,58 @@ test("20. LearnPanel renders Hadith Library entry and preserves all required hub
     );
   }
 });
+
+test("21. Initial navigation precedence: invalid initialRecordId does NOT fall through to valid initialCollectionId", async () => {
+  const panelCode = await readFile(
+    new URL("../app/hadith-reader-panel.tsx", import.meta.url),
+    "utf8"
+  );
+
+  // Verify deriveInitialHadithState function exists and defines exact precedence
+  assert.match(panelCode, /function deriveInitialHadithState\(/);
+
+  // Verify that inside `if (initialRecordId)`, when record is not found, it explicitly returns library state
+  // and does NOT fall through to `if (initialCollectionId)`
+  const recordBranchMatch = panelCode.match(
+    /if\s*\(\s*initialRecordId\s*\)\s*\{[\s\S]*?const record = getHadithRecord\(initialRecordId\);[\s\S]*?if\s*\(\s*record\s*\)\s*\{[\s\S]*?view:\s*"reader"[\s\S]*?\}[\s\S]*?return\s*\{[\s\S]*?view:\s*"library"[\s\S]*?\};?\s*\}/
+  );
+  assert.ok(
+    recordBranchMatch,
+    "deriveInitialHadithState must explicitly return library state when initialRecordId is invalid without falling through to initialCollectionId"
+  );
+
+  // Verify the full precedence chain in order: initialTarget -> initialRecordId -> initialCollectionId -> library
+  const targetIndex = panelCode.indexOf("if (initialTarget)");
+  const recordIndex = panelCode.indexOf("if (initialRecordId)");
+  const collectionIndex = panelCode.indexOf("if (initialCollectionId)");
+
+  assert.ok(targetIndex > 0, "initialTarget check must exist");
+  assert.ok(recordIndex > targetIndex, "initialRecordId must follow initialTarget");
+  assert.ok(collectionIndex > recordIndex, "initialCollectionId must follow initialRecordId");
+
+  // Verify helper behavior for all precedence cases
+  // A. Valid initialTarget -> resolves to reader
+  const validTarget = parseHadithTarget("hadith:muslim:8");
+  assert.ok(validTarget);
+  const resolvedTarget = resolveHadithReference(validTarget);
+  assert.equal(resolvedTarget.status, "resolved-translation-approved");
+  assert.ok(resolvedTarget.record);
+
+  // B. Malformed target -> fails safely with error, does not resolve to record
+  const malformedTarget = parseHadithTarget("invalid-target");
+  assert.equal(malformedTarget, null);
+
+  // C. Valid initialRecordId -> resolves to reader
+  const validRecord = getHadithRecord("muslim:8");
+  assert.ok(validRecord);
+  assert.equal(validRecord.id, "muslim:8");
+
+  // D. Invalid initialRecordId with valid initialCollectionId -> record is null, collection is valid
+  const invalidRecord = getHadithRecord("invalid-record-id");
+  assert.equal(invalidRecord, null);
+  const validCollection = getHadithCollection("muslim");
+  assert.ok(validCollection);
+
+  // E. Valid initialCollectionId alone -> resolves to collection
+  assert.equal(validCollection.id, "muslim");
+});

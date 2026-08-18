@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -31,6 +30,43 @@ export interface IslamicFoundationsPanelProps {
   onClose: () => void;
 }
 
+interface InitialFoundationsState {
+  view: FoundationsView;
+  selectedCollectionId: string | null;
+  selectedTopicId: string | null;
+}
+
+function deriveInitialFoundationsState(
+  initialCollectionId?: string | null,
+  initialTopicId?: string | null
+): InitialFoundationsState {
+  if (initialCollectionId && initialTopicId) {
+    const topic = getTopicForUi(initialCollectionId, initialTopicId);
+    if (topic) {
+      return {
+        view: "topic",
+        selectedCollectionId: initialCollectionId,
+        selectedTopicId: initialTopicId,
+      };
+    }
+  }
+  if (initialCollectionId) {
+    const col = getCollectionForUi(initialCollectionId);
+    if (col) {
+      return {
+        view: "collection",
+        selectedCollectionId: initialCollectionId,
+        selectedTopicId: null,
+      };
+    }
+  }
+  return {
+    view: "library",
+    selectedCollectionId: null,
+    selectedTopicId: null,
+  };
+}
+
 export function IslamicFoundationsPanel(props: IslamicFoundationsPanelProps) {
   const {
     initialCollectionId,
@@ -44,37 +80,21 @@ export function IslamicFoundationsPanel(props: IslamicFoundationsPanelProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
-  const [view, setView] = useState<FoundationsView>("library");
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [initialState] = useState(() =>
+    deriveInitialFoundationsState(initialCollectionId, initialTopicId)
+  );
+
+  const [view, setView] = useState<FoundationsView>(initialState.view);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
+    initialState.selectedCollectionId
+  );
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(
+    initialState.selectedTopicId
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [hadithError, setHadithError] = useState<string | null>(null);
 
   const collections = listCollectionsForUi();
-
-  // Initialize view from props if provided
-  useEffect(() => {
-    if (initialCollectionId && initialTopicId) {
-      const topic = getTopicForUi(initialCollectionId, initialTopicId);
-      if (topic) {
-        setSelectedCollectionId(initialCollectionId);
-        setSelectedTopicId(initialTopicId);
-        setView("topic");
-        setHadithError(null);
-        return;
-      }
-    }
-    if (initialCollectionId) {
-      const col = getCollectionForUi(initialCollectionId);
-      if (col) {
-        setSelectedCollectionId(initialCollectionId);
-        setSelectedTopicId(null);
-        setView("collection");
-        setHadithError(null);
-        return;
-      }
-    }
-  }, [initialCollectionId, initialTopicId]);
 
   // Trap focus within the panel for accessibility
   function trapFocus(event: ReactKeyboardEvent<HTMLElement>) {

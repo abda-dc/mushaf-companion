@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -9,13 +8,11 @@ import {
 import {
   getHadithCollection,
   listHadithCollections,
-  type HadithCollectionDefinition,
 } from "./hadith-registry.mjs";
 import {
   getHadithRecord,
   HADEETHENC_DATASET_MANIFEST,
   listHadithRecords,
-  type HadithRecord,
 } from "./hadith-content.mjs";
 import {
   formatHadithTarget,
@@ -33,17 +30,105 @@ export interface HadithReaderPanelProps {
   onClose: () => void;
 }
 
+interface InitialHadithState {
+  view: HadithReaderView;
+  selectedCollectionId: string | null;
+  selectedRecordId: string | null;
+  errorMessage: string | null;
+}
+
+function deriveInitialHadithState(
+  initialTarget?: string | null,
+  initialCollectionId?: string | null,
+  initialRecordId?: string | null
+): InitialHadithState {
+  if (initialTarget) {
+    const parsed = parseHadithTarget(initialTarget);
+    if (parsed) {
+      const resolution = resolveHadithReference(parsed);
+      if (resolution.record) {
+        return {
+          view: "reader",
+          selectedCollectionId: resolution.record.collectionId,
+          selectedRecordId: resolution.record.id,
+          errorMessage: null,
+        };
+      }
+      return {
+        view: "library",
+        selectedCollectionId: null,
+        selectedRecordId: null,
+        errorMessage:
+          resolution.reason ?? `Hadith target '${initialTarget}' could not be resolved.`,
+      };
+    }
+    return {
+      view: "library",
+      selectedCollectionId: null,
+      selectedRecordId: null,
+      errorMessage: `Malformed Hadith target '${initialTarget}'.`,
+    };
+  }
+
+  if (initialRecordId) {
+    const record = getHadithRecord(initialRecordId);
+    if (record) {
+      return {
+        view: "reader",
+        selectedCollectionId: record.collectionId,
+        selectedRecordId: record.id,
+        errorMessage: null,
+      };
+    }
+    return {
+      view: "library",
+      selectedCollectionId: null,
+      selectedRecordId: null,
+      errorMessage: null,
+    };
+  }
+
+  if (initialCollectionId) {
+    const col = getHadithCollection(initialCollectionId);
+    if (col) {
+      return {
+        view: "collection",
+        selectedCollectionId: col.id,
+        selectedRecordId: null,
+        errorMessage: null,
+      };
+    }
+  }
+
+  return {
+    view: "library",
+    selectedCollectionId: null,
+    selectedRecordId: null,
+    errorMessage: null,
+  };
+}
+
 export function HadithReaderPanel(props: HadithReaderPanelProps) {
   const { initialTarget, initialCollectionId, initialRecordId, onClose } = props;
 
   const panelRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [view, setView] = useState<HadithReaderView>("library");
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [initialState] = useState(() =>
+    deriveInitialHadithState(initialTarget, initialCollectionId, initialRecordId)
+  );
+
+  const [view, setView] = useState<HadithReaderView>(initialState.view);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
+    initialState.selectedCollectionId
+  );
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
+    initialState.selectedRecordId
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    initialState.errorMessage
+  );
 
   const collections = listHadithCollections();
   const allRecords = listHadithRecords();
@@ -56,46 +141,6 @@ export function HadithReaderPanel(props: HadithReaderPanelProps) {
       (recordCountByCollection.get(record.collectionId) ?? 0) + 1
     );
   }
-
-  // Handle initial navigation target or record on mount / prop change
-  useEffect(() => {
-    if (initialTarget) {
-      const parsed = parseHadithTarget(initialTarget);
-      if (parsed) {
-        const resolution = resolveHadithReference(parsed);
-        if (resolution.record) {
-          setSelectedCollectionId(resolution.record.collectionId);
-          setSelectedRecordId(resolution.record.id);
-          setView("reader");
-          setErrorMessage(null);
-          return;
-        } else {
-          setErrorMessage(
-            resolution.reason ?? `Hadith target '${initialTarget}' could not be resolved.`
-          );
-        }
-      } else {
-        setErrorMessage(`Malformed Hadith target '${initialTarget}'.`);
-      }
-    } else if (initialRecordId) {
-      const record = getHadithRecord(initialRecordId);
-      if (record) {
-        setSelectedCollectionId(record.collectionId);
-        setSelectedRecordId(record.id);
-        setView("reader");
-        setErrorMessage(null);
-        return;
-      }
-    } else if (initialCollectionId) {
-      const col = getHadithCollection(initialCollectionId);
-      if (col) {
-        setSelectedCollectionId(col.id);
-        setView("collection");
-        setErrorMessage(null);
-        return;
-      }
-    }
-  }, [initialTarget, initialRecordId, initialCollectionId]);
 
   // Trap focus within the panel for accessibility
   function trapFocus(event: ReactKeyboardEvent<HTMLElement>) {
