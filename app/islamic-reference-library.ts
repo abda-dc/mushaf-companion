@@ -1,0 +1,1297 @@
+export type IslamicReferenceAction =
+  | "internal-quran-navigation"
+  | "internal-hadith-navigation"
+  | "external-link";
+export type IslamicExternalContentPolicy = "metadata-only";
+export type IslamicReferenceTopicStatus = "reference-ready" | "planned";
+
+export interface QuranReference {
+  id: string;
+  type: "quran";
+  verseKeys: string[];
+  locator: string;
+  action: "internal-quran-navigation";
+}
+
+export interface HadithReference {
+  id: string;
+  type: "hadith";
+  title: string;
+  collectionId: string;
+  collection: string;
+  locator: string;
+  narrator: string | null;
+  grading: {
+    label: string;
+    authority: string | null;
+    reference: string | null;
+  };
+  sourceName: "HadeethEnc";
+  sourceRecordId: string;
+  sourceUrl: string;
+  action: "internal-hadith-navigation";
+  contentPolicy: "metadata-only";
+}
+
+export interface ScholarlyReference {
+  id: string;
+  type: "scholarly";
+  title: string;
+  author: string;
+  locator: string;
+  sourceName: "Alharamain's Message";
+  responsibleOrganization: string;
+  sourceUrl: string;
+  action: "external-link";
+  contentPolicy: "metadata-only";
+}
+
+export type IslamicReference =
+  | QuranReference
+  | HadithReference
+  | ScholarlyReference;
+
+export interface IslamicReferenceTopic {
+  id: string;
+  title: string;
+  description: string;
+  status: IslamicReferenceTopicStatus;
+  references: IslamicReference[];
+}
+
+export interface IslamicReferenceCollection {
+  id: string;
+  title: string;
+  description: string;
+  references: IslamicReference[];
+  topics: IslamicReferenceTopic[];
+}
+
+export interface IslamicReferenceLibrary {
+  schemaVersion: 2;
+  id: "islamic-foundations";
+  title: "Islamic Foundations";
+  revision: string;
+  collections: IslamicReferenceCollection[];
+}
+
+export const REQUIRED_CORE_COLLECTION_IDS = Object.freeze([
+  "islam",
+  "iman",
+  "ihsan",
+  "tawhid",
+  "quran-and-sunnah",
+  "akhlaq-and-adab",
+  "taharah",
+  "halal-and-haram",
+  "dua-and-dhikr",
+  "akhirah",
+] as const);
+
+export const REQUIRED_CORE_TOPIC_IDS = Object.freeze({
+  islam: Object.freeze([
+    "islam-shahadah",
+    "islam-salah",
+    "islam-zakat",
+    "islam-sawm",
+    "islam-hajj",
+  ] as const),
+  iman: Object.freeze([
+    "iman-belief-in-allah",
+    "iman-belief-in-angels",
+    "iman-belief-in-revealed-books",
+    "iman-belief-in-messengers",
+    "iman-belief-in-last-day",
+    "iman-belief-in-qadr",
+  ] as const),
+  ihsan: Object.freeze([
+    "ihsan-meaning-of-ihsan",
+    "ihsan-sincerity",
+    "ihsan-awareness-of-allah",
+    "ihsan-taqwa",
+  ] as const),
+  tawhid: Object.freeze([
+    "tawhid-worship-of-allah-alone",
+    "tawhid-allahs-lordship",
+    "tawhid-names-and-attributes",
+    "tawhid-shirk",
+  ] as const),
+  "quran-and-sunnah": Object.freeze([
+    "quran-and-sunnah-quran",
+    "quran-and-sunnah-sunnah",
+    "quran-and-sunnah-hadith",
+    "quran-and-sunnah-relationship-between-quran-and-sunnah",
+  ] as const),
+  "akhlaq-and-adab": Object.freeze([
+    "akhlaq-and-adab-truthfulness",
+    "akhlaq-and-adab-humility",
+    "akhlaq-and-adab-parents-and-family",
+    "akhlaq-and-adab-neighbors",
+    "akhlaq-and-adab-justice",
+    "akhlaq-and-adab-good-manners",
+  ] as const),
+  taharah: Object.freeze([
+    "taharah-purification",
+    "taharah-wudu",
+    "taharah-ghusl",
+    "taharah-cleanliness-and-prayer",
+  ] as const),
+  "halal-and-haram": Object.freeze([
+    "halal-and-haram-lawful-and-unlawful",
+    "halal-and-haram-food",
+    "halal-and-haram-income",
+    "halal-and-haram-transactions",
+    "halal-and-haram-relationships-and-conduct",
+  ] as const),
+  "dua-and-dhikr": Object.freeze([
+    "dua-and-dhikr-dua",
+    "dua-and-dhikr-dhikr",
+    "dua-and-dhikr-morning-and-evening-remembrance",
+    "dua-and-dhikr-etiquette-of-supplication",
+  ] as const),
+  akhirah: Object.freeze([
+    "akhirah-death",
+    "akhirah-life-of-the-grave",
+    "akhirah-resurrection",
+    "akhirah-day-of-judgment",
+    "akhirah-accountability",
+    "akhirah-paradise",
+    "akhirah-hellfire",
+  ] as const),
+});
+
+const SAFE_ID = /^[a-z0-9](?:[a-z0-9:._/-]{0,158}[a-z0-9])?$/;
+const VERSE_KEY = /^(?:[1-9]|[1-9]\d|1(?:0\d|1[0-4])):[1-9]\d{0,2}$/;
+
+const APPROVED_QURAN_VERSE_KEYS = new Set([
+  "2:43",
+  "2:177",
+  "2:183",
+  "2:185",
+  "2:255",
+  "2:285",
+  "3:3",
+  "3:4",
+  "3:18",
+  "3:97",
+  "4:103",
+  "4:136",
+  "4:163",
+  "4:164",
+  "4:165",
+  "5:44",
+  "5:45",
+  "5:46",
+  "5:47",
+  "5:48",
+  "9:60",
+  "21:25",
+  "22:7",
+  "22:27",
+  "23:15",
+  "23:16",
+  "35:1",
+  "47:19",
+  "54:49",
+  "57:22",
+  "59:22",
+  "76:30",
+  "99:1",
+  "99:2",
+  "99:3",
+  "99:4",
+  "99:5",
+  "99:6",
+  "99:7",
+  "99:8",
+]);
+
+const HADEETHENC_RECORD_ID = /^[1-9]\d*$/;
+const HADEETHENC_ORIGIN = "https://hadeethenc.com";
+const ALHARAMAIN_ORIGIN = "https://risala.prh.gov.sa";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
+}
+
+function exactKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  path: string,
+  issues: string[],
+) {
+  const allowedKeys = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) issues.push(`${path}.${key} is not allowed`);
+  }
+}
+
+function safeId(value: unknown): value is string {
+  return typeof value === "string" && SAFE_ID.test(value);
+}
+
+function safeText(value: unknown, max = 500): value is string {
+  return typeof value === "string"
+    && value.trim() === value
+    && value.length > 0
+    && [...value].length <= max
+    && !/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value);
+}
+
+function safeHttpsUrl(value: unknown, expectedOrigin: string): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:"
+      && url.origin === expectedOrigin
+      && !url.username
+      && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function deepFreeze<T>(value: T): T {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const nested of Object.values(value as Record<string, unknown>)) {
+    deepFreeze(nested);
+  }
+  return Object.freeze(value);
+}
+
+function validateNullableText(
+  value: unknown,
+  path: string,
+  issues: string[],
+  max = 500,
+) {
+  if (value !== null && !safeText(value, max)) {
+    issues.push(`${path} is invalid`);
+  }
+}
+
+function validateQuranReference(
+  value: Record<string, unknown>,
+  path: string,
+  issues: string[],
+) {
+  exactKeys(
+    value,
+    ["id", "type", "verseKeys", "locator", "action"],
+    path,
+    issues,
+  );
+
+  if (!safeId(value.id)) issues.push(`${path}.id is invalid`);
+  if (value.type !== "quran") issues.push(`${path}.type is invalid`);
+  if (!safeText(value.locator, 120)) issues.push(`${path}.locator is invalid`);
+  if (value.action !== "internal-quran-navigation") {
+    issues.push(`${path}.action must use trusted Quran navigation`);
+  }
+
+  if (
+    !Array.isArray(value.verseKeys)
+    || value.verseKeys.length < 1
+    || value.verseKeys.length > 286
+    || value.verseKeys.some(
+      (verseKey) =>
+        typeof verseKey !== "string"
+        || !VERSE_KEY.test(verseKey)
+        || !APPROVED_QURAN_VERSE_KEYS.has(verseKey),
+    )
+  ) {
+    issues.push(`${path}.verseKeys is invalid`);
+  } else if (new Set(value.verseKeys).size !== value.verseKeys.length) {
+    issues.push(`${path}.verseKeys contains duplicates`);
+  }
+}
+
+function validateHadithReference(
+  value: Record<string, unknown>,
+  path: string,
+  issues: string[],
+) {
+  exactKeys(
+    value,
+    [
+      "id",
+      "type",
+      "title",
+      "collectionId",
+      "collection",
+      "locator",
+      "narrator",
+      "grading",
+      "sourceName",
+      "sourceRecordId",
+      "sourceUrl",
+      "action",
+      "contentPolicy",
+    ],
+    path,
+    issues,
+  );
+
+  if (!safeId(value.id)) issues.push(`${path}.id is invalid`);
+  if (value.type !== "hadith") issues.push(`${path}.type is invalid`);
+  if (!safeText(value.title, 500)) issues.push(`${path}.title is invalid`);
+  if (!safeId(value.collectionId)) issues.push(`${path}.collectionId is invalid`);
+  if (!safeText(value.collection, 200)) {
+    issues.push(`${path}.collection is invalid`);
+  }
+  if (!safeText(value.locator, 120)) issues.push(`${path}.locator is invalid`);
+  validateNullableText(value.narrator, `${path}.narrator`, issues, 300);
+
+  if (!isRecord(value.grading)) {
+    issues.push(`${path}.grading is missing`);
+  } else {
+    exactKeys(
+      value.grading,
+      ["label", "authority", "reference"],
+      `${path}.grading`,
+      issues,
+    );
+    if (!safeText(value.grading.label, 120)) {
+      issues.push(`${path}.grading.label is invalid`);
+    }
+    validateNullableText(
+      value.grading.authority,
+      `${path}.grading.authority`,
+      issues,
+      200,
+    );
+    validateNullableText(
+      value.grading.reference,
+      `${path}.grading.reference`,
+      issues,
+      200,
+    );
+  }
+
+  if (value.sourceName !== "HadeethEnc") {
+    issues.push(`${path}.sourceName is not an approved source`);
+  }
+  if (
+    typeof value.sourceRecordId !== "string"
+    || !HADEETHENC_RECORD_ID.test(value.sourceRecordId)
+  ) {
+    issues.push(`${path}.sourceRecordId is invalid`);
+  }
+  if (!safeHttpsUrl(value.sourceUrl, HADEETHENC_ORIGIN)) {
+    issues.push(`${path}.sourceUrl must be an approved HadeethEnc HTTPS URL`);
+  }
+  if (value.action !== "internal-hadith-navigation") {
+    issues.push(`${path}.action must be internal-hadith-navigation`);
+  }
+  if (value.contentPolicy !== "metadata-only") {
+    issues.push(`${path}.contentPolicy must be metadata-only`);
+  }
+}
+
+function validateScholarlyReference(
+  value: Record<string, unknown>,
+  path: string,
+  issues: string[],
+) {
+  exactKeys(
+    value,
+    [
+      "id",
+      "type",
+      "title",
+      "author",
+      "locator",
+      "sourceName",
+      "responsibleOrganization",
+      "sourceUrl",
+      "action",
+      "contentPolicy",
+    ],
+    path,
+    issues,
+  );
+
+  if (!safeId(value.id)) issues.push(`${path}.id is invalid`);
+  if (value.type !== "scholarly") issues.push(`${path}.type is invalid`);
+  if (!safeText(value.title, 500)) issues.push(`${path}.title is invalid`);
+  if (!safeText(value.author, 300)) issues.push(`${path}.author is invalid`);
+  if (!safeText(value.locator, 300)) issues.push(`${path}.locator is invalid`);
+  if (value.sourceName !== "Alharamain's Message") {
+    issues.push(`${path}.sourceName is not an approved source`);
+  }
+  if (!safeText(value.responsibleOrganization, 500)) {
+    issues.push(`${path}.responsibleOrganization is invalid`);
+  }
+  if (!safeHttpsUrl(value.sourceUrl, ALHARAMAIN_ORIGIN)) {
+    issues.push(`${path}.sourceUrl must be an approved Alharamain HTTPS URL`);
+  }
+  if (value.action !== "external-link") {
+    issues.push(`${path}.action must be external-link`);
+  }
+  if (value.contentPolicy !== "metadata-only") {
+    issues.push(`${path}.contentPolicy must be metadata-only`);
+  }
+}
+
+function validateReferenceArray(
+  value: unknown,
+  path: string,
+  issues: string[],
+  referenceIds: string[],
+): value is Record<string, unknown>[] {
+  if (!Array.isArray(value) || value.length > 100) {
+    issues.push(`${path} is invalid`);
+    return false;
+  }
+
+  value.forEach((referenceValue, referenceIndex) => {
+    const referencePath = `${path}.${referenceIndex}`;
+    if (!isRecord(referenceValue)) {
+      issues.push(`${referencePath} is malformed`);
+      return;
+    }
+
+    if (safeId(referenceValue.id)) referenceIds.push(referenceValue.id);
+
+    switch (referenceValue.type) {
+      case "quran":
+        validateQuranReference(referenceValue, referencePath, issues);
+        break;
+      case "hadith":
+        validateHadithReference(referenceValue, referencePath, issues);
+        break;
+      case "scholarly":
+        validateScholarlyReference(referenceValue, referencePath, issues);
+        break;
+      default:
+        issues.push(`${referencePath}.type is unsupported`);
+    }
+  });
+
+  return true;
+}
+
+export function validateIslamicReferenceLibrary(
+  input: unknown,
+): {
+  valid: boolean;
+  issues: string[];
+  library: IslamicReferenceLibrary | null;
+} {
+  const issues: string[] = [];
+  let value: unknown;
+
+  try {
+    value = structuredClone(input);
+  } catch {
+    return {
+      valid: false,
+      issues: ["reference library could not be detached safely"],
+      library: null,
+    };
+  }
+
+  if (!isRecord(value)) {
+    return {
+      valid: false,
+      issues: ["reference library is missing or malformed"],
+      library: null,
+    };
+  }
+
+  exactKeys(
+    value,
+    ["schemaVersion", "id", "title", "revision", "collections"],
+    "library",
+    issues,
+  );
+
+  if (value.schemaVersion !== 2) issues.push("unsupported reference library schema");
+  if (value.id !== "islamic-foundations") {
+    issues.push("reference library ID is invalid");
+  }
+  if (value.title !== "Islamic Foundations") {
+    issues.push("reference library title is invalid");
+  }
+  if (!safeText(value.revision, 160)) {
+    issues.push("reference library revision is invalid");
+  }
+
+  const collectionIds: string[] = [];
+  const topicIds: string[] = [];
+  const referenceIds: string[] = [];
+  const topicsByCollection = new Map<string, Set<string>>();
+
+  if (!Array.isArray(value.collections) || value.collections.length > 100) {
+    issues.push("library.collections is invalid");
+  } else {
+    value.collections.forEach((collectionValue, collectionIndex) => {
+      const collectionPath = `library.collections.${collectionIndex}`;
+      if (!isRecord(collectionValue)) {
+        issues.push(`${collectionPath} is malformed`);
+        return;
+      }
+
+      exactKeys(
+        collectionValue,
+        ["id", "title", "description", "references", "topics"],
+        collectionPath,
+        issues,
+      );
+
+      let collectionId: string | null = null;
+      if (!safeId(collectionValue.id)) {
+        issues.push(`${collectionPath}.id is invalid`);
+      } else {
+        collectionId = collectionValue.id;
+        collectionIds.push(collectionValue.id);
+        if (!topicsByCollection.has(collectionValue.id)) {
+          topicsByCollection.set(collectionValue.id, new Set());
+        }
+      }
+
+      if (!safeText(collectionValue.title, 200)) {
+        issues.push(`${collectionPath}.title is invalid`);
+      }
+      if (!safeText(collectionValue.description, 500)) {
+        issues.push(`${collectionPath}.description is invalid`);
+      }
+
+      validateReferenceArray(
+        collectionValue.references,
+        `${collectionPath}.references`,
+        issues,
+        referenceIds,
+      );
+
+      if (!Array.isArray(collectionValue.topics) || collectionValue.topics.length > 200) {
+        issues.push(`${collectionPath}.topics is invalid`);
+        return;
+      }
+
+      collectionValue.topics.forEach((topicValue, topicIndex) => {
+        const topicPath = `${collectionPath}.topics.${topicIndex}`;
+        if (!isRecord(topicValue)) {
+          issues.push(`${topicPath} is malformed`);
+          return;
+        }
+
+        exactKeys(
+          topicValue,
+          ["id", "title", "description", "status", "references"],
+          topicPath,
+          issues,
+        );
+
+        if (!safeId(topicValue.id)) {
+          issues.push(`${topicPath}.id is invalid`);
+        } else {
+          topicIds.push(topicValue.id);
+          if (collectionId) topicsByCollection.get(collectionId)?.add(topicValue.id);
+        }
+
+        if (!safeText(topicValue.title, 200)) {
+          issues.push(`${topicPath}.title is invalid`);
+        }
+        if (!safeText(topicValue.description, 500)) {
+          issues.push(`${topicPath}.description is invalid`);
+        }
+        if (
+          topicValue.status !== "reference-ready"
+          && topicValue.status !== "planned"
+        ) {
+          issues.push(`${topicPath}.status is invalid`);
+        }
+
+        const referencesAreValidArray = validateReferenceArray(
+          topicValue.references,
+          `${topicPath}.references`,
+          issues,
+          referenceIds,
+        );
+
+        if (referencesAreValidArray) {
+          if (topicValue.status === "planned" && topicValue.references.length !== 0) {
+            issues.push(`${topicPath} planned topics must not contain references`);
+          }
+          if (
+            topicValue.status === "reference-ready"
+            && topicValue.references.length === 0
+          ) {
+            issues.push(`${topicPath} reference-ready topics require a reference`);
+          }
+        }
+      });
+    });
+  }
+
+  if (new Set(collectionIds).size !== collectionIds.length) {
+    issues.push("collection IDs must be unique");
+  }
+  if (new Set(topicIds).size !== topicIds.length) {
+    issues.push("topic IDs must be globally unique");
+  }
+  if (new Set(referenceIds).size !== referenceIds.length) {
+    issues.push("reference IDs must be globally unique");
+  }
+
+  const presentCollectionIds = new Set(collectionIds);
+  for (const requiredCollectionId of REQUIRED_CORE_COLLECTION_IDS) {
+    if (!presentCollectionIds.has(requiredCollectionId)) {
+      issues.push(`required core collection ${requiredCollectionId} is missing`);
+    }
+
+    const presentTopicIds = topicsByCollection.get(requiredCollectionId);
+    for (const requiredTopicId of REQUIRED_CORE_TOPIC_IDS[requiredCollectionId]) {
+      if (!presentTopicIds?.has(requiredTopicId)) {
+        issues.push(
+          `required topic ${requiredTopicId} is missing from ${requiredCollectionId}`,
+        );
+      }
+    }
+  }
+
+  if (issues.length) {
+    return { valid: false, issues, library: null };
+  }
+
+  return {
+    valid: true,
+    issues,
+    library: deepFreeze(value as unknown as IslamicReferenceLibrary),
+  };
+}
+
+function quranReference(
+  id: string,
+  verseKeys: string[],
+  locator: string,
+): QuranReference {
+  return {
+    id,
+    type: "quran",
+    verseKeys,
+    locator,
+    action: "internal-quran-navigation",
+  };
+}
+
+function hadithReference(
+  id: string,
+  title: string,
+  collectionId: string,
+  collection: string,
+  locator: string,
+  narrator: string | null,
+  sourceRecordId: string,
+  gradingReference: string,
+): HadithReference {
+  return {
+    id,
+    type: "hadith",
+    title,
+    collectionId,
+    collection,
+    locator,
+    narrator,
+    grading: {
+      label: "Authentic",
+      authority: "HadeethEnc",
+      reference: gradingReference,
+    },
+    sourceName: "HadeethEnc",
+    sourceRecordId,
+    sourceUrl: `https://hadeethenc.com/en/browse/hadith/${sourceRecordId}`,
+    action: "internal-hadith-navigation",
+    contentPolicy: "metadata-only",
+  };
+}
+
+function scholarlyReference(id: string, locator: string): ScholarlyReference {
+  return {
+    id,
+    type: "scholarly",
+    title: "A Glimpse into the Islamic Creed",
+    author: "Muhammad ibn Salih al-Uthaymin",
+    locator,
+    sourceName: "Alharamain's Message",
+    responsibleOrganization:
+      "Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque",
+    sourceUrl: "https://risala.prh.gov.sa/en/content/81",
+    action: "external-link",
+    contentPolicy: "metadata-only",
+  };
+}
+
+function plannedTopic(id: string, title: string): IslamicReferenceTopic {
+  return {
+    id,
+    title,
+    description: `Explore references related to ${title}.`,
+    status: "planned",
+    references: [],
+  };
+}
+
+function referenceReadyTopic(
+  id: string,
+  title: string,
+  references: IslamicReference[],
+): IslamicReferenceTopic {
+  return {
+    id,
+    title,
+    description: `References related to ${title}.`,
+    status: "reference-ready",
+    references,
+  };
+}
+
+const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
+  schemaVersion: 2,
+  id: "islamic-foundations",
+  title: "Islamic Foundations",
+  revision: "m9r-v2",
+  collections: [
+    {
+      id: "islam",
+      title: "Islam — Outer Practice & Submission",
+      description: "Browse references and topics related to Islam.",
+      references: [
+        hadithReference(
+          "hadith:islam-overview:hadeethenc-65000",
+          "Foundations of Islam (Five Pillars)",
+          "muslim",
+          "Sahih Muslim",
+          "16",
+          null,
+          "65000",
+          "Sahih Muslim 16",
+        ),
+        scholarlyReference(
+          "scholarly:islam-overview:uthaymin-creed",
+          "Pillars of Islam",
+        ),
+      ],
+      topics: [
+        referenceReadyTopic(
+          "islam-shahadah",
+          "Shahadah",
+          [
+            quranReference(
+              "quran:islam-shahadah:3-18",
+              ["3:18"],
+              "3:18",
+            ),
+            quranReference(
+              "quran:islam-shahadah:47-19",
+              ["47:19"],
+              "47:19",
+            ),
+            hadithReference(
+              "hadith:islam-shahadah:hadeethenc-4563",
+              "Hadith of Jibril (Testimony of Faith)",
+              "muslim",
+              "Sahih Muslim",
+              "8",
+              "Umar ibn al-Khattab",
+              "4563",
+              "Sahih Muslim 8",
+            ),
+            scholarlyReference(
+              "scholarly:islam-shahadah:uthaymin-creed",
+              "Pillars of Islam — testimony of faith",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "islam-salah",
+          "Salah",
+          [
+            quranReference(
+              "quran:islam-salah:2-43",
+              ["2:43"],
+              "2:43",
+            ),
+            quranReference(
+              "quran:islam-salah:4-103",
+              ["4:103"],
+              "4:103",
+            ),
+            hadithReference(
+              "hadith:islam-salah:hadeethenc-4968",
+              "Five Daily Prayers",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "528",
+              "Abu Hurayrah",
+              "4968",
+              "Sahih al-Bukhari 528",
+            ),
+            scholarlyReference(
+              "scholarly:islam-salah:uthaymin-creed",
+              "Pillars of Islam — establishment of prayer",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "islam-zakat",
+          "Zakat",
+          [
+            quranReference(
+              "quran:islam-zakat:2-43",
+              ["2:43"],
+              "2:43",
+            ),
+            quranReference(
+              "quran:islam-zakat:9-60",
+              ["9:60"],
+              "9:60",
+            ),
+            hadithReference(
+              "hadith:islam-zakat:hadeethenc-3689",
+              "Obligation of Zakat",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "1397",
+              null,
+              "3689",
+              "Sahih al-Bukhari 1397",
+            ),
+            scholarlyReference(
+              "scholarly:islam-zakat:uthaymin-creed",
+              "Pillars of Islam — paying Zakah",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "islam-sawm",
+          "Sawm",
+          [
+            quranReference(
+              "quran:islam-sawm:2-183",
+              ["2:183"],
+              "2:183",
+            ),
+            quranReference(
+              "quran:islam-sawm:2-185",
+              ["2:185"],
+              "2:185",
+            ),
+            hadithReference(
+              "hadith:islam-sawm:hadeethenc-65003",
+              "Obligation of Fasting Ramadan",
+              "muslim",
+              "Sahih Muslim",
+              "15",
+              null,
+              "65003",
+              "Sahih Muslim 15",
+            ),
+            scholarlyReference(
+              "scholarly:islam-sawm:uthaymin-creed",
+              "Pillars of Islam — fasting Ramadan",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "islam-hajj",
+          "Hajj",
+          [
+            quranReference(
+              "quran:islam-hajj:3-97",
+              ["3:97"],
+              "3:97",
+            ),
+            quranReference(
+              "quran:islam-hajj:22-27",
+              ["22:27"],
+              "22:27",
+            ),
+            hadithReference(
+              "hadith:islam-hajj:hadeethenc-2758",
+              "Obligation of Hajj",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "1521",
+              "Abu Hurayrah",
+              "2758",
+              "Sahih al-Bukhari 1521",
+            ),
+            scholarlyReference(
+              "scholarly:islam-hajj:uthaymin-creed",
+              "Pillars of Islam — Hajj",
+            ),
+          ],
+        ),
+      ],
+    },
+    {
+      id: "iman",
+      title: "Iman — Inner Conviction & Faith",
+      description: "Browse references and topics related to Iman.",
+      references: [
+        quranReference("quran:iman-overview:2-177", ["2:177"], "2:177"),
+        quranReference("quran:iman-overview:4-136", ["4:136"], "4:136"),
+        quranReference("quran:iman-overview:54-49", ["54:49"], "54:49"),
+        hadithReference(
+          "hadith:iman-overview:hadeethenc-4563",
+          "Hadith of Jibril",
+          "muslim",
+          "Sahih Muslim",
+          "8",
+          "Umar ibn al-Khattab",
+          "4563",
+          "Sahih Muslim 8",
+        ),
+        scholarlyReference(
+          "scholarly:iman-overview:uthaymin-creed",
+          "Foundations of the Islamic Creed",
+        ),
+      ],
+      topics: [
+        referenceReadyTopic(
+          "iman-belief-in-allah",
+          "Belief in Allah",
+          [
+            quranReference(
+              "quran:iman-belief-in-allah:2-255",
+              ["2:255"],
+              "2:255",
+            ),
+            quranReference(
+              "quran:iman-belief-in-allah:59-22",
+              ["59:22"],
+              "59:22",
+            ),
+            hadithReference(
+              "hadith:iman-belief-in-allah:hadeethenc-4563",
+              "Hadith of Jibril (Belief in Allah)",
+              "muslim",
+              "Sahih Muslim",
+              "8",
+              "Umar ibn al-Khattab",
+              "4563",
+              "Sahih Muslim 8",
+            ),
+            scholarlyReference(
+              "scholarly:iman-belief-in-allah:uthaymin-creed",
+              "Belief in Allah Almighty",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "iman-belief-in-angels",
+          "Belief in the Angels",
+          [
+            quranReference(
+              "quran:iman-belief-in-angels:2-285",
+              ["2:285"],
+              "2:285",
+            ),
+            quranReference(
+              "quran:iman-belief-in-angels:35-1",
+              ["35:1"],
+              "35:1",
+            ),
+            hadithReference(
+              "hadith:iman-belief-in-angels:hadeethenc-4563",
+              "Hadith of Jibril (Belief in the Angels)",
+              "muslim",
+              "Sahih Muslim",
+              "8",
+              "Umar ibn al-Khattab",
+              "4563",
+              "Sahih Muslim 8",
+            ),
+            scholarlyReference(
+              "scholarly:iman-belief-in-angels:uthaymin-creed",
+              "Belief in the Angels",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "iman-belief-in-revealed-books",
+          "Belief in Allah's Revealed Books",
+          [
+            quranReference(
+              "quran:iman-revealed-books:2-285",
+              ["2:285"],
+              "2:285",
+            ),
+            quranReference(
+              "quran:iman-revealed-books:3-3-4",
+              ["3:3", "3:4"],
+              "3:3-4",
+            ),
+            quranReference(
+              "quran:iman-revealed-books:5-44-48",
+              ["5:44", "5:45", "5:46", "5:47", "5:48"],
+              "5:44-48",
+            ),
+            hadithReference(
+              "hadith:iman-revealed-books:hadeethenc-65046",
+              "Reference concerning the People of the Book",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "4485",
+              "Abu Hurayrah",
+              "65046",
+              "Sahih al-Bukhari 4485",
+            ),
+            scholarlyReference(
+              "scholarly:iman-revealed-books:uthaymin-creed",
+              "Belief in the Revealed Books",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "iman-belief-in-messengers",
+          "Belief in the Messengers",
+          [
+            quranReference(
+              "quran:iman-messengers:2-285",
+              ["2:285"],
+              "2:285",
+            ),
+            quranReference(
+              "quran:iman-messengers:4-163-165",
+              ["4:163", "4:164", "4:165"],
+              "4:163-165",
+            ),
+            quranReference(
+              "quran:iman-messengers:21-25",
+              ["21:25"],
+              "21:25",
+            ),
+            hadithReference(
+              "hadith:iman-messengers:hadeethenc-3272",
+              "Belief in the message of Prophet Muhammad",
+              "muslim",
+              "Sahih Muslim",
+              "153",
+              "Abu Hurayrah",
+              "3272",
+              "Sahih Muslim 153",
+            ),
+            scholarlyReference(
+              "scholarly:iman-messengers:uthaymin-creed",
+              "Belief in the Messengers",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "iman-belief-in-last-day",
+          "Belief in the Last Day",
+          [
+            quranReference("quran:iman-last-day:22-7", ["22:7"], "22:7"),
+            quranReference(
+              "quran:iman-last-day:23-15-16",
+              ["23:15", "23:16"],
+              "23:15-16",
+            ),
+            quranReference(
+              "quran:iman-last-day:99",
+              ["99:1", "99:2", "99:3", "99:4", "99:5", "99:6", "99:7", "99:8"],
+              "Surah 99",
+            ),
+            hadithReference(
+              "hadith:iman-last-day:hadeethenc-5460",
+              "People will be gathered on the Day of Judgment",
+              "muslim",
+              "Sahih Muslim",
+              "2859",
+              "Aishah",
+              "5460",
+              "Sahih Muslim 2859",
+            ),
+            scholarlyReference(
+              "scholarly:iman-last-day:uthaymin-creed",
+              "Belief in the Last Day",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "iman-belief-in-qadr",
+          "Belief in Qadr",
+          [
+            quranReference("quran:iman-qadr:54-49", ["54:49"], "54:49"),
+            quranReference("quran:iman-qadr:57-22", ["57:22"], "57:22"),
+            quranReference("quran:iman-qadr:76-30", ["76:30"], "76:30"),
+            hadithReference(
+              "hadith:iman-qadr:hadeethenc-65038",
+              "Allah decreed the destinies of the creatures",
+              "muslim",
+              "Sahih Muslim",
+              "2653",
+              "Abdullah ibn Amr ibn al-As",
+              "65038",
+              "Sahih Muslim 2653",
+            ),
+            hadithReference(
+              "hadith:iman-qadr:hadeethenc-5493",
+              "The strong believer is better and dearer to Allah than the weak believer",
+              "muslim",
+              "Sahih Muslim",
+              "2664",
+              "Abu Hurayrah",
+              "5493",
+              "Sahih Muslim 2664",
+            ),
+            scholarlyReference(
+              "scholarly:iman-qadr:uthaymin-creed",
+              "Belief in Destiny",
+            ),
+          ],
+        ),
+      ],
+    },
+    {
+      id: "ihsan",
+      title: "Ihsan — Spiritual Excellence",
+      description: "Browse references and topics related to Ihsan.",
+      references: [],
+      topics: [
+        referenceReadyTopic("ihsan-meaning-of-ihsan", "Meaning of Ihsan", [
+          hadithReference(
+            "hadith:ihsan-meaning:hadeethenc-4563",
+            "Hadith of Jibril",
+            "muslim",
+            "Sahih Muslim",
+            "8",
+            "Umar ibn al-Khattab",
+            "4563",
+            "Sahih Muslim 8",
+          ),
+        ]),
+        plannedTopic("ihsan-sincerity", "Sincerity"),
+        plannedTopic("ihsan-awareness-of-allah", "Awareness of Allah"),
+        plannedTopic("ihsan-taqwa", "Taqwa"),
+      ],
+    },
+    {
+      id: "tawhid",
+      title: "Tawhid — The Oneness of Allah",
+      description: "Browse references and topics related to Tawhid.",
+      references: [],
+      topics: [
+        plannedTopic("tawhid-worship-of-allah-alone", "Worship of Allah Alone"),
+        plannedTopic("tawhid-allahs-lordship", "Allah's Lordship"),
+        plannedTopic("tawhid-names-and-attributes", "Names and Attributes"),
+        plannedTopic("tawhid-shirk", "Shirk"),
+      ],
+    },
+    {
+      id: "quran-and-sunnah",
+      title: "Qur'an and Sunnah — Primary Sources of Guidance",
+      description: "Browse references and topics related to the Qur'an and Sunnah.",
+      references: [],
+      topics: [
+        plannedTopic("quran-and-sunnah-quran", "Qur'an"),
+        plannedTopic("quran-and-sunnah-sunnah", "Sunnah"),
+        plannedTopic("quran-and-sunnah-hadith", "Hadith"),
+        plannedTopic(
+          "quran-and-sunnah-relationship-between-quran-and-sunnah",
+          "Relationship Between Qur'an and Sunnah",
+        ),
+      ],
+    },
+    {
+      id: "akhlaq-and-adab",
+      title: "Akhlaq and Adab — Moral Character & Etiquette",
+      description: "Browse references and topics related to Akhlaq and Adab.",
+      references: [],
+      topics: [
+        plannedTopic("akhlaq-and-adab-truthfulness", "Truthfulness"),
+        plannedTopic("akhlaq-and-adab-humility", "Humility"),
+        plannedTopic("akhlaq-and-adab-parents-and-family", "Parents and Family"),
+        plannedTopic("akhlaq-and-adab-neighbors", "Neighbors"),
+        plannedTopic("akhlaq-and-adab-justice", "Justice"),
+        plannedTopic("akhlaq-and-adab-good-manners", "Good Manners"),
+      ],
+    },
+    {
+      id: "taharah",
+      title: "Taharah — Purification & Cleanliness",
+      description: "Browse references and topics related to Taharah.",
+      references: [],
+      topics: [
+        plannedTopic("taharah-purification", "Purification"),
+        plannedTopic("taharah-wudu", "Wudu"),
+        plannedTopic("taharah-ghusl", "Ghusl"),
+        plannedTopic("taharah-cleanliness-and-prayer", "Cleanliness and Prayer"),
+      ],
+    },
+    {
+      id: "halal-and-haram",
+      title: "Halal and Haram — The Lawful & The Prohibited",
+      description: "Browse references and topics related to Halal and Haram.",
+      references: [],
+      topics: [
+        plannedTopic(
+          "halal-and-haram-lawful-and-unlawful",
+          "The Lawful and Unlawful",
+        ),
+        plannedTopic("halal-and-haram-food", "Food"),
+        plannedTopic("halal-and-haram-income", "Income"),
+        plannedTopic("halal-and-haram-transactions", "Transactions"),
+        plannedTopic(
+          "halal-and-haram-relationships-and-conduct",
+          "Relationships and Conduct",
+        ),
+      ],
+    },
+    {
+      id: "dua-and-dhikr",
+      title: "Du'a and Dhikr — Supplication & Remembrance",
+      description: "Browse references and topics related to Du'a and Dhikr.",
+      references: [],
+      topics: [
+        plannedTopic("dua-and-dhikr-dua", "Du'a"),
+        plannedTopic("dua-and-dhikr-dhikr", "Dhikr"),
+        plannedTopic(
+          "dua-and-dhikr-morning-and-evening-remembrance",
+          "Morning and Evening Remembrance",
+        ),
+        plannedTopic(
+          "dua-and-dhikr-etiquette-of-supplication",
+          "Etiquette of Supplication",
+        ),
+      ],
+    },
+    {
+      id: "akhirah",
+      title: "Akhirah — Accountability & The Afterlife",
+      description: "Browse references and topics related to the Akhirah.",
+      references: [],
+      topics: [
+        plannedTopic("akhirah-death", "Death"),
+        plannedTopic("akhirah-life-of-the-grave", "Life of the Grave"),
+        plannedTopic("akhirah-resurrection", "Resurrection"),
+        plannedTopic("akhirah-day-of-judgment", "Day of Judgment"),
+        plannedTopic("akhirah-accountability", "Accountability"),
+        plannedTopic("akhirah-paradise", "Paradise"),
+        plannedTopic("akhirah-hellfire", "Hellfire"),
+      ],
+    },
+  ],
+};
+
+const productionValidation = validateIslamicReferenceLibrary(
+  RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY,
+);
+
+if (!productionValidation.valid || !productionValidation.library) {
+  throw new Error(
+    `Invalid Islamic Foundations reference library: ${productionValidation.issues.join("; ")}`,
+  );
+}
+
+export const ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY =
+  productionValidation.library;

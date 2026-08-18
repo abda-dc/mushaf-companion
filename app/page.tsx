@@ -23,6 +23,8 @@ import { AyahContextLens } from "./ayah-context-lens";
 import type { ContextLensTab } from "./ayah-context-lens-state";
 import { StudyNotesIndex } from "./study-notes-ui";
 import { LearnPanel } from "./learn-panel";
+import { HadithReaderPanel } from "./hadith-reader-panel";
+import { IslamicFoundationsPanel } from "./islamic-foundations-panel";
 import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
@@ -116,7 +118,7 @@ import {
 
 type NavItem = "Home" | "Contents" | "Read" | "Learn" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type MobileNavItem = "Home" | "Read" | "Learn" | "Listen" | "More";
-type Overlay = Exclude<NavItem, "Read"> | "More" | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | null;
+type Overlay = Exclude<NavItem, "Read"> | "More" | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | "Hadith" | "Foundations" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -261,6 +263,7 @@ export default function Home() {
   const [studyNotes, setStudyNotes] = useState<StudyNotesState>(() => normalizeStudyNotes(DEFAULT_STUDY_NOTES));
   const [evidenceResult, setEvidenceResult] = useState<EvidenceQueryResult | { status: "loading" }>({ status: "disabled", reason: "No rights-cleared evidence dataset is active." });
   const [savedSection, setSavedSection] = useState<"bookmarks" | "notes">("bookmarks");
+  const [hadithTarget, setHadithTarget] = useState<string | null>(null);
   const [todayKey, setTodayKey] = useState(() => toLocalDateKey());
   const [studySessionVisible, setStudySessionVisible] = useState(false);
   const [hifzFrom, setHifzFrom] = useState("1:1");
@@ -326,8 +329,8 @@ export default function Home() {
   const desktopLearnNavRef = useRef<HTMLButtonElement | null>(null);
   const mobileLearnNavRef = useRef<HTMLButtonElement | null>(null);
 
-  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" || overlay === "More" ? "Read" : overlay ?? "Read";
-  const activeMobileNav: MobileNavItem = overlay === "Home" ? "Home" : overlay === "Learn" ? "Learn" : overlay === "Listen" || overlay === "Downloads" ? "Listen" : overlay === "More" || overlay === "Contents" || overlay === "Bookmarks" || overlay === "Search" || overlay === "Settings" ? "More" : "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" || overlay === "More" || overlay === "Hadith" || overlay === "Foundations" ? "Read" : overlay ?? "Read";
+  const activeMobileNav: MobileNavItem = overlay === "Home" ? "Home" : overlay === "Learn" || overlay === "Hadith" || overlay === "Foundations" ? "Learn" : overlay === "Listen" || overlay === "Downloads" ? "Listen" : overlay === "More" || overlay === "Contents" || overlay === "Bookmarks" || overlay === "Search" || overlay === "Settings" ? "More" : "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -1396,6 +1399,11 @@ export default function Home() {
     ]);
   }
 
+  function openHadithLibrary(target?: string | null) {
+    setHadithTarget(target ?? null);
+    setOverlay("Hadith");
+  }
+
   function chooseNav(item: NavItem, trigger?: HTMLButtonElement) {
     if (item === "Contents") {
       openContents();
@@ -2067,6 +2075,8 @@ export default function Home() {
               onCompleteLesson={finishEducationLesson}
               onRateKnowledgeCheck={rateEducationCheck}
               onOpenQuranCitation={openEducationQuranCitation}
+              onOpenHadith={() => openHadithLibrary()}
+              onOpenFoundations={() => setOverlay("Foundations")}
               onOpenHifz={() => setOverlay("Hifz")}
               onOpenVocabulary={() => setOverlay("Hifz")}
               onOpenTajweed={() => { setOverlay(null); setTajweedGuideOpen(true); }}
@@ -2074,6 +2084,35 @@ export default function Home() {
               onOpenReaderStudy={(trigger) => openContextLens(trigger)}
               onCreateLessonNote={createPrivateLessonNote}
               onClose={closeLearn}
+            />
+          )}
+
+          {overlay === "Hadith" && (
+            <HadithReaderPanel
+              initialTarget={hadithTarget}
+              onClose={() => {
+                setHadithTarget(null);
+                setOverlay(null);
+              }}
+            />
+          )}
+
+          {overlay === "Foundations" && (
+            <IslamicFoundationsPanel
+              onNavigateToQuranVerse={async (verseKey) => {
+                try {
+                  const target = await contentTransport.lookupVerse(verseKey);
+                  goToPage(target.page, target.page > pageData.page ? "next" : target.page < pageData.page ? "previous" : undefined, target.verseKey);
+                  setOverlay(null);
+                  setNotice(`Opened Quran coordinate ${verseKey}.`);
+                } catch {
+                  setNotice("That Quran reference could not be opened.");
+                }
+              }}
+              onOpenHadithTarget={(target) => {
+                openHadithLibrary(target);
+              }}
+              onClose={() => setOverlay(null)}
             />
           )}
 
