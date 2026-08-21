@@ -32,7 +32,7 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 22);
+  assert.equal(hadithRefs.length, 28);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
@@ -318,11 +318,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 88 references", () => {
+test("18. M9R reference IDs remain globally unique across all 109 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 88);
+  assert.equal(ids.length, 109);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -418,7 +418,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 45);
+  assert.equal(quranRefs.length, 55);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -427,7 +427,7 @@ test("24. Quran references remain unaffected by Hadith integration", () => {
 
 test("25. Scholarly external references remain unaffected by Hadith integration", () => {
   const scholarlyRefs = getAllM9RReferences().filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 21);
+  assert.equal(scholarlyRefs.length, 26);
   for (const ref of scholarlyRefs) {
     assert.equal(ref.action, "external-link");
     assert.equal(ref.sourceName, "Alharamain's Message");
@@ -436,25 +436,25 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 4 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 5 additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 20);
+  assert.equal(readyTopics.length, 26);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 29);
+  assert.equal(plannedTopics.length, 23);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 88);
-  assert.equal(getM9RHadithReferences().length, 22);
+  assert.equal(allRefs.length, 109);
+  assert.equal(getM9RHadithReferences().length, 28);
 
-  // Exactly 17 unique Hadith internal targets
+  // Exactly 23 unique Hadith internal targets
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 17);
+  assert.equal(uniqueTargets.size, 23);
 });
 
 test("27. M9H collection/content counts reflect approved seeded records", () => {
@@ -462,9 +462,9 @@ test("27. M9H collection/content counts reflect approved seeded records", () => 
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 17);
+  assert.equal(records.length, 23);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 17);
+  assert.equal(approved.length, 23);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
@@ -624,4 +624,87 @@ test("36. Qur'an and Sunnah Batch 4 Hadith references resolve correctly through 
   assert.equal(relResult.target, "hadith:bukhari:7137");
   assert.equal(relResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 7137");
   assert.equal(relResult.hadithResolution?.record?.narrator, "Abu Hurayrah");
+});
+
+test("37. Akhlaq and Adab Batch 5 Hadith references resolve correctly through bridge", () => {
+  const collection = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.find((c) => c.id === "akhlaq-and-adab");
+  assert.ok(collection);
+
+  // 1. Truthfulness: Muslim 2607 / 5504
+  const truthHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-truthfulness")?.references.find((r) => r.type === "hadith");
+  assert.ok(truthHadith);
+  assert.equal(truthHadith.id, "hadith:akhlaq-and-adab-truthfulness:hadeethenc-5504");
+  assert.equal(truthHadith.collectionId, "muslim");
+  assert.equal(truthHadith.locator, "2607");
+  assert.equal(truthHadith.sourceRecordId, "5504");
+  const truthResult = resolveIslamicReferenceHadith(truthHadith);
+  assert.equal(truthResult.status, "resolved");
+  assert.equal(truthResult.target, "hadith:muslim:2607");
+  assert.equal(truthResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 2607");
+  assert.equal(truthResult.hadithResolution?.record?.narrator, "Abdullah ibn Mas'ud");
+
+  // 2. Humility: Muslim 2865 / 5497
+  const humilityHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-humility")?.references.find((r) => r.type === "hadith");
+  assert.ok(humilityHadith);
+  assert.equal(humilityHadith.id, "hadith:akhlaq-and-adab-humility:hadeethenc-5497");
+  assert.equal(humilityHadith.collectionId, "muslim");
+  assert.equal(humilityHadith.locator, "2865");
+  assert.equal(humilityHadith.sourceRecordId, "5497");
+  const humilityResult = resolveIslamicReferenceHadith(humilityHadith);
+  assert.equal(humilityResult.status, "resolved");
+  assert.equal(humilityResult.target, "hadith:muslim:2865");
+  assert.equal(humilityResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 2865");
+  assert.equal(humilityResult.hadithResolution?.record?.narrator, "Iyad ibn Himar");
+
+  // 3. Parents and Family: Muslim 2548 / 4182
+  const parentsHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-parents-and-family")?.references.find((r) => r.type === "hadith");
+  assert.ok(parentsHadith);
+  assert.equal(parentsHadith.id, "hadith:akhlaq-and-adab-parents-and-family:hadeethenc-4182");
+  assert.equal(parentsHadith.collectionId, "muslim");
+  assert.equal(parentsHadith.locator, "2548");
+  assert.equal(parentsHadith.sourceRecordId, "4182");
+  const parentsResult = resolveIslamicReferenceHadith(parentsHadith);
+  assert.equal(parentsResult.status, "resolved");
+  assert.equal(parentsResult.target, "hadith:muslim:2548");
+  assert.equal(parentsResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 2548");
+  assert.equal(parentsResult.hadithResolution?.record?.narrator, "Abu Hurayrah");
+
+  // 4. Neighbors: Bukhari 6014 / 4965
+  const neighborsHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-neighbors")?.references.find((r) => r.type === "hadith");
+  assert.ok(neighborsHadith);
+  assert.equal(neighborsHadith.id, "hadith:akhlaq-and-adab-neighbors:hadeethenc-4965");
+  assert.equal(neighborsHadith.collectionId, "bukhari");
+  assert.equal(neighborsHadith.locator, "6014");
+  assert.equal(neighborsHadith.sourceRecordId, "4965");
+  const neighborsResult = resolveIslamicReferenceHadith(neighborsHadith);
+  assert.equal(neighborsResult.status, "resolved");
+  assert.equal(neighborsResult.target, "hadith:bukhari:6014");
+  assert.equal(neighborsResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 6014");
+  assert.equal(neighborsResult.hadithResolution?.record?.narrator, "Abdullah ibn Umar");
+
+  // 5. Justice: Muslim 1827 / 4935
+  const justiceHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-justice")?.references.find((r) => r.type === "hadith");
+  assert.ok(justiceHadith);
+  assert.equal(justiceHadith.id, "hadith:akhlaq-and-adab-justice:hadeethenc-4935");
+  assert.equal(justiceHadith.collectionId, "muslim");
+  assert.equal(justiceHadith.locator, "1827");
+  assert.equal(justiceHadith.sourceRecordId, "4935");
+  const justiceResult = resolveIslamicReferenceHadith(justiceHadith);
+  assert.equal(justiceResult.status, "resolved");
+  assert.equal(justiceResult.target, "hadith:muslim:1827");
+  assert.equal(justiceResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 1827");
+  assert.equal(justiceResult.hadithResolution?.record?.narrator, "Abdullah ibn Amr");
+
+  // 6. Good Manners: Muslim 2553 / 4308
+  const mannersHadith = collection.topics.find((t) => t.id === "akhlaq-and-adab-good-manners")?.references.find((r) => r.type === "hadith");
+  assert.ok(mannersHadith);
+  assert.equal(mannersHadith.id, "hadith:akhlaq-and-adab-good-manners:hadeethenc-4308");
+  assert.equal(mannersHadith.collectionId, "muslim");
+  assert.equal(mannersHadith.locator, "2553");
+  assert.equal(mannersHadith.sourceRecordId, "4308");
+  const mannersResult = resolveIslamicReferenceHadith(mannersHadith);
+  assert.equal(mannersResult.status, "resolved");
+  assert.equal(mannersResult.target, "hadith:muslim:2553");
+  assert.equal(mannersResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 2553");
+  assert.equal(mannersResult.hadithResolution?.record?.narrator, "An-Nawwas ibn Sim'an");
 });

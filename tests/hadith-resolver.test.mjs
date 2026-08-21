@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 17 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 23 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 17);
+  assert.equal(allRecords.length, 23);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -160,11 +160,12 @@ test("9. HadeethEnc source record is distinct from canonical collection numberin
 
 test("10. Deterministic metadata search across canonical number, label, narrator, and collection", () => {
   const umarResults = searchHadithMetadata("Umar");
-  assert.equal(umarResults.length, 1);
-  assert.equal(umarResults[0].id, "muslim:8");
+  assert.equal(umarResults.length, 2); // muslim:8 (Umar ibn al-Khattab) and bukhari:6014 (Abdullah ibn Umar)
+  assert.ok(umarResults.some((r) => r.id === "muslim:8"));
+  assert.ok(umarResults.some((r) => r.id === "bukhari:6014"));
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 9); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137
+  assert.equal(bukhariResults.length, 10); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);
@@ -272,4 +273,54 @@ test("13. Resolver resolves Batch 4 Qur'an and Sunnah Hadith targets", () => {
   assert.equal(res7137.record?.id, "bukhari:7137");
   assert.equal(res7137.record?.narrator, "Abu Hurayrah");
   assert.equal(res7137.sourceRecord?.providerRecordId, "6383");
+});
+
+test("14. Resolver resolves Batch 5 Akhlaq and Adab Hadith targets", () => {
+  // 1. Truthfulness: muslim:2607 (HadeethEnc 5504)
+  const res2607 = resolveHadithReference({ collectionId: "muslim", number: "2607" });
+  assert.equal(res2607.status, "resolved-translation-approved");
+  assert.equal(res2607.target, "hadith:muslim:2607");
+  assert.equal(res2607.record?.id, "muslim:2607");
+  assert.equal(res2607.record?.narrator, "Abdullah ibn Mas'ud");
+  assert.equal(res2607.sourceRecord?.providerRecordId, "5504");
+
+  // 2. Humility: muslim:2865 (HadeethEnc 5497)
+  const res2865 = resolveHadithReference({ collectionId: "muslim", number: "2865" });
+  assert.equal(res2865.status, "resolved-translation-approved");
+  assert.equal(res2865.target, "hadith:muslim:2865");
+  assert.equal(res2865.record?.id, "muslim:2865");
+  assert.equal(res2865.record?.narrator, "Iyad ibn Himar");
+  assert.equal(res2865.sourceRecord?.providerRecordId, "5497");
+
+  // 3. Parents and Family: muslim:2548 (HadeethEnc 4182)
+  const res2548 = resolveHadithReference({ collectionId: "muslim", number: "2548" });
+  assert.equal(res2548.status, "resolved-translation-approved");
+  assert.equal(res2548.target, "hadith:muslim:2548");
+  assert.equal(res2548.record?.id, "muslim:2548");
+  assert.equal(res2548.record?.narrator, "Abu Hurayrah");
+  assert.equal(res2548.sourceRecord?.providerRecordId, "4182");
+
+  // 4. Neighbors: bukhari:6014 (HadeethEnc 4965)
+  const res6014 = resolveHadithReference({ collectionId: "bukhari", number: "6014" });
+  assert.equal(res6014.status, "resolved-translation-approved");
+  assert.equal(res6014.target, "hadith:bukhari:6014");
+  assert.equal(res6014.record?.id, "bukhari:6014");
+  assert.equal(res6014.record?.narrator, "Abdullah ibn Umar");
+  assert.equal(res6014.sourceRecord?.providerRecordId, "4965");
+
+  // 5. Justice: muslim:1827 (HadeethEnc 4935)
+  const res1827 = resolveHadithReference({ collectionId: "muslim", number: "1827" });
+  assert.equal(res1827.status, "resolved-translation-approved");
+  assert.equal(res1827.target, "hadith:muslim:1827");
+  assert.equal(res1827.record?.id, "muslim:1827");
+  assert.equal(res1827.record?.narrator, "Abdullah ibn Amr");
+  assert.equal(res1827.sourceRecord?.providerRecordId, "4935");
+
+  // 6. Good Manners: muslim:2553 (HadeethEnc 4308)
+  const res2553 = resolveHadithReference({ collectionId: "muslim", number: "2553" });
+  assert.equal(res2553.status, "resolved-translation-approved");
+  assert.equal(res2553.target, "hadith:muslim:2553");
+  assert.equal(res2553.record?.id, "muslim:2553");
+  assert.equal(res2553.record?.narrator, "An-Nawwas ibn Sim'an");
+  assert.equal(res2553.sourceRecord?.providerRecordId, "4308");
 });

@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v4");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v5");
 });
 
 test("production library validates successfully", () => {
@@ -159,19 +159,19 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 29);
-  assert.equal(ready.length, 20);
+  assert.equal(planned.length, 23);
+  assert.equal(ready.length, 26);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "akhlaq-and-adab-truthfulness");
+  const planned = findTopic(library, "taharah-purification");
   planned.references.push(
     structuredClone(findCollection(library, "iman").references[0]),
   );
-  planned.references[0].id = "quran:akhlaq-adab:2-177";
+  planned.references[0].id = "quran:taharah-purification:2-177";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -236,7 +236,7 @@ test("all scholarly references for A Glimpse into the Islamic Creed use /en/cont
     ...c.topics.flatMap((t) => t.references),
   ]);
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 21);
+  assert.equal(scholarlyRefs.length, 26);
   for (const ref of scholarlyRefs) {
     assert.equal(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/81");
     assert.notEqual(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/381");
@@ -356,6 +356,201 @@ test("all four Qur'an and Sunnah topics are reference-ready with vetted sources"
   const relScholarly = relTopic.references.find((r) => r.type === "scholarly");
   assert.ok(relScholarly);
   assert.equal(relScholarly.locator, "Foundations of the Islamic Creed");
+});
+
+test("all six Akhlaq and Adab topics are reference-ready with vetted sources", () => {
+  const collection = findCollection(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab");
+  assert.equal(collection.topics.length, 6);
+  assert.equal(collection.references.length, 0);
+
+  // 1. Truthfulness
+  const truthTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-truthfulness");
+  assert.equal(truthTopic.status, "reference-ready");
+  assert.equal(truthTopic.references.length, 4);
+  assert.deepEqual(
+    truthTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-truthfulness:9-119",
+      "quran:akhlaq-and-adab-truthfulness:33-70",
+      "hadith:akhlaq-and-adab-truthfulness:hadeethenc-5504",
+      "scholarly:akhlaq-and-adab-truthfulness:uthaymin-creed",
+    ],
+  );
+  assert.deepEqual(
+    truthTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["9:119", "33:70"],
+  );
+  const truthHadith = truthTopic.references.find((r) => r.type === "hadith");
+  assert.ok(truthHadith);
+  assert.equal(truthHadith.collectionId, "muslim");
+  assert.equal(truthHadith.locator, "2607");
+  assert.equal(truthHadith.sourceRecordId, "5504");
+  const truthScholarly = truthTopic.references.find((r) => r.type === "scholarly");
+  assert.ok(truthScholarly);
+  assert.equal(truthScholarly.locator, "Introduction — Islam enjoins truthfulness and forbids lying");
+
+  // 2. Humility
+  const humilityTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-humility");
+  assert.equal(humilityTopic.status, "reference-ready");
+  assert.equal(humilityTopic.references.length, 3);
+  assert.deepEqual(
+    humilityTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-humility:25-63",
+      "quran:akhlaq-and-adab-humility:31-18",
+      "hadith:akhlaq-and-adab-humility:hadeethenc-5497",
+    ],
+  );
+  assert.deepEqual(
+    humilityTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["25:63", "31:18"],
+  );
+  const humilityHadith = humilityTopic.references.find((r) => r.type === "hadith");
+  assert.ok(humilityHadith);
+  assert.equal(humilityHadith.collectionId, "muslim");
+  assert.equal(humilityHadith.locator, "2865");
+  assert.equal(humilityHadith.sourceRecordId, "5497");
+  assert.equal(humilityTopic.references.filter((r) => r.type === "scholarly").length, 0);
+
+  // 3. Parents and Family
+  const parentsTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-parents-and-family");
+  assert.equal(parentsTopic.status, "reference-ready");
+  assert.equal(parentsTopic.references.length, 4);
+  assert.deepEqual(
+    parentsTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-parents-and-family:17-23",
+      "quran:akhlaq-and-adab-parents-and-family:4-36",
+      "hadith:akhlaq-and-adab-parents-and-family:hadeethenc-4182",
+      "scholarly:akhlaq-and-adab-parents-and-family:uthaymin-creed",
+    ],
+  );
+  assert.deepEqual(
+    parentsTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["17:23", "4:36"],
+  );
+  const parentsHadith = parentsTopic.references.find((r) => r.type === "hadith");
+  assert.ok(parentsHadith);
+  assert.equal(parentsHadith.collectionId, "muslim");
+  assert.equal(parentsHadith.locator, "2548");
+  assert.equal(parentsHadith.sourceRecordId, "4182");
+  const parentsScholarly = parentsTopic.references.find((r) => r.type === "scholarly");
+  assert.ok(parentsScholarly);
+  assert.equal(parentsScholarly.locator, "Introduction — dutifulness to parents and upholding kinship ties");
+
+  // 4. Neighbors
+  const neighborsTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-neighbors");
+  assert.equal(neighborsTopic.status, "reference-ready");
+  assert.equal(neighborsTopic.references.length, 3);
+  assert.deepEqual(
+    neighborsTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-neighbors:4-36",
+      "hadith:akhlaq-and-adab-neighbors:hadeethenc-4965",
+      "scholarly:akhlaq-and-adab-neighbors:uthaymin-creed",
+    ],
+  );
+  assert.deepEqual(
+    neighborsTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["4:36"],
+  );
+  const neighborsHadith = neighborsTopic.references.find((r) => r.type === "hadith");
+  assert.ok(neighborsHadith);
+  assert.equal(neighborsHadith.collectionId, "bukhari");
+  assert.equal(neighborsHadith.locator, "6014");
+  assert.equal(neighborsHadith.sourceRecordId, "4965");
+  const neighborsScholarly = neighborsTopic.references.find((r) => r.type === "scholarly");
+  assert.ok(neighborsScholarly);
+  assert.equal(neighborsScholarly.locator, "Introduction — good neighborliness");
+
+  // 5. Justice
+  const justiceTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-justice");
+  assert.equal(justiceTopic.status, "reference-ready");
+  assert.equal(justiceTopic.references.length, 4);
+  assert.deepEqual(
+    justiceTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-justice:4-135",
+      "quran:akhlaq-and-adab-justice:5-8",
+      "hadith:akhlaq-and-adab-justice:hadeethenc-4935",
+      "scholarly:akhlaq-and-adab-justice:uthaymin-creed",
+    ],
+  );
+  assert.deepEqual(
+    justiceTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["4:135", "5:8"],
+  );
+  const justiceHadith = justiceTopic.references.find((r) => r.type === "hadith");
+  assert.ok(justiceHadith);
+  assert.equal(justiceHadith.collectionId, "muslim");
+  assert.equal(justiceHadith.locator, "1827");
+  assert.equal(justiceHadith.sourceRecordId, "4935");
+  const justiceScholarly = justiceTopic.references.find((r) => r.type === "scholarly");
+  assert.ok(justiceScholarly);
+  assert.equal(justiceScholarly.locator, "Introduction — justice and forbids injustice");
+
+  // 6. Good Manners
+  const mannersTopic = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "akhlaq-and-adab-good-manners");
+  assert.equal(mannersTopic.status, "reference-ready");
+  assert.equal(mannersTopic.references.length, 3);
+  assert.deepEqual(
+    mannersTopic.references.map((r) => r.id),
+    [
+      "quran:akhlaq-and-adab-good-manners:68-4",
+      "hadith:akhlaq-and-adab-good-manners:hadeethenc-4308",
+      "scholarly:akhlaq-and-adab-good-manners:uthaymin-creed",
+    ],
+  );
+  assert.deepEqual(
+    mannersTopic.references.filter((r) => r.type === "quran").flatMap((r) => r.verseKeys),
+    ["68:4"],
+  );
+  const mannersHadith = mannersTopic.references.find((r) => r.type === "hadith");
+  assert.ok(mannersHadith);
+  assert.equal(mannersHadith.collectionId, "muslim");
+  assert.equal(mannersHadith.locator, "2553");
+  assert.equal(mannersHadith.sourceRecordId, "4308");
+  const mannersScholarly = mannersTopic.references.find((r) => r.type === "scholarly");
+  assert.ok(mannersScholarly);
+  assert.equal(mannersScholarly.locator, "Introduction — every good manner and righteous act");
+
+  // Verify Whitelist, Rejections, and Counts
+  const allRefs = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.flatMap((c) => [
+    ...c.references,
+    ...c.topics.flatMap((t) => t.references),
+  ]);
+  const quranRefs = allRefs.filter((r) => r.type === "quran");
+  const hadithRefs = allRefs.filter((r) => r.type === "hadith");
+  const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
+
+  assert.equal(allRefs.length, 109);
+  assert.equal(quranRefs.length, 55);
+  assert.equal(hadithRefs.length, 28);
+  assert.equal(scholarlyRefs.length, 26);
+
+  // Reused 4:36 verse key check
+  const p36Refs = quranRefs.filter((r) => r.verseKeys.includes("4:36"));
+  assert.equal(p36Refs.length, 2);
+  assert.deepEqual(p36Refs.map((r) => r.id), [
+    "quran:akhlaq-and-adab-parents-and-family:4-36",
+    "quran:akhlaq-and-adab-neighbors:4-36",
+  ]);
+
+  // Unapproved key rejections
+  const allVerseKeys = new Set(quranRefs.flatMap((r) => r.verseKeys));
+  assert.equal(allVerseKeys.has("16:90"), false);
+  assert.equal(allVerseKeys.has("7:199"), false);
+
+  // All 9 approved Batch 5 keys are present
+  const batch5Keys = ["4:36", "4:135", "5:8", "9:119", "17:23", "25:63", "31:18", "33:70", "68:4"];
+  for (const k of batch5Keys) {
+    assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
+  }
+
+  // All 23 remaining planned topics are empty
+  const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
+  assert.equal(plannedTopics.length, 23);
+  assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
 test("all four Tawhid topics are reference-ready with vetted sources", () => {
@@ -518,7 +713,7 @@ test("unapproved Quran coordinates fail closed", () => {
   assertInvalid(library, "verseKeys is invalid");
 });
 
-test("controlled Quran whitelist poststate contains exactly 59 keys and accepts Batch 4 additions while rejecting unapproved candidates", () => {
+test("controlled Quran whitelist poststate contains exactly 68 keys and accepts Batch 4 and Batch 5 additions while rejecting unapproved candidates", () => {
   const librarySource = readFileSync(
     new URL("../app/islamic-reference-library.ts", import.meta.url),
     "utf8"
@@ -528,8 +723,8 @@ test("controlled Quran whitelist poststate contains exactly 59 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 59);
-  assert.equal(new Set(extractedKeys).size, 59);
+  assert.equal(extractedKeys.length, 68);
+  assert.equal(new Set(extractedKeys).size, 68);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -548,24 +743,64 @@ test("controlled Quran whitelist poststate contains exactly 59 keys and accepts 
     assert.equal(
       validation.valid,
       true,
-      `Expected approved key ${key} to pass validation`,
+      `Expected approved Batch 4 key ${key} to pass validation`,
     );
     assert.ok(
       extractedKeys.includes(key),
-      `Key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
+      `Batch 4 key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
     );
   }
 
-  // Explicitly prove the rejected broad candidates are rejected and NOT in whitelist
-  const rejectedCandidateKeys = ["9:122", "53:3", "53:4"];
-  for (const key of rejectedCandidateKeys) {
+  // Explicitly prove the nine Batch 5 keys are accepted
+  const batch5ApprovedKeys = [
+    "4:36",
+    "4:135",
+    "5:8",
+    "9:119",
+    "17:23",
+    "25:63",
+    "31:18",
+    "33:70",
+    "68:4",
+  ];
+  for (const key of batch5ApprovedKeys) {
+    const validLib = cloneLibrary();
+    firstReferenceOfType(validLib, "quran").verseKeys = [key];
+    const validation = validateIslamicReferenceLibrary(validLib);
+    assert.equal(
+      validation.valid,
+      true,
+      `Expected approved Batch 5 key ${key} to pass validation`,
+    );
+    assert.ok(
+      extractedKeys.includes(key),
+      `Batch 5 key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
+    );
+  }
+
+  // Explicitly prove the rejected Batch 4 candidate keys are rejected and NOT in whitelist
+  const batch4RejectedCandidateKeys = ["9:122", "53:3", "53:4"];
+  for (const key of batch4RejectedCandidateKeys) {
     const invalidLib = cloneLibrary();
     firstReferenceOfType(invalidLib, "quran").verseKeys = [key];
     assertInvalid(invalidLib, "verseKeys is invalid");
     assert.equal(
       extractedKeys.includes(key),
       false,
-      `Rejected candidate ${key} should not be in whitelist`,
+      `Rejected Batch 4 candidate ${key} should not be in whitelist`,
+    );
+  }
+
+  // Explicitly prove the rejected Batch 5 candidate keys are rejected and NOT in whitelist
+  const batch5RejectedCandidateKeys = ["16:90", "7:199"];
+  for (const key of batch5RejectedCandidateKeys) {
+    const invalidLib = cloneLibrary();
+    firstReferenceOfType(invalidLib, "quran").verseKeys = [key];
+    assertInvalid(invalidLib, "verseKeys is invalid");
+    assert.equal(
+      extractedKeys.includes(key),
+      false,
+      `Rejected Batch 5 candidate ${key} should not be in whitelist`,
     );
   }
 });

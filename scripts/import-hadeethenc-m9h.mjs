@@ -30,6 +30,12 @@ export const APPROVED_HADEETHENC_IDS = Object.freeze([
   "6078",
   "3686",
   "6383",
+  "5504",
+  "5497",
+  "4182",
+  "4965",
+  "4935",
+  "4308",
 ]);
 
 const EXPECTED_MANIFEST = {
