@@ -42,12 +42,12 @@ The required core registry contains ten collections:
 4. Tawhid — The Oneness of Allah (Reference-ready: 4 topics)
 5. Qur'an and Sunnah — Primary Sources of Guidance (Reference-ready: 4 topics)
 6. Akhlaq and Adab — Moral Character & Etiquette (Reference-ready: 6 topics)
-7. Taharah — Purification & Cleanliness (Planned: 4 topics)
+7. Taharah — Purification & Cleanliness (Reference-ready: 4 topics)
 8. Halal and Haram — The Lawful & The Prohibited (Planned: 5 topics)
 9. Du'a and Dhikr — Supplication & Remembrance (Planned: 4 topics)
 10. Akhirah — Accountability & The Afterlife (Planned: 7 topics)
 
-Total production status: **26 reference-ready topics**, **23 planned topics**, **109 total references** (55 Qur'an, 28 Hadith, 26 Scholarly).
+Total production status: **30 reference-ready topics**, **19 planned topics**, **120 total references** (59 Qur'an, 32 Hadith, 29 Scholarly).
 
 The registry establishes the required production baseline, not a permanent upper limit.
 
@@ -80,7 +80,10 @@ For detailed cross-domain integration documentation, see [ISLAMIC-FOUNDATIONS-HA
 
 ### Scholarly references
 
-The approved current scholarly source is *A Glimpse into the Islamic Creed* by Muhammad ibn Salih al-Uthaymin, hosted by Alharamain's Message at `risala.prh.gov.sa`. Records include the section locator and identify the responsible organization as the Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque.
+The approved scholarly publications are hosted by Alharamain's Message at `risala.prh.gov.sa` and identify the responsible organization as the Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque:
+
+1. *A Glimpse into the Islamic Creed* by Muhammad ibn Salih al-Uthaymin (`/en/content/81`)
+2. *What A Muslim Must Know* compiled by the Scientific Committee under the Presidency of Religious Affairs at the Sacred Mosque and the Prophet's Mosque (`/en/content/251`)
 
 Scholarly references use `external-link` and `contentPolicy: "metadata-only"`. The external book text is not bundled.
 
