@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 17
+  "recordCount": 23
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -67,6 +67,28 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "f3ff017718c6d331f946b87bf1ed5e55630ec246e3a59ce0b7c725350936969a",
     "charCount": 592
   },
+  "4182": {
+    "id": "4182",
+    "title": "O Messenger of Allah, who is the most entitled among people to my good companionship? He said: Your mother, then your mother, then your mother, then your father, and then those who are the closest to you",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that a man came to the Messenger of Allah (may Allah's peace and blessings be upon him) and said: \"O Messenger of Allah, who is the most entitled among people to my good companionship?\" He said: \"Your mother.\" The man said: \"Who next?\" He said: \"Your mother.\" The man asked again: \"Who next?\" He replied: \"Your mother.\" The man further said: \"Who next?\" He said: \"Your father.\"\nIn another narration, the man asked: \"O Messenger of Allah, who is the most entitled among people to my good companionship?\" He said: \"Your mother, then your mother, then your mother, then your father, and then those who are the closest to you.\"",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Muslim - Narrated by Bukhari & Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4182",
+    "sha256": "7cf8bc99f3558acc00ed5cb5da10af518884e17c1bcff9a427662c2d91d4fe31",
+    "charCount": 677
+  },
+  "4308": {
+    "id": "4308",
+    "title": "Righteousness is good morals, and sinfulness is what your heart is not at ease with, and you hate that people know about it",
+    "hadith_text": "An-Nawwās ibn Sim‘ān al-Ansāri (may Allah be pleased with him) reported: I asked the Messenger of Allah (may Allah's peace and blessings be upon him) about righteousness and sinfulness, and he said, \"Righteousness is good morals, and sinfulness is what your heart is not at ease with, and you hate that people know about it.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4308",
+    "sha256": "bf781f3abeb3ed19da51f0e802a4c698920c9a58fdb05b2c0f3fd1f8d8f6675e",
+    "charCount": 325
+  },
   "4563": {
     "id": "4563",
     "title": "Islam is to testify that there is no god but Allah and that Muhammad is the Messenger of Allah, to establish prayer, to pay Zakah, to fast Ramadan, and to perform Hajj to the House if you are able to find a way thereto",
@@ -77,6 +99,28 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/4563",
     "sha256": "f0abe0a43f6a03cb1c557714216cbf0a482feebce284ea3f254219523b50e31c",
     "charCount": 1886
+  },
+  "4935": {
+    "id": "4935",
+    "title": "Those who act justly will be with Allah on pulpits of light at the right Hand of the Most Compassionate, Exalted be He, and both His Hands are right",
+    "hadith_text": "‘Abdullāh ibn ‘Amr (may Allah be pleased with him) reported: The Messenger of Allah (may Allah’s peace and blessings be upon him) said: \"Those who act justly will be with Allah on pulpits of light at the right Hand of the Most Compassionate, Exalted be He, and both His Hands are right. They are those who are just in their judgment and towards their people and what is under their charge.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4935",
+    "sha256": "62cae207a5898ff6cbd446a67f3a6d2cfbf5a32b8b387ef2aecc85ec45b9170e",
+    "charCount": 390
+  },
+  "4965": {
+    "id": "4965",
+    "title": "Jibrīl kept enjoining me regarding the good treatment of the neighbor to the extent that I thought he would inherit him",
+    "hadith_text": "Ibn ‘Umar (may Allah be pleased with him) reported: The Messenger of Allah (may Allah’s peace and blessings be upon him) said: \"Jibrīl kept enjoining me regarding the good treatment of the neighbor to the extent that I thought he would inherit him.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4965",
+    "sha256": "b09fd7dac70bfd5bbdc44c7a602873a21fd49aa0fe6a6c1aa4c10375b091153d",
+    "charCount": 249
   },
   "4968": {
     "id": "4968",
@@ -110,6 +154,28 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/5493",
     "sha256": "a249a17d98eaccd187c1566608690c8519f1dfd9a30e729ed7b5f3d1d9b05a49",
     "charCount": 543
+  },
+  "5497": {
+    "id": "5497",
+    "title": "And verily, Allah revealed to me that you must be humble, so that no one boasts of oneself before another or oppresses another",
+    "hadith_text": "‘Iyād ibn Himār, the brother of Bani Mujāshi‘ (may Allah be pleased with him), reported: The Messenger of Allah (may Allah's peace and blessings be upon him) stood among us one day and delivered a sermon, in which he said: and then he narrated the Hadīth that includes: \"And verily, Allah revealed to me that you must be humble, so that no one boasts of oneself before another or oppresses another.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5497",
+    "sha256": "6ce0cf8d9f73a07015b85b4aea2c3a3d31accb5752e2a3c31734d6103ea09378",
+    "charCount": 399
+  },
+  "5504": {
+    "id": "5504",
+    "title": "Adhere to truthfulness, for truthfulness leads to righteousness, and righteousness leads to Paradise",
+    "hadith_text": "‘Abdullah ibn Mas‘ūd (may Allah be pleased with him) reported: The Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Adhere to truthfulness, for truthfulness leads to righteousness, and righteousness leads to Paradise. A man will keep telling the truth and strive to tell the truth until he is recorded with Allah as the most truthful. Beware of lying, for lying leads to wickedness and wickedness leads to Hellfire. A man will keep telling lies and strive to tell lies until he is recorded with Allah as a persistent liar.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5504",
+    "sha256": "85cb751bb5f69c8495d41b7f7ea1ae1bf654cbfa79f8f239493464de1e3de12c",
+    "charCount": 546
   },
   "5913": {
     "id": "5913",
