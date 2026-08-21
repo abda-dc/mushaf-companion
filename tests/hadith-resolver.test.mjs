@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 27 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 32 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 27);
+  assert.equal(allRecords.length, 32);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -183,7 +183,7 @@ test("10. Deterministic metadata search across canonical number, label, narrator
   assert.ok(umarResults.some((r) => r.id === "bukhari:6014"));
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 13); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014, 164, 272, 6954
+  assert.equal(bukhariResults.length, 15); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014, 164, 272, 6954, 1471, 5232
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);
@@ -198,6 +198,48 @@ test("10. Deterministic metadata search across canonical number, label, narrator
 
   const noMatch = searchHadithMetadata("nonexistent term xyz");
   assert.deepEqual(noMatch, []);
+});
+
+test("15. Resolver resolves Batch 7 Halal and Haram Hadith targets", () => {
+  // 1. Lawful and Unlawful: muslim:1599 (HadeethEnc 4314)
+  const res1599 = resolveHadithReference({ collectionId: "muslim", number: "1599" });
+  assert.equal(res1599.status, "resolved-translation-approved");
+  assert.equal(res1599.target, "hadith:muslim:1599");
+  assert.equal(res1599.record?.id, "muslim:1599");
+  assert.equal(res1599.record?.narrator, "An-Nu'man ibn Bashir");
+  assert.equal(res1599.sourceRecord?.providerRecordId, "4314");
+
+  // 2. Food: muslim:1934 (HadeethEnc 64643)
+  const res1934 = resolveHadithReference({ collectionId: "muslim", number: "1934" });
+  assert.equal(res1934.status, "resolved-translation-approved");
+  assert.equal(res1934.target, "hadith:muslim:1934");
+  assert.equal(res1934.record?.id, "muslim:1934");
+  assert.equal(res1934.record?.narrator, "Ibn 'Abbas");
+  assert.equal(res1934.sourceRecord?.providerRecordId, "64643");
+
+  // 3. Income: bukhari:1471 (HadeethEnc 3785)
+  const res1471 = resolveHadithReference({ collectionId: "bukhari", number: "1471" });
+  assert.equal(res1471.status, "resolved-translation-approved");
+  assert.equal(res1471.target, "hadith:bukhari:1471");
+  assert.equal(res1471.record?.id, "bukhari:1471");
+  assert.equal(res1471.record?.narrator, "Az-Zubayr ibn al-'Awwam");
+  assert.equal(res1471.sourceRecord?.providerRecordId, "3785");
+
+  // 4. Transactions: muslim:1515 (HadeethEnc 5918)
+  const res1515 = resolveHadithReference({ collectionId: "muslim", number: "1515" });
+  assert.equal(res1515.status, "resolved-translation-approved");
+  assert.equal(res1515.target, "hadith:muslim:1515");
+  assert.equal(res1515.record?.id, "muslim:1515");
+  assert.equal(res1515.record?.narrator, "Abu Hurayrah");
+  assert.equal(res1515.sourceRecord?.providerRecordId, "5918");
+
+  // 5. Relationships and Conduct: bukhari:5232 (HadeethEnc 5888)
+  const res5232 = resolveHadithReference({ collectionId: "bukhari", number: "5232" });
+  assert.equal(res5232.status, "resolved-translation-approved");
+  assert.equal(res5232.target, "hadith:bukhari:5232");
+  assert.equal(res5232.record?.id, "bukhari:5232");
+  assert.equal(res5232.record?.narrator, "Uqbah ibn Amir");
+  assert.equal(res5232.sourceRecord?.providerRecordId, "5888");
 });
 
 test("11. Resolver resolves Tawhid Hadith targets bukhari:2856 and bukhari:2736", () => {

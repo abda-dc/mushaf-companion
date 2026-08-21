@@ -43,11 +43,11 @@ The required core registry contains ten collections:
 5. Qur'an and Sunnah — Primary Sources of Guidance (Reference-ready: 4 topics)
 6. Akhlaq and Adab — Moral Character & Etiquette (Reference-ready: 6 topics)
 7. Taharah — Purification & Cleanliness (Reference-ready: 4 topics)
-8. Halal and Haram — The Lawful & The Prohibited (Planned: 5 topics)
+8. Halal and Haram — The Lawful & The Prohibited (Reference-ready: 5 topics)
 9. Du'a and Dhikr — Supplication & Remembrance (Planned: 4 topics)
 10. Akhirah — Accountability & The Afterlife (Planned: 7 topics)
 
-Total production status: **30 reference-ready topics**, **19 planned topics**, **120 total references** (59 Qur'an, 32 Hadith, 29 Scholarly).
+Total production status: **35 reference-ready topics**, **14 planned topics**, **132 total references** (64 Qur'an, 37 Hadith, 31 Scholarly).
 
 The registry establishes the required production baseline, not a permanent upper limit.
 

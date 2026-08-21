@@ -169,7 +169,9 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "2:177",
   "2:183",
   "2:185",
+  "2:188",
   "2:255",
+  "2:275",
   "2:285",
   "3:3",
   "3:4",
@@ -185,6 +187,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "4:163",
   "4:164",
   "4:165",
+  "5:3",
   "5:6",
   "5:8",
   "5:44",
@@ -200,7 +203,9 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "15:9",
   "16:36",
   "16:44",
+  "16:116",
   "17:23",
+  "17:32",
   "21:25",
   "22:7",
   "22:27",
@@ -808,7 +813,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v6",
+  revision: "m9r-v7",
   collections: [
     {
       id: "islam",
@@ -1756,16 +1761,118 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to Halal and Haram.",
       references: [],
       topics: [
-        plannedTopic(
+        referenceReadyTopic(
           "halal-and-haram-lawful-and-unlawful",
           "The Lawful and Unlawful",
+          [
+            quranReference(
+              "quran:halal-and-haram-lawful-and-unlawful:16-116",
+              ["16:116"],
+              "16:116",
+            ),
+            hadithReference(
+              "hadith:halal-and-haram-lawful-and-unlawful:hadeethenc-4314",
+              "Verily, the lawful is clear, and the unlawful is clear",
+              "muslim",
+              "Sahih Muslim",
+              "1599",
+              "An-Nu'man ibn Bashir",
+              "4314",
+              "Sahih Muslim 1599",
+            ),
+          ],
         ),
-        plannedTopic("halal-and-haram-food", "Food"),
-        plannedTopic("halal-and-haram-income", "Income"),
-        plannedTopic("halal-and-haram-transactions", "Transactions"),
-        plannedTopic(
+        referenceReadyTopic(
+          "halal-and-haram-food",
+          "Food",
+          [
+            quranReference(
+              "quran:halal-and-haram-food:5-3",
+              ["5:3"],
+              "5:3",
+            ),
+            hadithReference(
+              "hadith:halal-and-haram-food:hadeethenc-64643",
+              "forbade (eating the flesh of) all carnivorous animals that have fangs and all birds that have talons",
+              "muslim",
+              "Sahih Muslim",
+              "1934",
+              "Ibn 'Abbas",
+              "64643",
+              "Sahih Muslim 1934",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "halal-and-haram-income",
+          "Income",
+          [
+            quranReference(
+              "quran:halal-and-haram-income:2-188",
+              ["2:188"],
+              "2:188",
+            ),
+            hadithReference(
+              "hadith:halal-and-haram-income:hadeethenc-3785",
+              "It is better for one of you to take his rope, go out and gather a bundle of firewood on his back, sell it, and thereby Allah preserves his dignity, than to ask people—whether they give him or withhold from him",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "1471",
+              "Az-Zubayr ibn al-'Awwam",
+              "3785",
+              "Sahih al-Bukhari 1471",
+            ),
+            whatAMuslimMustKnowScholarlyReference(
+              "scholarly:halal-and-haram-income:alharamain-251",
+              "Chapter Three: Transactions — rules related to financial transactions, items 4 and 6",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "halal-and-haram-transactions",
+          "Transactions",
+          [
+            quranReference(
+              "quran:halal-and-haram-transactions:2-275",
+              ["2:275"],
+              "2:275",
+            ),
+            hadithReference(
+              "hadith:halal-and-haram-transactions:hadeethenc-5918",
+              "Do not go out to meet the riders (in a trade caravan), do not urge buyers to cancel a sale transaction to make a new one with you, do not bid against each other (to fool another bidder), a townsman must not buy on behalf of a Bedouin, and do not tie up the udders of camels and sheep",
+              "muslim",
+              "Sahih Muslim",
+              "1515",
+              "Abu Hurayrah",
+              "5918",
+              "Sahih Muslim 1515",
+            ),
+            whatAMuslimMustKnowScholarlyReference(
+              "scholarly:halal-and-haram-transactions:alharamain-251",
+              "Chapter Three: Transactions",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
           "halal-and-haram-relationships-and-conduct",
           "Relationships and Conduct",
+          [
+            quranReference(
+              "quran:halal-and-haram-relationships-and-conduct:17-32",
+              ["17:32"],
+              "17:32",
+            ),
+            hadithReference(
+              "hadith:halal-and-haram-relationships-and-conduct:hadeethenc-5888",
+              "\"Beware of entering upon women.\" A man from the Ansār said: O Messenger of Allah, what about the Hamw (brother-in-law)? He said: \"The Hamw is death\"",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "5232",
+              "Uqbah ibn Amir",
+              "5888",
+              "Sahih al-Bukhari 5232",
+            ),
+          ],
         ),
       ],
     },

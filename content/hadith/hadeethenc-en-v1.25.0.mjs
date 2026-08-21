@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 27
+  "recordCount": 32
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -100,6 +100,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "f3ff017718c6d331f946b87bf1ed5e55630ec246e3a59ce0b7c725350936969a",
     "charCount": 592
   },
+  "3785": {
+    "id": "3785",
+    "title": "It is better for one of you to take his rope, go out and gather a bundle of firewood on his back, sell it, and thereby Allah preserves his dignity, than to ask people—whether they give him or withhold from him",
+    "hadith_text": "Az-Zubayr ibn al-‘Awwām (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: \"It is better for one of you to take his rope, go out and gather a bundle of firewood on his back, sell it, and thereby Allah preserves his dignity, than to ask people—whether they give him or withhold from him.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Al-Bukhāri]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3785",
+    "sha256": "45de60145d96f6f7d5f384a5a807c28819787da4e2de23e9a2ed00215a65f29c",
+    "charCount": 346
+  },
   "4182": {
     "id": "4182",
     "title": "O Messenger of Allah, who is the most entitled among people to my good companionship? He said: Your mother, then your mother, then your mother, then your father, and then those who are the closest to you",
@@ -121,6 +132,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/4308",
     "sha256": "bf781f3abeb3ed19da51f0e802a4c698920c9a58fdb05b2c0f3fd1f8d8f6675e",
     "charCount": 325
+  },
+  "4314": {
+    "id": "4314",
+    "title": "Verily, the lawful is clear, and the unlawful is clear",
+    "hadith_text": "An-Nu'mān ibn Bashīr (may Allah be pleased with him) reported: I heard the Messenger of Allah (may Allah's peace and blessings be upon him) say, as An-Nu'mān dropped his two fingers to his ears: \"Verily, the lawful is clear, and the unlawful is clear, and between them are doubtful matters many people do not know. Whoever avoids doubtful matters clears his liability regarding his religion and his honor, and whoever falls into doubtful matters will fall into the unlawful, just like the shepherd who grazes his animals in the vicinity of a prohibited pasture and is thus likely to graze therein. Verily, every king has a protected area, and the protected area of Allah is His prohibitions. Verily, in the body, there is a piece of flesh; if it is sound, the entire body will be sound, and if it is corrupt, the entire body will be corrupt; verily, that is the heart.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4314",
+    "sha256": "46be4108ee574a13da7a8844e7c5bc2e456e438ea1866606c3b692a3b726155f",
+    "charCount": 869
   },
   "4563": {
     "id": "4563",
@@ -210,6 +232,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "85cb751bb5f69c8495d41b7f7ea1ae1bf654cbfa79f8f239493464de1e3de12c",
     "charCount": 546
   },
+  "5888": {
+    "id": "5888",
+    "title": "Beware of entering upon women.\" A man from the Ansār said: O Messenger of Allah, what about the Hamw (brother-in-law)? He said: \"The Hamw is death",
+    "hadith_text": "‘Uqbah ibn ‘Āmir (may Allah be pleased with him) reported that the Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Beware of entering upon women.\" A man from the Ansār said: O Messenger of Allah, what about the Hamw (brother-in-law)? He said: \"The Hamw is death.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5888",
+    "sha256": "c75436b93499bd02dd9dcc88a7652c5386f0789a5d66273e7506d7c43eb91291",
+    "charCount": 287
+  },
   "5913": {
     "id": "5913",
     "title": "The best of you are those who learn the Qur’an and teach it",
@@ -220,6 +253,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/5913",
     "sha256": "698fbdc17c7be97dd7efd21fffae41cac1325c9136356edfb7cfbfd07b0a8cbf",
     "charCount": 187
+  },
+  "5918": {
+    "id": "5918",
+    "title": "Do not go out to meet the riders (in a trade caravan), do not urge buyers to cancel a sale transaction to make a new one with you, do not bid against each other (to fool another bidder), a townsman must not buy on behalf of a Bedouin, and do not tie up the udders of camels and sheep",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: \"Do not go out to meet the riders (in a trade caravan), do not urge buyers to cancel a sale transaction to make a new one with you, do not bid against each other (to fool another bidder), a townsman must not buy on behalf of a Bedouin, and do not tie up the udders of camels and sheep (so that they appear to have a lot of milk). However, if someone buys them while in this condition and has already milked them, then he has two options: If he is pleased with them, he may keep them, and if he is displeased with them, he may return them along with a Sā‘ of dates.”",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Muslim - Narrated by Bukhari & Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5918",
+    "sha256": "8caaa69c4e10387d8809b0bfb373f00648da6383d2e50b8f4b911243424fb522",
+    "charCount": 688
   },
   "6078": {
     "id": "6078",
@@ -242,6 +286,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/6383",
     "sha256": "77e448a101c38d03c481e9c8c3556e3e972e06a43ccfd3869e9c918a61b6f3db",
     "charCount": 298
+  },
+  "64643": {
+    "id": "64643",
+    "title": "forbade (eating the flesh of) all carnivorous animals that have fangs and all birds that have talons",
+    "hadith_text": "Ibn ‘Abbās (may Allah be pleased with him) reported that the Messenger of Allah (may Allah's peace and blessings be upon him) forbade (eating the flesh of) all carnivorous animals that have fangs and all birds that have talons.",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/64643",
+    "sha256": "e21cad17315f8977e5120e11de6196e468947213350a8b605000416a04ac9cf5",
+    "charCount": 227
   },
   "64673": {
     "id": "64673",

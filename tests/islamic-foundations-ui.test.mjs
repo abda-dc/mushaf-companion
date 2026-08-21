@@ -69,8 +69,8 @@ test("4. Collection counts derive dynamically from production data", () => {
   const plannedTopics = list.reduce((sum, c) => sum + c.plannedTopicsCount, 0);
 
   assert.equal(totalTopics, 49);
-  assert.equal(readyTopics, 30);
-  assert.equal(plannedTopics, 19);
+  assert.equal(readyTopics, 35);
+  assert.equal(plannedTopics, 14);
 });
 
 test("5. Islam shows all 5 topics ready", () => {
@@ -157,12 +157,24 @@ test("8d. Taharah shows all 4 topics ready", () => {
   assert.equal(taharah.totalReferencesCount, 11);
 });
 
+test("8e. Halal and Haram shows all 5 topics ready", () => {
+  const halal = listCollectionsForUi().find((c) => c.id === "halal-and-haram");
+  assert.ok(halal);
+  assert.equal(halal.topicsCount, 5);
+  assert.equal(halal.readyTopicsCount, 5);
+  assert.equal(halal.plannedTopicsCount, 0);
+  assert.equal(halal.readinessState, "fully-ready");
+  assert.equal(halal.readinessLabel, "5 of 5 topics source-ready");
+  assert.equal(halal.overviewReferencesCount, 0);
+  assert.equal(halal.totalReferencesCount, 12);
+});
+
 test("9. Planned collections/topics remain marked planned", () => {
   const list = listCollectionsForUi();
   const plannedCols = list.filter(
-    (c) => !["islam", "iman", "ihsan", "tawhid", "quran-and-sunnah", "akhlaq-and-adab", "taharah"].includes(c.id)
+    (c) => !["islam", "iman", "ihsan", "tawhid", "quran-and-sunnah", "akhlaq-and-adab", "taharah", "halal-and-haram"].includes(c.id)
   );
-  assert.equal(plannedCols.length, 3);
+  assert.equal(plannedCols.length, 2);
   for (const col of plannedCols) {
     assert.equal(col.readinessState, "planned");
     assert.equal(col.readyTopicsCount, 0);
@@ -172,7 +184,7 @@ test("9. Planned collections/topics remain marked planned", () => {
 });
 
 test("10. Planned topic cannot fabricate references", () => {
-  const topic = getTopicForUi("halal-and-haram", "halal-and-haram-lawful-and-unlawful");
+  const topic = getTopicForUi("dua-and-dhikr", "dua-and-dhikr-dua");
   assert.ok(topic);
   assert.equal(topic.status, "planned");
   assert.equal(topic.references.length, 0);
@@ -182,12 +194,12 @@ test("10. Planned topic cannot fabricate references", () => {
   assert.equal(topic.groupedReferences.scholarly.length, 0);
 });
 
-test("11. Planned topic has zero production references across all 19 planned topics", () => {
+test("11. Planned topic has zero production references across all 14 planned topics", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   const plannedTopics = library.collections.flatMap((c) =>
     c.topics.filter((t) => t.status === "planned")
   );
-  assert.equal(plannedTopics.length, 19);
+  assert.equal(plannedTopics.length, 14);
   for (const topic of plannedTopics) {
     assert.equal(topic.references.length, 0);
   }
@@ -338,11 +350,11 @@ test("24. Alharamain scholarly references use /en/content/81 for Creed and /en/c
     ...c.topics.flatMap((t) => t.references),
   ]);
   const scholarly = allRefs.filter((r) => r.type === "scholarly");
-  assert.equal(scholarly.length, 29);
+  assert.equal(scholarly.length, 31);
   const content81 = scholarly.filter((s) => s.sourceUrl === "https://risala.prh.gov.sa/en/content/81");
   const content251 = scholarly.filter((s) => s.sourceUrl === "https://risala.prh.gov.sa/en/content/251");
   assert.equal(content81.length, 26);
-  assert.equal(content251.length, 3);
+  assert.equal(content251.length, 5);
 });
 
 test("25. /en/content/381 is not reintroduced anywhere", () => {
@@ -431,7 +443,7 @@ test("34. Close remains separate from Back in panel component", async () => {
   assert.match(panelCode, /onClick=\{onClose\}/);
 });
 
-test("35. All 30 reference-ready topics are reachable via getTopicForUi", () => {
+test("35. All 35 reference-ready topics are reachable via getTopicForUi", () => {
   const readyExpected = [
     ["islam", "islam-shahadah"],
     ["islam", "islam-salah"],
@@ -463,6 +475,11 @@ test("35. All 30 reference-ready topics are reachable via getTopicForUi", () => 
     ["taharah", "taharah-wudu"],
     ["taharah", "taharah-ghusl"],
     ["taharah", "taharah-cleanliness-and-prayer"],
+    ["halal-and-haram", "halal-and-haram-lawful-and-unlawful"],
+    ["halal-and-haram", "halal-and-haram-food"],
+    ["halal-and-haram", "halal-and-haram-income"],
+    ["halal-and-haram", "halal-and-haram-transactions"],
+    ["halal-and-haram", "halal-and-haram-relationships-and-conduct"],
   ];
 
   for (const [colId, topicId] of readyExpected) {
@@ -473,7 +490,7 @@ test("35. All 30 reference-ready topics are reachable via getTopicForUi", () => 
   }
 });
 
-test("36. All 19 planned topics remain truthful/planned", () => {
+test("36. All 14 planned topics remain truthful/planned", () => {
   const allCols = listCollectionsForUi();
   let totalPlanned = 0;
   for (const col of allCols) {
@@ -485,38 +502,38 @@ test("36. All 19 planned topics remain truthful/planned", () => {
       }
     }
   }
-  assert.equal(totalPlanned, 19);
+  assert.equal(totalPlanned, 14);
 });
 
-test("37. Global production counts reflect 49 / 30 / 19", () => {
+test("37. Global production counts reflect 49 / 35 / 14", () => {
   const list = listCollectionsForUi();
   const total = list.reduce((sum, c) => sum + c.topicsCount, 0);
   const ready = list.reduce((sum, c) => sum + c.readyTopicsCount, 0);
   const planned = list.reduce((sum, c) => sum + c.plannedTopicsCount, 0);
 
   assert.equal(total, 49);
-  assert.equal(ready, 30);
-  assert.equal(planned, 19);
+  assert.equal(ready, 35);
+  assert.equal(planned, 14);
 });
 
-test("38. Total references reflect 120", () => {
+test("38. Total references reflect 132", () => {
   const allRefs = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.flatMap((c) => [
     ...c.references,
     ...c.topics.flatMap((t) => t.references),
   ]);
-  assert.equal(allRefs.length, 120);
+  assert.equal(allRefs.length, 132);
 });
 
-test("39. Hadith references reflect 32", () => {
+test("39. Hadith references reflect 37", () => {
   const allRefs = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.flatMap((c) => [
     ...c.references,
     ...c.topics.flatMap((t) => t.references),
   ]);
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
-  assert.equal(hadithRefs.length, 32);
+  assert.equal(hadithRefs.length, 37);
 });
 
-test("40. Unique Hadith target count reflects 27", () => {
+test("40. Unique Hadith target count reflects 32", () => {
   const allRefs = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.flatMap((c) => [
     ...c.references,
     ...c.topics.flatMap((t) => t.references),
@@ -525,14 +542,14 @@ test("40. Unique Hadith target count reflects 27", () => {
   const uniqueTargets = new Set(
     hadithRefs.map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 27);
+  assert.equal(uniqueTargets.size, 32);
 });
 
-test("41. M9H approved record count reflects 27", () => {
+test("41. M9H approved record count reflects 32", () => {
   const records = listHadithRecords();
-  assert.equal(records.length, 27);
+  assert.equal(records.length, 32);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 27);
+  assert.equal(approved.length, 32);
 });
 
 test("42. M9H content is not modified by Foundations UI", () => {
