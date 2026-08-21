@@ -32,7 +32,7 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 32);
+  assert.equal(hadithRefs.length, 37);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
@@ -318,11 +318,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 120 references", () => {
+test("18. M9R reference IDs remain globally unique across all 132 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 120);
+  assert.equal(ids.length, 132);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -418,7 +418,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 59);
+  assert.equal(quranRefs.length, 64);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -427,11 +427,11 @@ test("24. Quran references remain unaffected by Hadith integration", () => {
 
 test("25. Scholarly external references remain unaffected by Hadith integration", () => {
   const scholarlyRefs = getAllM9RReferences().filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 29);
+  assert.equal(scholarlyRefs.length, 31);
   const content81 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/81");
   const content251 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/251");
   assert.equal(content81.length, 26);
-  assert.equal(content251.length, 3);
+  assert.equal(content251.length, 5);
   for (const ref of scholarlyRefs) {
     assert.equal(ref.action, "external-link");
     assert.equal(ref.sourceName, "Alharamain's Message");
@@ -439,25 +439,25 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 6 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 7 additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 30);
+  assert.equal(readyTopics.length, 35);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 19);
+  assert.equal(plannedTopics.length, 14);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 120);
-  assert.equal(getM9RHadithReferences().length, 32);
+  assert.equal(allRefs.length, 132);
+  assert.equal(getM9RHadithReferences().length, 37);
 
-  // Exactly 27 unique Hadith internal targets
+  // Exactly 32 unique Hadith internal targets
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 27);
+  assert.equal(uniqueTargets.size, 32);
 });
 
 test("27. M9H collection/content counts reflect approved seeded records", () => {
@@ -465,9 +465,9 @@ test("27. M9H collection/content counts reflect approved seeded records", () => 
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 27);
+  assert.equal(records.length, 32);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 27);
+  assert.equal(approved.length, 32);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
@@ -768,4 +768,75 @@ test("38. All four Taharah Hadith references resolve correctly through generic b
   assert.equal(cleanlinessResult.target, "hadith:bukhari:6954");
   assert.equal(cleanlinessResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 6954");
   assert.equal(cleanlinessResult.hadithResolution?.record?.narrator, "Abu Hurayrah");
+});
+
+test("39. All five Halal and Haram Hadith references resolve correctly through generic bridge", () => {
+  const collection = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.find((c) => c.id === "halal-and-haram");
+  assert.ok(collection);
+  assert.equal(collection.topics.length, 5);
+
+  // 1. Lawful and Unlawful: Muslim 1599 / 4314
+  const lawfulHadith = collection.topics.find((t) => t.id === "halal-and-haram-lawful-and-unlawful")?.references.find((r) => r.type === "hadith");
+  assert.ok(lawfulHadith);
+  assert.equal(lawfulHadith.id, "hadith:halal-and-haram-lawful-and-unlawful:hadeethenc-4314");
+  assert.equal(lawfulHadith.collectionId, "muslim");
+  assert.equal(lawfulHadith.locator, "1599");
+  assert.equal(lawfulHadith.sourceRecordId, "4314");
+  const lawfulResult = resolveIslamicReferenceHadith(lawfulHadith);
+  assert.equal(lawfulResult.status, "resolved");
+  assert.equal(lawfulResult.target, "hadith:muslim:1599");
+  assert.equal(lawfulResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 1599");
+  assert.equal(lawfulResult.hadithResolution?.record?.narrator, "An-Nu'man ibn Bashir");
+
+  // 2. Food: Muslim 1934 / 64643
+  const foodHadith = collection.topics.find((t) => t.id === "halal-and-haram-food")?.references.find((r) => r.type === "hadith");
+  assert.ok(foodHadith);
+  assert.equal(foodHadith.id, "hadith:halal-and-haram-food:hadeethenc-64643");
+  assert.equal(foodHadith.collectionId, "muslim");
+  assert.equal(foodHadith.locator, "1934");
+  assert.equal(foodHadith.sourceRecordId, "64643");
+  const foodResult = resolveIslamicReferenceHadith(foodHadith);
+  assert.equal(foodResult.status, "resolved");
+  assert.equal(foodResult.target, "hadith:muslim:1934");
+  assert.equal(foodResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 1934");
+  assert.equal(foodResult.hadithResolution?.record?.narrator, "Ibn 'Abbas");
+
+  // 3. Income: Bukhari 1471 / 3785
+  const incomeHadith = collection.topics.find((t) => t.id === "halal-and-haram-income")?.references.find((r) => r.type === "hadith");
+  assert.ok(incomeHadith);
+  assert.equal(incomeHadith.id, "hadith:halal-and-haram-income:hadeethenc-3785");
+  assert.equal(incomeHadith.collectionId, "bukhari");
+  assert.equal(incomeHadith.locator, "1471");
+  assert.equal(incomeHadith.sourceRecordId, "3785");
+  const incomeResult = resolveIslamicReferenceHadith(incomeHadith);
+  assert.equal(incomeResult.status, "resolved");
+  assert.equal(incomeResult.target, "hadith:bukhari:1471");
+  assert.equal(incomeResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 1471");
+  assert.equal(incomeResult.hadithResolution?.record?.narrator, "Az-Zubayr ibn al-'Awwam");
+
+  // 4. Transactions: Muslim 1515 / 5918
+  const transactionsHadith = collection.topics.find((t) => t.id === "halal-and-haram-transactions")?.references.find((r) => r.type === "hadith");
+  assert.ok(transactionsHadith);
+  assert.equal(transactionsHadith.id, "hadith:halal-and-haram-transactions:hadeethenc-5918");
+  assert.equal(transactionsHadith.collectionId, "muslim");
+  assert.equal(transactionsHadith.locator, "1515");
+  assert.equal(transactionsHadith.sourceRecordId, "5918");
+  const transactionsResult = resolveIslamicReferenceHadith(transactionsHadith);
+  assert.equal(transactionsResult.status, "resolved");
+  assert.equal(transactionsResult.target, "hadith:muslim:1515");
+  assert.equal(transactionsResult.hadithResolution?.record?.canonicalLabel, "Sahih Muslim 1515");
+  assert.equal(transactionsResult.hadithResolution?.record?.narrator, "Abu Hurayrah");
+
+  // 5. Relationships and Conduct: Bukhari 5232 / 5888
+  const relHadith = collection.topics.find((t) => t.id === "halal-and-haram-relationships-and-conduct")?.references.find((r) => r.type === "hadith");
+  assert.ok(relHadith);
+  assert.equal(relHadith.id, "hadith:halal-and-haram-relationships-and-conduct:hadeethenc-5888");
+  assert.equal(relHadith.collectionId, "bukhari");
+  assert.equal(relHadith.locator, "5232");
+  assert.equal(relHadith.sourceRecordId, "5888");
+  const relResult = resolveIslamicReferenceHadith(relHadith);
+  assert.equal(relResult.status, "resolved");
+  assert.equal(relResult.target, "hadith:bukhari:5232");
+  assert.equal(relResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 5232");
+  assert.equal(relResult.hadithResolution?.record?.narrator, "Uqbah ibn Amir");
 });

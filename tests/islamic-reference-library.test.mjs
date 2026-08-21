@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v6");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v7");
 });
 
 test("production library validates successfully", () => {
@@ -159,19 +159,19 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 19);
-  assert.equal(ready.length, 30);
+  assert.equal(planned.length, 14);
+  assert.equal(ready.length, 35);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "halal-and-haram-lawful-and-unlawful");
+  const planned = findTopic(library, "dua-and-dhikr-dua");
   planned.references.push(
     structuredClone(findCollection(library, "iman").references[0]),
   );
-  planned.references[0].id = "quran:halal-and-haram-lawful-and-unlawful:2-177";
+  planned.references[0].id = "quran:dua-and-dhikr-dua:2-177";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -236,11 +236,11 @@ test("scholarly references use /en/content/81 for Creed and /en/content/251 for 
     ...c.topics.flatMap((t) => t.references),
   ]);
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 29);
+  assert.equal(scholarlyRefs.length, 31);
   const content81 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/81");
   const content251 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/251");
   assert.equal(content81.length, 26);
-  assert.equal(content251.length, 3);
+  assert.equal(content251.length, 5);
   for (const ref of scholarlyRefs) {
     assert.notEqual(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/381");
   }
@@ -526,10 +526,10 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
 
-  assert.equal(allRefs.length, 120);
-  assert.equal(quranRefs.length, 59);
-  assert.equal(hadithRefs.length, 32);
-  assert.equal(scholarlyRefs.length, 29);
+  assert.equal(allRefs.length, 132);
+  assert.equal(quranRefs.length, 64);
+  assert.equal(hadithRefs.length, 37);
+  assert.equal(scholarlyRefs.length, 31);
 
   // Reused 4:36 verse key check
   const p36Refs = quranRefs.filter((r) => r.verseKeys.includes("4:36"));
@@ -550,9 +550,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
     assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
   }
 
-  // All 19 remaining planned topics are empty
+  // All 14 remaining planned topics are empty
   const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 19);
+  assert.equal(plannedTopics.length, 14);
   assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
@@ -716,7 +716,7 @@ test("unapproved Quran coordinates fail closed", () => {
   assertInvalid(library, "verseKeys is invalid");
 });
 
-test("controlled Quran whitelist poststate contains exactly 71 keys and accepts Batch 4, Batch 5, and Batch 6 additions while rejecting unapproved candidates", () => {
+test("controlled Quran whitelist poststate contains exactly 76 keys and accepts Batch 4, Batch 5, Batch 6, and Batch 7 additions while rejecting unapproved candidates", () => {
   const librarySource = readFileSync(
     new URL("../app/islamic-reference-library.ts", import.meta.url),
     "utf8"
@@ -726,8 +726,8 @@ test("controlled Quran whitelist poststate contains exactly 71 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 71);
-  assert.equal(new Set(extractedKeys).size, 71);
+  assert.equal(extractedKeys.length, 76);
+  assert.equal(new Set(extractedKeys).size, 76);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -798,6 +798,23 @@ test("controlled Quran whitelist poststate contains exactly 71 keys and accepts 
     );
   }
 
+  // Explicitly prove the five Batch 7 keys are accepted
+  const batch7ApprovedKeys = ["16:116", "5:3", "2:188", "2:275", "17:32"];
+  for (const key of batch7ApprovedKeys) {
+    const validLib = cloneLibrary();
+    firstReferenceOfType(validLib, "quran").verseKeys = [key];
+    const validation = validateIslamicReferenceLibrary(validLib);
+    assert.equal(
+      validation.valid,
+      true,
+      `Expected approved Batch 7 key ${key} to pass validation`,
+    );
+    assert.ok(
+      extractedKeys.includes(key),
+      `Batch 7 key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
+    );
+  }
+
   // Explicitly prove the rejected Batch 4 candidate keys are rejected and NOT in whitelist
   const batch4RejectedCandidateKeys = ["9:122", "53:3", "53:4"];
   for (const key of batch4RejectedCandidateKeys) {
@@ -834,6 +851,19 @@ test("controlled Quran whitelist poststate contains exactly 71 keys and accepts 
       extractedKeys.includes(key),
       false,
       `Rejected Batch 6 candidate ${key} should not be in whitelist`,
+    );
+  }
+
+  // Explicitly prove the rejected Batch 7 candidate keys are rejected and NOT in whitelist
+  const batch7RejectedCandidateKeys = ["5:87", "2:172", "5:1", "24:30"];
+  for (const key of batch7RejectedCandidateKeys) {
+    const invalidLib = cloneLibrary();
+    firstReferenceOfType(invalidLib, "quran").verseKeys = [key];
+    assertInvalid(invalidLib, "verseKeys is invalid");
+    assert.equal(
+      extractedKeys.includes(key),
+      false,
+      `Rejected Batch 7 candidate ${key} should not be in whitelist`,
     );
   }
 });
@@ -967,6 +997,123 @@ test("all four Taharah topics are reference-ready with vetted sources", () => {
   assert.equal(cleanlinessScholarly.sourceUrl, "https://risala.prh.gov.sa/en/content/251");
   assert.equal(cleanlinessScholarly.action, "external-link");
   assert.equal(cleanlinessScholarly.contentPolicy, "metadata-only");
+});
+
+test("all five Halal and Haram topics are reference-ready with vetted sources", () => {
+  const collection = findCollection(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram");
+  assert.ok(collection);
+  assert.equal(collection.topics.length, 5);
+
+  // 1. Lawful and Unlawful: 16:116, Muslim 1599 / 4314, NO SCHOLARLY
+  const lawful = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram-lawful-and-unlawful");
+  assert.ok(lawful);
+  assert.equal(lawful.status, "reference-ready");
+  assert.equal(lawful.references.length, 2);
+  assert.deepEqual(
+    lawful.references.map((r) => r.type),
+    ["quran", "hadith"],
+  );
+  assert.deepEqual(
+    lawful.references.find((r) => r.type === "quran")?.verseKeys,
+    ["16:116"],
+  );
+  const lawfulHadith = lawful.references.find((r) => r.type === "hadith");
+  assert.ok(lawfulHadith);
+  assert.equal(lawfulHadith.collectionId, "muslim");
+  assert.equal(lawfulHadith.locator, "1599");
+  assert.equal(lawfulHadith.sourceRecordId, "4314");
+  assert.equal(lawful.references.some((r) => r.type === "scholarly"), false);
+
+  // 2. Food: 5:3, Muslim 1934 / 64643, NO SCHOLARLY
+  const food = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram-food");
+  assert.ok(food);
+  assert.equal(food.status, "reference-ready");
+  assert.equal(food.references.length, 2);
+  assert.deepEqual(
+    food.references.map((r) => r.type),
+    ["quran", "hadith"],
+  );
+  assert.deepEqual(
+    food.references.find((r) => r.type === "quran")?.verseKeys,
+    ["5:3"],
+  );
+  const foodHadith = food.references.find((r) => r.type === "hadith");
+  assert.ok(foodHadith);
+  assert.equal(foodHadith.collectionId, "muslim");
+  assert.equal(foodHadith.locator, "1934");
+  assert.equal(foodHadith.sourceRecordId, "64643");
+  assert.equal(food.references.some((r) => r.type === "scholarly"), false);
+
+  // 3. Income: 2:188, Bukhari 1471 / 3785, Alharamain 251
+  const income = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram-income");
+  assert.ok(income);
+  assert.equal(income.status, "reference-ready");
+  assert.equal(income.references.length, 3);
+  assert.deepEqual(
+    income.references.map((r) => r.type),
+    ["quran", "hadith", "scholarly"],
+  );
+  assert.deepEqual(
+    income.references.find((r) => r.type === "quran")?.verseKeys,
+    ["2:188"],
+  );
+  const incomeHadith = income.references.find((r) => r.type === "hadith");
+  assert.ok(incomeHadith);
+  assert.equal(incomeHadith.collectionId, "bukhari");
+  assert.equal(incomeHadith.locator, "1471");
+  assert.equal(incomeHadith.sourceRecordId, "3785");
+  const incomeScholarly = income.references.find((r) => r.type === "scholarly");
+  assert.ok(incomeScholarly);
+  assert.equal(incomeScholarly.id, "scholarly:halal-and-haram-income:alharamain-251");
+  assert.equal(incomeScholarly.title, "What A Muslim Must Know");
+  assert.equal(
+    incomeScholarly.locator,
+    "Chapter Three: Transactions — rules related to financial transactions, items 4 and 6",
+  );
+
+  // 4. Transactions: 2:275, Muslim 1515 / 5918, Alharamain 251
+  const transactions = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram-transactions");
+  assert.ok(transactions);
+  assert.equal(transactions.status, "reference-ready");
+  assert.equal(transactions.references.length, 3);
+  assert.deepEqual(
+    transactions.references.map((r) => r.type),
+    ["quran", "hadith", "scholarly"],
+  );
+  assert.deepEqual(
+    transactions.references.find((r) => r.type === "quran")?.verseKeys,
+    ["2:275"],
+  );
+  const transHadith = transactions.references.find((r) => r.type === "hadith");
+  assert.ok(transHadith);
+  assert.equal(transHadith.collectionId, "muslim");
+  assert.equal(transHadith.locator, "1515");
+  assert.equal(transHadith.sourceRecordId, "5918");
+  const transScholarly = transactions.references.find((r) => r.type === "scholarly");
+  assert.ok(transScholarly);
+  assert.equal(transScholarly.id, "scholarly:halal-and-haram-transactions:alharamain-251");
+  assert.equal(transScholarly.title, "What A Muslim Must Know");
+  assert.equal(transScholarly.locator, "Chapter Three: Transactions");
+
+  // 5. Relationships and Conduct: 17:32, Bukhari 5232 / 5888, NO SCHOLARLY
+  const rel = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "halal-and-haram-relationships-and-conduct");
+  assert.ok(rel);
+  assert.equal(rel.status, "reference-ready");
+  assert.equal(rel.references.length, 2);
+  assert.deepEqual(
+    rel.references.map((r) => r.type),
+    ["quran", "hadith"],
+  );
+  assert.deepEqual(
+    rel.references.find((r) => r.type === "quran")?.verseKeys,
+    ["17:32"],
+  );
+  const relHadith = rel.references.find((r) => r.type === "hadith");
+  assert.ok(relHadith);
+  assert.equal(relHadith.collectionId, "bukhari");
+  assert.equal(relHadith.locator, "5232");
+  assert.equal(relHadith.sourceRecordId, "5888");
+  assert.equal(rel.references.some((r) => r.type === "scholarly"), false);
 });
 
 test("duplicate Quran coordinates inside one reference fail closed", () => {
