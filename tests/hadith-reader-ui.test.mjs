@@ -34,10 +34,10 @@ test("1. Hadith Library exposes all six registered collections", () => {
   ]);
 });
 
-test("2. Sahih Muslim displays exactly 13 locally approved records", () => {
+test("2. Sahih Muslim displays exactly 14 locally approved records", () => {
   const allRecords = listHadithRecords();
   const muslimRecords = allRecords.filter((r) => r.collectionId === "muslim");
-  assert.equal(muslimRecords.length, 13);
+  assert.equal(muslimRecords.length, 14);
   const numbers = muslimRecords.map((r) => r.canonicalNumber);
   assert.deepEqual(numbers, [
     "8",
@@ -53,13 +53,14 @@ test("2. Sahih Muslim displays exactly 13 locally approved records", () => {
     "2548",
     "1827",
     "2553",
+    "223",
   ]);
 });
 
-test("3. Sahih al-Bukhari displays exactly 10 locally approved records", () => {
+test("3. Sahih al-Bukhari displays exactly 13 locally approved records", () => {
   const allRecords = listHadithRecords();
   const bukhariRecords = allRecords.filter((r) => r.collectionId === "bukhari");
-  assert.equal(bukhariRecords.length, 10);
+  assert.equal(bukhariRecords.length, 13);
   const numbers = bukhariRecords.map((r) => r.canonicalNumber);
   assert.deepEqual(numbers, [
     "4485",
@@ -72,6 +73,9 @@ test("3. Sahih al-Bukhari displays exactly 10 locally approved records", () => {
     "3461",
     "7137",
     "6014",
+    "164",
+    "272",
+    "6954",
   ]);
 });
 

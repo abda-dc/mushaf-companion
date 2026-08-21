@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 23
+  "recordCount": 27
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -44,6 +44,39 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/3272",
     "sha256": "901c9d829629724d7a73805fad966faa5a2dba4c066e5e4c1164d19288de2e6e",
     "charCount": 385
+  },
+  "3313": {
+    "id": "3313",
+    "title": "If anyone performs ablution like this ablution of mine and offers two Rak'ahs during which he does not think of anything else, Allah will forgive his past sins",
+    "hadith_text": "Humrān, the freed slave of 'Uthmān ibn' Affān, reported that he saw 'Uthmān ibn' Affān asking (for water) to perform ablution, and he poured water from his vessel over his hands and washed them thrice and then put his right hand in the water and rinsed his mouth and washed his nose by putting water in it and then blowing it out. Then, he washed his face thrice and his forearms up to the elbows thrice. Then, he passed his wet hands over his head and washed each foot thrice. After that, he said: \"I saw the Prophet (may Allah's peace and blessings be upon him) perform ablution like this ablution of mine, and he said: 'If anyone performs ablution like this ablution of mine and offers two Rak'ahs during which he does not think of anything else, Allah will forgive his past sins.'\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3313",
+    "sha256": "cb5f110912a12528ab23925eea1b09afe2433d211d2093aeb4789860071d1c30",
+    "charCount": 785
+  },
+  "3316": {
+    "id": "3316",
+    "title": "On taking a ritual bath from Janābah (major ritual impurity), the Messenger of Allah (may Allah's peace and blessings be upon him) used to wash his hands and perform ablution like that for prayer, then wash himself",
+    "hadith_text": "‘Ā’ishah, the Mother of the Believers, (may Allah be pleased with her) reported: On taking a ritual bath from Janābah (major ritual impurity), the Messenger of Allah (may Allah's peace and blessings be upon him) used to wash his hands and perform ablution like that for prayer, then wash himself. He would, then, run his wet hand through his hair until he would feel that his skin had become wet. Then, he would pour water thrice over it, and then wash the rest of his body. She further said: I and the Messenger of Allah (may Allah's peace and blessings be upon him) used to bathe from a single container from which we used to take water simultaneously.",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Al-Bukhāri]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3316",
+    "sha256": "b170c2c653db7366b75d92d42208f9502e598527a94638a46825272d1acca700",
+    "charCount": 654
+  },
+  "3534": {
+    "id": "3534",
+    "title": "Allah does not accept the prayer of any of you who is in the state of Hadath (minor ritual impurity) until he performs ablution",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: \"Allah does not accept the prayer of any of you who is in the state of Hadath (minor ritual impurity) until he performs ablution.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3534",
+    "sha256": "5666f4183729e662de2d381e50ea50e8b694e8f17c8fc6e3e1c09402da8055a4",
+    "charCount": 253
   },
   "3686": {
     "id": "3686",
@@ -242,6 +275,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/65003",
     "sha256": "6fee64c862636b57aff7e33cd22e0d1242c256ab594133836042ef5f648a0eb3",
     "charCount": 405
+  },
+  "65004": {
+    "id": "65004",
+    "title": "Purity is half of faith, al-hamdulillāh (praise be to Allah) fills the Scale, and subhān Allah wa al-hamdulillāh (glory and praise be to Allah) fills what is between the heavens and the earth",
+    "hadith_text": "Abu Mālik al-Ash‘ari (may Allah be pleased with him) reported: The Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Purity is half of faith, al-hamdulillāh (praise be to Allah) fills the Scale, and subhān Allah wa al-hamdulillāh (glory and praise be to Allah) fills what is between the heavens and the earth. Prayer is light, charity is proof, patience is radiance, and the Qur’an is an argument either for you or against you. Every person goes out in the morning and sells his soul; he either saves it from doom or throws it into destruction.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/65004",
+    "sha256": "b0530eeaf152e71f2c82523593a6f282f95dbe254c36809ce1afbffaa26a7b22",
+    "charCount": 567
   },
   "65007": {
     "id": "65007",

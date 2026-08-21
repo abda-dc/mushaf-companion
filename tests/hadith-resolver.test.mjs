@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 23 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 27 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 23);
+  assert.equal(allRecords.length, 27);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -70,6 +70,24 @@ test("3. Resolver resolves all 23 seeded records as resolved-translation-approve
     assert.equal(result.target, `hadith:${record.collectionId}:${record.canonicalNumber}`);
     assert.equal(result.record?.id, record.id);
     assert.ok(result.record?.text?.translations[0]?.text.length > 0);
+  }
+});
+
+test("3b. Resolver resolves all four Taharah Hadith targets to their approved HadeethEnc provider IDs", () => {
+  const taharahTargets = [
+    { collectionId: "muslim", number: "223", providerId: "65004" },
+    { collectionId: "bukhari", number: "164", providerId: "3313" },
+    { collectionId: "bukhari", number: "272", providerId: "3316" },
+    { collectionId: "bukhari", number: "6954", providerId: "3534" },
+  ];
+
+  for (const target of taharahTargets) {
+    const result = resolveHadithReference({
+      collectionId: target.collectionId,
+      number: target.number,
+    });
+    assert.equal(result.status, "resolved-translation-approved");
+    assert.equal(result.sourceRecord?.providerRecordId, target.providerId);
   }
 });
 
@@ -165,7 +183,7 @@ test("10. Deterministic metadata search across canonical number, label, narrator
   assert.ok(umarResults.some((r) => r.id === "bukhari:6014"));
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 10); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014
+  assert.equal(bukhariResults.length, 13); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014, 164, 272, 6954
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);

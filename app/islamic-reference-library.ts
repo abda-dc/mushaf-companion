@@ -176,6 +176,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "3:18",
   "3:97",
   "4:36",
+  "4:43",
   "4:48",
   "4:59",
   "4:103",
@@ -184,6 +185,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "4:163",
   "4:164",
   "4:165",
+  "5:6",
   "5:8",
   "5:44",
   "5:45",
@@ -193,6 +195,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "7:54",
   "7:180",
   "9:60",
+  "9:108",
   "9:119",
   "15:9",
   "16:36",
@@ -757,6 +760,26 @@ function scholarlyReference(id: string, locator: string): ScholarlyReference {
   };
 }
 
+function whatAMuslimMustKnowScholarlyReference(
+  id: string,
+  locator: string,
+): ScholarlyReference {
+  return {
+    id,
+    type: "scholarly",
+    title: "What A Muslim Must Know",
+    author:
+      "The Scientific Committee under the Presidency of Religious Affairs at the Sacred Mosque and the Prophet's Mosque",
+    locator,
+    sourceName: "Alharamain's Message",
+    responsibleOrganization:
+      "Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque",
+    sourceUrl: "https://risala.prh.gov.sa/en/content/251",
+    action: "external-link",
+    contentPolicy: "metadata-only",
+  };
+}
+
 function plannedTopic(id: string, title: string): IslamicReferenceTopic {
   return {
     id,
@@ -785,7 +808,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v5",
+  revision: "m9r-v6",
   collections: [
     {
       id: "islam",
@@ -1629,10 +1652,102 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to Taharah.",
       references: [],
       topics: [
-        plannedTopic("taharah-purification", "Purification"),
-        plannedTopic("taharah-wudu", "Wudu"),
-        plannedTopic("taharah-ghusl", "Ghusl"),
-        plannedTopic("taharah-cleanliness-and-prayer", "Cleanliness and Prayer"),
+        referenceReadyTopic(
+          "taharah-purification",
+          "Purification",
+          [
+            quranReference(
+              "quran:taharah-purification:9-108",
+              ["9:108"],
+              "9:108",
+            ),
+            hadithReference(
+              "hadith:taharah-purification:hadeethenc-65004",
+              "Purity is half of faith, al-hamdulillāh (praise be to Allah) fills the Scale, and subhān Allah wa al-hamdulillāh (glory and praise be to Allah) fills what is between the heavens and the earth",
+              "muslim",
+              "Sahih Muslim",
+              "223",
+              "Abu Malik al-Ash'ari",
+              "65004",
+              "Sahih Muslim 223",
+            ),
+            whatAMuslimMustKnowScholarlyReference(
+              "scholarly:taharah-purification:alharamain-251",
+              "Chapter Two: Matters Related to Acts of Worship — The First Topic: Tahārah (purification)",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "taharah-wudu",
+          "Wudu",
+          [
+            quranReference(
+              "quran:taharah-wudu:5-6",
+              ["5:6"],
+              "5:6",
+            ),
+            hadithReference(
+              "hadith:taharah-wudu:hadeethenc-3313",
+              "If anyone performs ablution like this ablution of mine and offers two Rak'ahs during which he does not think of anything else, Allah will forgive his past sins",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "164",
+              "Uthman ibn Affan",
+              "3313",
+              "Sahih al-Bukhari 164",
+            ),
+            whatAMuslimMustKnowScholarlyReference(
+              "scholarly:taharah-wudu:alharamain-251",
+              "Chapter Two: Matters Related to Acts of Worship — The First Topic: Tahārah — Sixth: Rulings of wudū’ (ablution)",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "taharah-ghusl",
+          "Ghusl",
+          [
+            quranReference(
+              "quran:taharah-ghusl:4-43",
+              ["4:43"],
+              "4:43",
+            ),
+            hadithReference(
+              "hadith:taharah-ghusl:hadeethenc-3316",
+              "On taking a ritual bath from Janābah (major ritual impurity), the Messenger of Allah (may Allah's peace and blessings be upon him) used to wash his hands and perform ablution like that for prayer, then wash himself",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "272",
+              "Aishah",
+              "3316",
+              "Sahih al-Bukhari 272",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "taharah-cleanliness-and-prayer",
+          "Cleanliness and Prayer",
+          [
+            quranReference(
+              "quran:taharah-cleanliness-and-prayer:5-6",
+              ["5:6"],
+              "5:6",
+            ),
+            hadithReference(
+              "hadith:taharah-cleanliness-and-prayer:hadeethenc-3534",
+              "Allah does not accept the prayer of any of you who is in the state of Hadath (minor ritual impurity) until he performs ablution",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "6954",
+              "Abu Hurayrah",
+              "3534",
+              "Sahih al-Bukhari 6954",
+            ),
+            whatAMuslimMustKnowScholarlyReference(
+              "scholarly:taharah-cleanliness-and-prayer:alharamain-251",
+              "Chapter Two: Matters Related to Acts of Worship — The First Topic: Tahārah — Third: Things forbidden for Muhdith (one in the state of ritual impurity)",
+            ),
+          ],
+        ),
       ],
     },
     {

@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v5");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v6");
 });
 
 test("production library validates successfully", () => {
@@ -159,19 +159,19 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 23);
-  assert.equal(ready.length, 26);
+  assert.equal(planned.length, 19);
+  assert.equal(ready.length, 30);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "taharah-purification");
+  const planned = findTopic(library, "halal-and-haram-lawful-and-unlawful");
   planned.references.push(
     structuredClone(findCollection(library, "iman").references[0]),
   );
-  planned.references[0].id = "quran:taharah-purification:2-177";
+  planned.references[0].id = "quran:halal-and-haram-lawful-and-unlawful:2-177";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -230,15 +230,18 @@ test("all five Islam / Five Pillars topics are reference-ready with vetted sourc
   }
 });
 
-test("all scholarly references for A Glimpse into the Islamic Creed use /en/content/81 and not /en/content/381", () => {
+test("scholarly references use /en/content/81 for Creed and /en/content/251 for What A Muslim Must Know", () => {
   const allRefs = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.flatMap((c) => [
     ...c.references,
     ...c.topics.flatMap((t) => t.references),
   ]);
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
-  assert.equal(scholarlyRefs.length, 26);
+  assert.equal(scholarlyRefs.length, 29);
+  const content81 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/81");
+  const content251 = scholarlyRefs.filter((r) => r.sourceUrl === "https://risala.prh.gov.sa/en/content/251");
+  assert.equal(content81.length, 26);
+  assert.equal(content251.length, 3);
   for (const ref of scholarlyRefs) {
-    assert.equal(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/81");
     assert.notEqual(ref.sourceUrl, "https://risala.prh.gov.sa/en/content/381");
   }
 });
@@ -523,10 +526,10 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
 
-  assert.equal(allRefs.length, 109);
-  assert.equal(quranRefs.length, 55);
-  assert.equal(hadithRefs.length, 28);
-  assert.equal(scholarlyRefs.length, 26);
+  assert.equal(allRefs.length, 120);
+  assert.equal(quranRefs.length, 59);
+  assert.equal(hadithRefs.length, 32);
+  assert.equal(scholarlyRefs.length, 29);
 
   // Reused 4:36 verse key check
   const p36Refs = quranRefs.filter((r) => r.verseKeys.includes("4:36"));
@@ -547,9 +550,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
     assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
   }
 
-  // All 23 remaining planned topics are empty
+  // All 19 remaining planned topics are empty
   const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 23);
+  assert.equal(plannedTopics.length, 19);
   assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
@@ -713,7 +716,7 @@ test("unapproved Quran coordinates fail closed", () => {
   assertInvalid(library, "verseKeys is invalid");
 });
 
-test("controlled Quran whitelist poststate contains exactly 68 keys and accepts Batch 4 and Batch 5 additions while rejecting unapproved candidates", () => {
+test("controlled Quran whitelist poststate contains exactly 71 keys and accepts Batch 4, Batch 5, and Batch 6 additions while rejecting unapproved candidates", () => {
   const librarySource = readFileSync(
     new URL("../app/islamic-reference-library.ts", import.meta.url),
     "utf8"
@@ -723,8 +726,8 @@ test("controlled Quran whitelist poststate contains exactly 68 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 68);
-  assert.equal(new Set(extractedKeys).size, 68);
+  assert.equal(extractedKeys.length, 71);
+  assert.equal(new Set(extractedKeys).size, 71);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -778,6 +781,23 @@ test("controlled Quran whitelist poststate contains exactly 68 keys and accepts 
     );
   }
 
+  // Explicitly prove the three Batch 6 keys are accepted
+  const batch6ApprovedKeys = ["4:43", "5:6", "9:108"];
+  for (const key of batch6ApprovedKeys) {
+    const validLib = cloneLibrary();
+    firstReferenceOfType(validLib, "quran").verseKeys = [key];
+    const validation = validateIslamicReferenceLibrary(validLib);
+    assert.equal(
+      validation.valid,
+      true,
+      `Expected approved Batch 6 key ${key} to pass validation`,
+    );
+    assert.ok(
+      extractedKeys.includes(key),
+      `Batch 6 key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
+    );
+  }
+
   // Explicitly prove the rejected Batch 4 candidate keys are rejected and NOT in whitelist
   const batch4RejectedCandidateKeys = ["9:122", "53:3", "53:4"];
   for (const key of batch4RejectedCandidateKeys) {
@@ -803,6 +823,150 @@ test("controlled Quran whitelist poststate contains exactly 68 keys and accepts 
       `Rejected Batch 5 candidate ${key} should not be in whitelist`,
     );
   }
+
+  // Explicitly prove the rejected Batch 6 candidate keys are rejected and NOT in whitelist
+  const batch6RejectedCandidateKeys = ["2:222", "74:4"];
+  for (const key of batch6RejectedCandidateKeys) {
+    const invalidLib = cloneLibrary();
+    firstReferenceOfType(invalidLib, "quran").verseKeys = [key];
+    assertInvalid(invalidLib, "verseKeys is invalid");
+    assert.equal(
+      extractedKeys.includes(key),
+      false,
+      `Rejected Batch 6 candidate ${key} should not be in whitelist`,
+    );
+  }
+});
+
+test("all four Taharah topics are reference-ready with vetted sources", () => {
+  const collection = findCollection(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "taharah");
+  assert.ok(collection);
+  assert.equal(collection.topics.length, 4);
+
+  // 1. Purification: 9:108, Muslim 223 / 65004, Alharamain 251
+  const purification = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "taharah-purification");
+  assert.ok(purification);
+  assert.equal(purification.status, "reference-ready");
+  assert.equal(purification.references.length, 3);
+  assert.deepEqual(
+    purification.references.map((r) => r.type),
+    ["quran", "hadith", "scholarly"],
+  );
+  assert.deepEqual(
+    purification.references.find((r) => r.type === "quran")?.verseKeys,
+    ["9:108"],
+  );
+  const purHadith = purification.references.find((r) => r.type === "hadith");
+  assert.ok(purHadith);
+  assert.equal(purHadith.collectionId, "muslim");
+  assert.equal(purHadith.locator, "223");
+  assert.equal(purHadith.sourceRecordId, "65004");
+  const purScholarly = purification.references.find((r) => r.type === "scholarly");
+  assert.ok(purScholarly);
+  assert.equal(purScholarly.id, "scholarly:taharah-purification:alharamain-251");
+  assert.equal(purScholarly.title, "What A Muslim Must Know");
+  assert.equal(
+    purScholarly.author,
+    "The Scientific Committee under the Presidency of Religious Affairs at the Sacred Mosque and the Prophet's Mosque",
+  );
+  assert.equal(purScholarly.sourceName, "Alharamain's Message");
+  assert.equal(
+    purScholarly.responsibleOrganization,
+    "Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque",
+  );
+  assert.equal(purScholarly.sourceUrl, "https://risala.prh.gov.sa/en/content/251");
+  assert.equal(purScholarly.action, "external-link");
+  assert.equal(purScholarly.contentPolicy, "metadata-only");
+
+  // 2. Wudu: 5:6, Bukhari 164 / 3313, Alharamain 251
+  const wudu = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "taharah-wudu");
+  assert.ok(wudu);
+  assert.equal(wudu.status, "reference-ready");
+  assert.equal(wudu.references.length, 3);
+  assert.deepEqual(
+    wudu.references.map((r) => r.type),
+    ["quran", "hadith", "scholarly"],
+  );
+  assert.deepEqual(
+    wudu.references.find((r) => r.type === "quran")?.verseKeys,
+    ["5:6"],
+  );
+  const wuduHadith = wudu.references.find((r) => r.type === "hadith");
+  assert.ok(wuduHadith);
+  assert.equal(wuduHadith.collectionId, "bukhari");
+  assert.equal(wuduHadith.locator, "164");
+  assert.equal(wuduHadith.sourceRecordId, "3313");
+  const wuduScholarly = wudu.references.find((r) => r.type === "scholarly");
+  assert.ok(wuduScholarly);
+  assert.equal(wuduScholarly.id, "scholarly:taharah-wudu:alharamain-251");
+  assert.equal(wuduScholarly.title, "What A Muslim Must Know");
+  assert.equal(
+    wuduScholarly.author,
+    "The Scientific Committee under the Presidency of Religious Affairs at the Sacred Mosque and the Prophet's Mosque",
+  );
+  assert.equal(wuduScholarly.sourceName, "Alharamain's Message");
+  assert.equal(
+    wuduScholarly.responsibleOrganization,
+    "Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque",
+  );
+  assert.equal(wuduScholarly.sourceUrl, "https://risala.prh.gov.sa/en/content/251");
+  assert.equal(wuduScholarly.action, "external-link");
+  assert.equal(wuduScholarly.contentPolicy, "metadata-only");
+
+  // 3. Ghusl: 4:43, Bukhari 272 / 3316, NO SCHOLARLY
+  const ghusl = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "taharah-ghusl");
+  assert.ok(ghusl);
+  assert.equal(ghusl.status, "reference-ready");
+  assert.equal(ghusl.references.length, 2);
+  assert.deepEqual(
+    ghusl.references.map((r) => r.type),
+    ["quran", "hadith"],
+  );
+  assert.deepEqual(
+    ghusl.references.find((r) => r.type === "quran")?.verseKeys,
+    ["4:43"],
+  );
+  const ghuslHadith = ghusl.references.find((r) => r.type === "hadith");
+  assert.ok(ghuslHadith);
+  assert.equal(ghuslHadith.collectionId, "bukhari");
+  assert.equal(ghuslHadith.locator, "272");
+  assert.equal(ghuslHadith.sourceRecordId, "3316");
+  assert.equal(ghusl.references.some((r) => r.type === "scholarly"), false);
+
+  // 4. Cleanliness and Prayer: 5:6, Bukhari 6954 / 3534, Alharamain 251
+  const cleanliness = findTopic(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY, "taharah-cleanliness-and-prayer");
+  assert.ok(cleanliness);
+  assert.equal(cleanliness.status, "reference-ready");
+  assert.equal(cleanliness.references.length, 3);
+  assert.deepEqual(
+    cleanliness.references.map((r) => r.type),
+    ["quran", "hadith", "scholarly"],
+  );
+  assert.deepEqual(
+    cleanliness.references.find((r) => r.type === "quran")?.verseKeys,
+    ["5:6"],
+  );
+  const cleanlinessHadith = cleanliness.references.find((r) => r.type === "hadith");
+  assert.ok(cleanlinessHadith);
+  assert.equal(cleanlinessHadith.collectionId, "bukhari");
+  assert.equal(cleanlinessHadith.locator, "6954");
+  assert.equal(cleanlinessHadith.sourceRecordId, "3534");
+  const cleanlinessScholarly = cleanliness.references.find((r) => r.type === "scholarly");
+  assert.ok(cleanlinessScholarly);
+  assert.equal(cleanlinessScholarly.id, "scholarly:taharah-cleanliness-and-prayer:alharamain-251");
+  assert.equal(cleanlinessScholarly.title, "What A Muslim Must Know");
+  assert.equal(
+    cleanlinessScholarly.author,
+    "The Scientific Committee under the Presidency of Religious Affairs at the Sacred Mosque and the Prophet's Mosque",
+  );
+  assert.equal(cleanlinessScholarly.sourceName, "Alharamain's Message");
+  assert.equal(
+    cleanlinessScholarly.responsibleOrganization,
+    "Presidency of Religious Affairs at the Grand Mosque and the Prophet's Mosque",
+  );
+  assert.equal(cleanlinessScholarly.sourceUrl, "https://risala.prh.gov.sa/en/content/251");
+  assert.equal(cleanlinessScholarly.action, "external-link");
+  assert.equal(cleanlinessScholarly.contentPolicy, "metadata-only");
 });
 
 test("duplicate Quran coordinates inside one reference fail closed", () => {
