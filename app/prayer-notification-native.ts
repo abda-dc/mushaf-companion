@@ -12,6 +12,7 @@ import {
   reconcilePrayerNotificationSchedule,
   type PendingPrayerNotification,
   type PrayerNotificationEntry,
+  type PrayerNotificationSchedulingMode,
 } from "./prayer-notification-scheduler.ts";
 import type {
   PrayerExactSchedulingState,
@@ -77,6 +78,18 @@ function channelId(entry: PrayerNotificationEntry): string {
   return cue ? `prayer-adhan-${cue.id}-v1` : PRAYER_DEFAULT_CHANNEL_ID;
 }
 
+function schedulingMode(
+  exactScheduling: PrayerExactSchedulingState,
+): Exclude<PrayerNotificationSchedulingMode, "unknown"> {
+  if (exactScheduling === "available") {
+    return "exact";
+  }
+  if (exactScheduling === "unavailable") {
+    return "inexact";
+  }
+  return "not-applicable";
+}
+
 export function toNativePrayerNotification(
   entry: PrayerNotificationEntry,
   exactScheduling: PrayerExactSchedulingState,
@@ -103,6 +116,7 @@ export function toNativePrayerNotification(
       alertMode: entry.alertMode,
       adhanCueId: entry.adhanCueId,
       navigationTarget: entry.navigationTarget,
+      schedulingMode: schedulingMode(exactScheduling),
     },
   };
 }
@@ -125,6 +139,14 @@ function isSalahName(value: unknown): value is SalahName {
     typeof value === "string" &&
     SALAH_ORDER.includes(value as SalahName)
   );
+}
+
+function pendingSchedulingMode(value: unknown): PrayerNotificationSchedulingMode {
+  return value === "exact" ||
+    value === "inexact" ||
+    value === "not-applicable"
+    ? value
+    : "unknown";
 }
 
 export function pendingNativePrayerNotification(
@@ -167,6 +189,7 @@ export function pendingNativePrayerNotification(
     adhanCueId:
       typeof extra.adhanCueId === "string" ? extra.adhanCueId : null,
     navigationTarget: "prayer",
+    schedulingMode: pendingSchedulingMode(extra.schedulingMode),
   };
 }
 
@@ -315,6 +338,7 @@ export function createNativePrayerNotificationPlatform(
         const reconciliation = reconcilePrayerNotificationSchedule(
           desired,
           pending,
+          schedulingMode(currentCapabilities.exactScheduling),
         );
 
         if (reconciliation.cancelIds.length > 0) {

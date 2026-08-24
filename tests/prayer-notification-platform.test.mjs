@@ -237,7 +237,7 @@ test("disabling notifications reconciles an empty owned schedule even when permi
   assert.deepEqual(platform.calls, [[]]);
 });
 
-test("native payload translation uses integers, dates, owned metadata, and no coordinates", () => {
+test("native payload translation uses integers, dates, owned metadata, scheduling mode, and no coordinates", () => {
   const prefs = preferences();
   const days = calculatePrayerNotificationHorizon({
     preferences: prefs,
@@ -251,6 +251,7 @@ test("native payload translation uses integers, dates, owned metadata, and no co
   })[0];
   const exact = toNativePrayerNotification(entry, "available");
   const inexact = toNativePrayerNotification(entry, "unavailable");
+  const ios = toNativePrayerNotification(entry, "not-applicable");
 
   assert.equal(Number.isInteger(exact.id), true);
   assert.equal(exact.title, entry.title);
@@ -264,12 +265,15 @@ test("native payload translation uses integers, dates, owned metadata, and no co
   assert.equal(inexact.isExactNotification, false);
   assert.equal(exact.extra.owner, PRAYER_NOTIFICATION_OWNER);
   assert.equal(exact.extra.navigationTarget, "prayer");
+  assert.equal(exact.extra.schedulingMode, "exact");
+  assert.equal(inexact.extra.schedulingMode, "inexact");
+  assert.equal(ios.extra.schedulingMode, "not-applicable");
   assert.equal("latitude" in exact.extra, false);
   assert.equal("longitude" in exact.extra, false);
   assert.doesNotMatch(JSON.stringify(exact), /38\.907|-77\.037/);
 });
 
-test("pending native entries are accepted only with app-owned prayer metadata", () => {
+test("pending native entries preserve scheduling mode and migrate legacy metadata safely", () => {
   const prefs = preferences();
   const entry = buildPrayerNotificationSchedule({
     days: calculatePrayerNotificationHorizon({ preferences: prefs, coordinates, now }),
@@ -279,7 +283,11 @@ test("pending native entries are accepted only with app-owned prayer metadata", 
   const payload = toNativePrayerNotification(entry, "available");
   assert.deepEqual(
     pendingNativePrayerNotification(payload),
-    { ...entry, owner: PRAYER_NOTIFICATION_OWNER },
+    {
+      ...entry,
+      owner: PRAYER_NOTIFICATION_OWNER,
+      schedulingMode: "exact",
+    },
   );
   assert.equal(
     pendingNativePrayerNotification({
@@ -289,12 +297,22 @@ test("pending native entries are accepted only with app-owned prayer metadata", 
     null,
   );
 
+  const legacyExtra = { ...payload.extra };
+  delete legacyExtra.schedulingMode;
+  const legacyOwned = pendingNativePrayerNotification({
+    ...payload,
+    extra: legacyExtra,
+  });
+  assert.ok(legacyOwned);
+  assert.equal(legacyOwned.schedulingMode, "unknown");
+
   const malformedOwned = pendingNativePrayerNotification({
     ...payload,
     extra: { owner: PRAYER_NOTIFICATION_OWNER },
   });
   assert.ok(malformedOwned);
   assert.equal(Number.isNaN(malformedOwned.scheduledAt), true);
+  assert.equal(malformedOwned.schedulingMode, "unknown");
 });
 
 test("structured plugin errors become bounded user-facing messages", () => {
