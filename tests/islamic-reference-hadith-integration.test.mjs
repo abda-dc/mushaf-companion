@@ -32,7 +32,7 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 41);
+  assert.equal(hadithRefs.length, 48);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
@@ -322,11 +322,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 140 references", () => {
+test("18. M9R reference IDs remain globally unique across all 154 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 140);
+  assert.equal(ids.length, 154);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -422,7 +422,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 68);
+  assert.equal(quranRefs.length, 75);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -443,25 +443,25 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 8 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 9 additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 39);
+  assert.equal(readyTopics.length, 46);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 10);
+  assert.equal(plannedTopics.length, 3);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 140);
-  assert.equal(getM9RHadithReferences().length, 41);
+  assert.equal(allRefs.length, 154);
+  assert.equal(getM9RHadithReferences().length, 48);
 
-  // Exactly 36 unique Hadith internal targets
+  // Exactly 42 unique Hadith internal targets
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 36);
+  assert.equal(uniqueTargets.size, 42);
 });
 
 test("27. M9H collection/content counts reflect approved seeded records", () => {
@@ -469,9 +469,9 @@ test("27. M9H collection/content counts reflect approved seeded records", () => 
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 36);
+  assert.equal(records.length, 42);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 36);
+  assert.equal(approved.length, 42);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
@@ -892,6 +892,102 @@ test("40. All four Du'a and Dhikr Batch 8 Hadith references resolve correctly th
 
   for (const item of expected) {
     const hadithRef = collection.topics
+      .find((topic) => topic.id === item.topicId)
+      ?.references.find((reference) => reference.type === "hadith");
+
+    assert.ok(hadithRef, `Missing Hadith reference for ${item.topicId}`);
+    assert.equal(hadithRef.id, item.referenceId);
+    assert.equal(hadithRef.collectionId, item.collectionId);
+    assert.equal(hadithRef.locator, item.locator);
+    assert.equal(hadithRef.sourceRecordId, item.providerId);
+
+    const result = resolveIslamicReferenceHadith(hadithRef);
+    assert.equal(result.status, "resolved");
+    assert.equal(result.target, item.target);
+    assert.equal(
+      result.hadithResolution?.record?.canonicalLabel,
+      item.canonicalLabel,
+    );
+    assert.equal(
+      result.hadithResolution?.sourceRecord?.providerRecordId,
+      item.providerId,
+    );
+  }
+});
+
+test("40. All seven Akhirah Batch 9 Hadith references resolve correctly through the generic bridge", () => {
+  const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
+  const akhirahCollection = library.collections.find((c) => c.id === "akhirah");
+  assert.ok(akhirahCollection);
+
+  const expected = [
+    {
+      topicId: "akhirah-death",
+      referenceId: "hadith:akhirah-death:hadeethenc-66232",
+      collectionId: "tirmidhi",
+      locator: "2307",
+      providerId: "66232",
+      target: "hadith:tirmidhi:2307",
+      canonicalLabel: "Jami' at-Tirmidhi 2307",
+    },
+    {
+      topicId: "akhirah-life-of-the-grave",
+      referenceId: "hadith:akhirah-life-of-the-grave:hadeethenc-4206",
+      collectionId: "bukhari",
+      locator: "4699",
+      providerId: "4206",
+      target: "hadith:bukhari:4699",
+      canonicalLabel: "Sahih al-Bukhari 4699",
+    },
+    {
+      topicId: "akhirah-resurrection",
+      referenceId: "hadith:akhirah-resurrection:hadeethenc-5460",
+      collectionId: "muslim",
+      locator: "2859",
+      providerId: "5460",
+      target: "hadith:muslim:2859",
+      canonicalLabel: "Sahih Muslim 2859",
+    },
+    {
+      topicId: "akhirah-day-of-judgment",
+      referenceId: "hadith:akhirah-day-of-judgment:hadeethenc-8345",
+      collectionId: "bukhari",
+      locator: "4712",
+      providerId: "8345",
+      target: "hadith:bukhari:4712",
+      canonicalLabel: "Sahih al-Bukhari 4712",
+    },
+    {
+      topicId: "akhirah-accountability",
+      referenceId: "hadith:akhirah-accountability:hadeethenc-3165",
+      collectionId: "muslim",
+      locator: "2581",
+      providerId: "3165",
+      target: "hadith:muslim:2581",
+      canonicalLabel: "Sahih Muslim 2581",
+    },
+    {
+      topicId: "akhirah-paradise",
+      referenceId: "hadith:akhirah-paradise:hadeethenc-10404",
+      collectionId: "bukhari",
+      locator: "4779",
+      providerId: "10404",
+      target: "hadith:bukhari:4779",
+      canonicalLabel: "Sahih al-Bukhari 4779",
+    },
+    {
+      topicId: "akhirah-hellfire",
+      referenceId: "hadith:akhirah-hellfire:hadeethenc-3370",
+      collectionId: "muslim",
+      locator: "2844",
+      providerId: "3370",
+      target: "hadith:muslim:2844",
+      canonicalLabel: "Sahih Muslim 2844",
+    },
+  ];
+
+  for (const item of expected) {
+    const hadithRef = akhirahCollection.topics
       .find((topic) => topic.id === item.topicId)
       ?.references.find((reference) => reference.type === "hadith");
 

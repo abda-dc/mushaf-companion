@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 36
+  "recordCount": 42
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -33,6 +33,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/2758",
     "sha256": "e3ea18090673d180b8b547df88e76d78f2522a6889cd980fa1a8bd9028a669ea",
     "charCount": 291
+  },
+  "3165": {
+    "id": "3165",
+    "title": "The bankrupt in my Ummah is the one who will come on the Day of Judgment with prayer, fasting and Zakah, but since he hurled abuse at others, accused others of committing adultery without evidence, unlawfully consumed the wealth of others, and shed the blood of others and beat others, his good deeds will be credited to the accounts of others (who suffered at his hands)",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: “‘Do you know who is the bankrupt?\" They said: \"The bankrupt among us is the one who has neither money nor property.\" He said: \"The bankrupt in my Ummah is the one who will come on the Day of Judgment with prayer, fasting and Zakat, but since he hurled abuse at others, accused others of committing adultery without evidence, unlawfully consumed the wealth of others, and shed the blood of others and beat others, his good deeds will be credited to the accounts of others (who suffered at his hands), and if his good deeds fall short to clear his account, others' sins will be cast on him and he will then be thrown in the Fire.\"",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3165",
+    "sha256": "aefbf27e0764258e2d9146e0a6d100f4033eb3585562ef92883ec91c75e99f62",
+    "charCount": 752
   },
   "3232": {
     "id": "3232",
@@ -77,6 +88,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/3316",
     "sha256": "b170c2c653db7366b75d92d42208f9502e598527a94638a46825272d1acca700",
     "charCount": 654
+  },
+  "3370": {
+    "id": "3370",
+    "title": "This is a stone that was thrown into Hellfire seventy years ago and it was falling into Hellfire until it reached its bottom",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported: We were in the company of the Messenger of Allah (may Allah's peace and blessings be upon him) when he heard a bang. Thereupon, the Prophet (may Allah's peace and blessings be upon him) said: \"Do you know what it is?\" We said: \"Allah and His Messenger know best.\" He said: \"This is a stone that was thrown into Hellfire seventy years ago and it was falling into Hellfire until it reached its bottom.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3370",
+    "sha256": "8182c788c0a749eff4c9fd2a73d2428c3dc3ce96900895842e39fa2f076b426b",
+    "charCount": 455
   },
   "3534": {
     "id": "3534",
@@ -132,6 +154,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/4182",
     "sha256": "7cf8bc99f3558acc00ed5cb5da10af518884e17c1bcff9a427662c2d91d4fe31",
     "charCount": 677
+  },
+  "4206": {
+    "id": "4206",
+    "title": "When a Muslim is questioned in the grave, he testifies that no deity is worthy of worship except Allah and that Muhammad is the Messenger of Allah",
+    "hadith_text": "Al-Barā’ ibn ‘Āzib (may Allah be pleased with him) reported that the Messenger of Allah (may Allah's peace and blessings be upon him) said: \"When a Muslim is questioned in the grave, he testifies that no deity is worthy of worship except Allah and that Muhammad is the Messenger of Allah,\" this is His saying: {Allah keeps those who believe steadfast with the firm Word [of faith] in the life of this world and in the Hereafter.} [Surat Ibrāhīm: 27]",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4206",
+    "sha256": "006f1567bf6f9ac0070684f506658c6ef8a774800d5431a142d41dee97625773",
+    "charCount": 449
   },
   "4308": {
     "id": "4308",
@@ -320,6 +353,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "77e448a101c38d03c481e9c8c3556e3e972e06a43ccfd3869e9c918a61b6f3db",
     "charCount": 298
   },
+  "8345": {
+    "id": "8345",
+    "title": "Allah will gather the people, the first and the last, in one place, where they will hear the caller and they will be sighted clearly. The sun will draw near, and people will be overwhelmed with anguish and distress that they cannot endure or bear",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported: The Messenger of Allah (may Allah's peace and blessings be upon him) was brought some meat, and the forearm was presented to him, and he used to like it, so he took a bite from it and then said: \"I am the master of the people on the Day of Judgment, and do you know why? Allah will gather the people, the first and the last, in one place, where they will hear the caller and they will be sighted clearly. The sun will draw near, and people will be overwhelmed with anguish and distress that they cannot endure or bear. People will say: Do you not see what has befallen you all? Will you not look for someone to intercede for you with your Lord? Then some of the people will say to others: Go to Adam. They will come to Adam (peace be upon him) and say: You are the father of mankind; Allah created you with His Own Hand, breathed into you from His Spirit, and commanded the angels to prostrate to you. Intercede for us with your Lord. Do you not see what we are going through? Do you not see what has befallen us? Adam will say: Indeed, my Lord is so angry today as He has never been before and will never be after. He has forbidden me from the tree, and I disobeyed Him. Myself, myself, myself! Go to someone else; go to Nūh (Noah). They will come to Noah and say: O Noah, you are the first of the messengers to the people of the earth, and Allah has named you a grateful slave. Intercede for us with your Lord. Do you not see what we are going through? He will say: Indeed, my Lord is so angry today, as He has never been before and will never be after. I had a supplication that I made against my people. Myself, myself, myself! Go to someone else; go to Ibrāhīm (Abraham). They will come to Abraham and say: O Abraham, you are the Prophet of Allah and His close Friend from the people of the earth. Intercede for us with your Lord. Do you not see what we are going through? He will say: Indeed, my Lord is so angry today as He has never been before and will never be after. I have told three lies. Myself, myself, myself! Go to someone else; go to Mūsa (Moses). They will come to Moses and say: O Moses, you are the Messenger of Allah; Allah has favored you with His message and His speech over the people. Intercede for us with your Lord. Do you not see what we are going through? He will say: Indeed, my Lord is so angry today as He has never been before and will never be after. I killed a soul that I was not commanded to kill. Myself, myself, myself! Go to someone else; go to ‘Isa (Jesus), son of Mary. They will come to Jesus and say: O Jesus, you are the Messenger of Allah, and His Word which He cast to Mary, and a Spirit from Him, and you spoke to the people in the cradle as a baby. Intercede for us with your Lord. Do you not see what we are going through? Jesus will say: Indeed, my Lord is so angry today as He has never been before and will never be after, and he did not mention a sin. Myself, myself, myself! Go to someone else; go to Muhammad. They will come to Muhammad and say: O Muhammad, you are the Messenger of Allah and the Seal of the Prophets. Allah has forgiven you what has preceded and what was later of your sin. Intercede for us with your Lord. Do you not see what we are going through? I will then set off and come beneath the Throne and fall in prostration to my Lord, Exalted and Glorified be He, and then Allah will inspire me with some forms of His praise and glorification that He has not inspired anyone with before me. Then it will be said: O Muhammad, raise your head; ask, and it will be granted to you, and intercede, and your intercession will be accepted. I will raise my head and say: My nation, O Lord! My nation, O Lord! My nation, O Lord! It will be said: O Muhammad, admit from your nation those who have no reckoning from the right gate of the gates of Paradise, and they will share with people in the other gates. Then he said: By the One in Whose Hand my soul is, what lies between the two gateposts of the gates of Paradise is like the distance between Makkah and Himyar—or as the distance between Makkah and Busra -\".",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/8345",
+    "sha256": "1bcec4bd491a824f9c35b084a3bb6e3e5ccf436ea4162a1c4ebf4367d52027d0",
+    "charCount": 4132
+  },
   "8402": {
     "id": "8402",
     "title": "The Prophet (may Allah's peace and blessings be upon him) used to remember Allah at all times",
@@ -330,6 +374,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/8402",
     "sha256": "a10510f63ee1878a6e0c54a0747924322d4c3fcd97c0296e38941fc593ad60b3",
     "charCount": 145
+  },
+  "10404": {
+    "id": "10404",
+    "title": "Allah, the Blessed and Exalted, said: I have prepared for My righteous slaves what no eye has ever seen, no ear has ever heard, and no human heart has ever imagined,",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Allah, the Blessed and Exalted, said: I have prepared for My righteous slaves what no eye has ever seen, no ear has ever heard, and no human heart has ever imagined,\" Abu Hurayrah said: Recite, if you wish: {No soul knows what delights are kept hidden for them.} [Surat as-Sajdah: 17]",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/10404",
+    "sha256": "c0bd33da7f68e6010473a21c75c1b27305b8a0029c03108e290f50516ec87a4c",
+    "charCount": 419
   },
   "64643": {
     "id": "64643",
@@ -418,5 +473,16 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/65046",
     "sha256": "af87aabda2fe222aa06386d831a53658fc1cb48784dab02e6bfbc776495d7a3c",
     "charCount": 380
+  },
+  "66232": {
+    "id": "66232",
+    "title": "Remember the destroyer of pleasures frequently,\" meaning death",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported: The Messenger of Allah (may Allah's peace and blessings be upon him) said: \"Remember the destroyer of pleasures frequently,\" meaning death.",
+    "grade": "[Hasan]",
+    "takhrij": "[Narrated by At-Tirmidhi, An-Nasā’i, Ibn Mājah]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/66232",
+    "sha256": "f6ff559e78e246e702ec3583bd81c85b7f1f4a65ea504b21a85aa4c1cee1c759",
+    "charCount": 194
   }
 });

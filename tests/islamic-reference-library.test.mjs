@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v8");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v9");
 });
 
 test("production library validates successfully", () => {
@@ -159,8 +159,8 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 10);
-  assert.equal(ready.length, 39);
+  assert.equal(planned.length, 3);
+  assert.equal(ready.length, 46);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
@@ -526,9 +526,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
 
-  assert.equal(allRefs.length, 140);
-  assert.equal(quranRefs.length, 68);
-  assert.equal(hadithRefs.length, 41);
+  assert.equal(allRefs.length, 154);
+  assert.equal(quranRefs.length, 75);
+  assert.equal(hadithRefs.length, 48);
   assert.equal(scholarlyRefs.length, 31);
 
   // Reused 4:36 verse key check
@@ -550,9 +550,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
     assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
   }
 
-  // All 10 remaining planned topics are empty
+  // All 3 remaining planned topics are empty
   const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 10);
+  assert.equal(plannedTopics.length, 3);
   assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
@@ -726,8 +726,8 @@ test("controlled Quran whitelist poststate contains exactly 80 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 80);
-  assert.equal(new Set(extractedKeys).size, 80);
+  assert.equal(extractedKeys.length, 85);
+  assert.equal(new Set(extractedKeys).size, 85);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -1425,4 +1425,33 @@ test("M9R has no Education, Today Study, or Evidence model dependency", () => {
     source,
     /\b(?:EducationCatalog|EducationCourse|EducationModule|EducationLesson|EducationProgress|KnowledgeCheck|TodayStudy|Evidence)\b/,
   );
+});
+
+test("all seven Akhirah topics are reference-ready with vetted sources", () => {
+  const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
+  const akhirah = findCollection(library, "akhirah");
+  assert.ok(akhirah);
+  assert.equal(akhirah.topics.length, 7);
+
+  const topicIds = [
+    "akhirah-death",
+    "akhirah-life-of-the-grave",
+    "akhirah-resurrection",
+    "akhirah-day-of-judgment",
+    "akhirah-accountability",
+    "akhirah-paradise",
+    "akhirah-hellfire",
+  ];
+
+  assert.deepEqual(akhirah.topics.map((t) => t.id), topicIds);
+
+  for (const topicId of topicIds) {
+    const topic = findTopic(library, topicId);
+    assert.equal(topic.status, "reference-ready");
+    assert.equal(topic.references.length, 2);
+    assert.equal(topic.references[0].type, "quran");
+    assert.equal(topic.references[1].type, "hadith");
+    assert.equal(topic.references[0].action, "internal-quran-navigation");
+    assert.equal(topic.references[1].action, "internal-hadith-navigation");
+  }
 });

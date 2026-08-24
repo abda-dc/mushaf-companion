@@ -35,12 +35,12 @@ test("1. Dataset manifest is present, valid, and deeply frozen", () => {
   assert.equal(HADEETHENC_DATASET_MANIFEST.attribution, "HadeethEnc.com");
   assert.equal(HADEETHENC_DATASET_MANIFEST.contentScope, "translated-hadith-text");
   assert.equal(HADEETHENC_DATASET_MANIFEST.workbookChecksum, "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218");
-  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 36);
+  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 42);
   assert.ok(Object.isFrozen(HADEETHENC_DATASET_MANIFEST));
 });
 
-test("2. Exactly 36 translations are activated with translation-approved state", () => {
-  assert.equal(SEEDED_HADITH_RECORDS.length, 36);
+test("2. Exactly 42 translations are activated with translation-approved state", () => {
+  assert.equal(SEEDED_HADITH_RECORDS.length, 42);
   for (const record of SEEDED_HADITH_RECORDS) {
     assert.equal(record.activation, "translation-approved", `Record ${record.id} should be translation-approved`);
     assert.ok(record.text, `Record ${record.id} text should exist`);
@@ -59,11 +59,11 @@ test("2. Exactly 36 translations are activated with translation-approved state",
   }
 });
 
-test("3. Only the approved 36 provider IDs are activated", () => {
+test("3. Only the approved 42 provider IDs are activated", () => {
   const activatedProviderIds = SEEDED_HADITH_RECORDS.map((r) => r.text?.translations[0]?.providerRecordId);
   const expectedSet = new Set(APPROVED_HADEETHENC_IDS);
 
-  assert.equal(activatedProviderIds.length, 36);
+  assert.equal(activatedProviderIds.length, 42);
   for (const pid of activatedProviderIds) {
     assert.ok(expectedSet.has(pid), `Provider ID '${pid}' is not in approved list`);
   }
@@ -644,20 +644,22 @@ test("31. HadeethEnc 4308 resolves to Sahih Muslim 2553 with exact translation h
   assert.equal(translation.attribution, "HadeethEnc.com");
 });
 
-test("32. M9H seeded records breakdown: 16 Bukhari, 19 Muslim, 1 Abu Dawud, 0 remaining collections", () => {
+test("32. M9H seeded records breakdown: 19 Bukhari, 21 Muslim, 1 Abu Dawud, 1 Tirmidhi, 0 remaining collections", () => {
   const records = listHadithRecords();
-  assert.equal(records.length, 36);
+  assert.equal(records.length, 42);
 
   const bukhari = records.filter((r) => r.collectionId === "bukhari");
   const muslim = records.filter((r) => r.collectionId === "muslim");
   const abuDawud = records.filter((r) => r.collectionId === "abu-dawud");
+  const tirmidhi = records.filter((r) => r.collectionId === "tirmidhi");
   const remaining = records.filter((r) =>
-    !["bukhari", "muslim", "abu-dawud"].includes(r.collectionId)
+    !["bukhari", "muslim", "abu-dawud", "tirmidhi"].includes(r.collectionId)
   );
 
-  assert.equal(bukhari.length, 16);
-  assert.equal(muslim.length, 19);
+  assert.equal(bukhari.length, 19);
+  assert.equal(muslim.length, 21);
   assert.equal(abuDawud.length, 1);
+  assert.equal(tirmidhi.length, 1);
   assert.equal(remaining.length, 0);
 });
 
@@ -845,7 +847,7 @@ test("42. HadeethEnc 5888 resolves to Sahih al-Bukhari 5232 with exact translati
 });
 
 test("43. Verify all disallowed provider records remain explicitly UNACTIVATED", () => {
-  const disallowed = ["66515", "58259", "4316", "66518", "3752", "3165", "6454"];
+  const disallowed = ["66515", "58259", "4316", "66518", "3752", "66519", "6454"];
   const records = listHadithRecords();
   for (const pid of disallowed) {
     const found = records.some((r) =>
@@ -941,5 +943,90 @@ test("46. Existing non-hyphenated Bukhari and Muslim record IDs remain valid", (
 
     const validation = validateHadithRecord(record, VALID_COLLECTIONS);
     assert.equal(validation.valid, true, validation.errors.join("; "));
+  }
+});
+
+test("47. M9R-9 Akhirah Hadith records resolve with verified translation checksums and attributes", () => {
+  const expectedRecords = [
+    {
+      id: "tirmidhi:2307",
+      collectionId: "tirmidhi",
+      canonicalNumber: "2307",
+      canonicalLabel: "Jami' at-Tirmidhi 2307",
+      narrator: "Abu Hurayrah",
+      providerId: "66232",
+      checksum: "f6ff559e78e246e702ec3583bd81c85b7f1f4a65ea504b21a85aa4c1cee1c759",
+      charCount: 194,
+    },
+    {
+      id: "bukhari:4699",
+      collectionId: "bukhari",
+      canonicalNumber: "4699",
+      canonicalLabel: "Sahih al-Bukhari 4699",
+      narrator: "Al-Bara' ibn 'Azib",
+      providerId: "4206",
+      checksum: "006f1567bf6f9ac0070684f506658c6ef8a774800d5431a142d41dee97625773",
+      charCount: 449,
+    },
+    {
+      id: "bukhari:4712",
+      collectionId: "bukhari",
+      canonicalNumber: "4712",
+      canonicalLabel: "Sahih al-Bukhari 4712",
+      narrator: "Abu Hurayrah",
+      providerId: "8345",
+      checksum: "1bcec4bd491a824f9c35b084a3bb6e3e5ccf436ea4162a1c4ebf4367d52027d0",
+      charCount: 4132,
+    },
+    {
+      id: "muslim:2581",
+      collectionId: "muslim",
+      canonicalNumber: "2581",
+      canonicalLabel: "Sahih Muslim 2581",
+      narrator: "Abu Hurayrah",
+      providerId: "3165",
+      checksum: "aefbf27e0764258e2d9146e0a6d100f4033eb3585562ef92883ec91c75e99f62",
+      charCount: 752,
+    },
+    {
+      id: "bukhari:4779",
+      collectionId: "bukhari",
+      canonicalNumber: "4779",
+      canonicalLabel: "Sahih al-Bukhari 4779",
+      narrator: "Abu Hurayrah",
+      providerId: "10404",
+      checksum: "c0bd33da7f68e6010473a21c75c1b27305b8a0029c03108e290f50516ec87a4c",
+      charCount: 419,
+    },
+    {
+      id: "muslim:2844",
+      collectionId: "muslim",
+      canonicalNumber: "2844",
+      canonicalLabel: "Sahih Muslim 2844",
+      narrator: "Abu Hurayrah",
+      providerId: "3370",
+      checksum: "8182c788c0a749eff4c9fd2a73d2428c3dc3ce96900895842e39fa2f076b426b",
+      charCount: 455,
+    },
+  ];
+
+  for (const expected of expectedRecords) {
+    const record = getHadithRecord(expected.id);
+    assert.ok(record, `Record ${expected.id} must exist`);
+    assert.equal(record.collectionId, expected.collectionId);
+    assert.equal(record.canonicalNumber, expected.canonicalNumber);
+    assert.equal(record.canonicalLabel, expected.canonicalLabel);
+    assert.equal(record.narrator, expected.narrator);
+    assert.equal(record.activation, "translation-approved");
+
+    const translation = record.text?.translations[0];
+    assert.ok(translation);
+    assert.equal(translation.providerRecordId, expected.providerId);
+    assert.equal(translation.checksum, expected.checksum);
+    assert.equal(translation.text.length, expected.charCount);
+
+    // Checksum verification
+    const computedHash = crypto.createHash("sha256").update(translation.text, "utf8").digest("hex");
+    assert.equal(computedHash, expected.checksum);
   }
 });
