@@ -34,10 +34,10 @@ test("1. Hadith Library exposes all six registered collections", () => {
   ]);
 });
 
-test("2. Sahih Muslim displays exactly 17 locally approved records", () => {
+test("2. Sahih Muslim displays exactly 19 locally approved records", () => {
   const allRecords = listHadithRecords();
   const muslimRecords = allRecords.filter((r) => r.collectionId === "muslim");
-  assert.equal(muslimRecords.length, 17);
+  assert.equal(muslimRecords.length, 19);
   const numbers = muslimRecords.map((r) => r.canonicalNumber);
   assert.deepEqual(numbers, [
     "8",
@@ -57,13 +57,15 @@ test("2. Sahih Muslim displays exactly 17 locally approved records", () => {
     "1599",
     "1934",
     "1515",
+    "373",
+    "2735",
   ]);
 });
 
-test("3. Sahih al-Bukhari displays exactly 15 locally approved records", () => {
+test("3. Sahih al-Bukhari displays exactly 16 locally approved records", () => {
   const allRecords = listHadithRecords();
   const bukhariRecords = allRecords.filter((r) => r.collectionId === "bukhari");
-  assert.equal(bukhariRecords.length, 15);
+  assert.equal(bukhariRecords.length, 16);
   const numbers = bukhariRecords.map((r) => r.canonicalNumber);
   assert.deepEqual(numbers, [
     "4485",
@@ -81,12 +83,23 @@ test("3. Sahih al-Bukhari displays exactly 15 locally approved records", () => {
     "6954",
     "1471",
     "5232",
+    "6389",
   ]);
 });
 
-test("4. Other four collections truthfully display zero local records", () => {
+test("4. Abu Dawud displays one approved record and the remaining three collections display zero", () => {
   const allRecords = listHadithRecords();
-  for (const collectionId of ["abu-dawud", "tirmidhi", "nasai", "ibn-majah"]) {
+
+  const abuDawudRecords = allRecords.filter((r) => r.collectionId === "abu-dawud");
+  assert.equal(abuDawudRecords.length, 1);
+  assert.equal(abuDawudRecords[0].canonicalNumber, "5074");
+  assert.equal(abuDawudRecords[0].canonicalLabel, "Sunan Abi Dawud 5074");
+  assert.equal(
+    abuDawudRecords[0].text?.translations[0]?.providerRecordId,
+    "5485",
+  );
+
+  for (const collectionId of ["tirmidhi", "nasai", "ibn-majah"]) {
     const colRecords = allRecords.filter((r) => r.collectionId === collectionId);
     assert.equal(
       colRecords.length,

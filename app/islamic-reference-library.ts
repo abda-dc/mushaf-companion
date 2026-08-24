@@ -196,6 +196,7 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "5:47",
   "5:48",
   "7:54",
+  "7:55",
   "7:180",
   "9:60",
   "9:108",
@@ -215,9 +216,12 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "31:13",
   "31:18",
   "33:21",
+  "33:41",
+  "33:42",
   "33:70",
   "35:1",
   "39:62",
+  "40:60",
   "42:11",
   "47:19",
   "49:6",
@@ -813,7 +817,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v7",
+  revision: "m9r-v8",
   collections: [
     {
       id: "islam",
@@ -1882,15 +1886,89 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to Du'a and Dhikr.",
       references: [],
       topics: [
-        plannedTopic("dua-and-dhikr-dua", "Du'a"),
-        plannedTopic("dua-and-dhikr-dhikr", "Dhikr"),
-        plannedTopic(
+        referenceReadyTopic(
+          "dua-and-dhikr-dua",
+          "Du'a",
+          [
+            quranReference(
+              "quran:dua-and-dhikr-dua:40-60",
+              ["40:60"],
+              "40:60",
+            ),
+            hadithReference(
+              "hadith:dua-and-dhikr-dua:hadeethenc-5502",
+              "Supplication for good in this world and the Hereafter",
+              "bukhari",
+              "Sahih al-Bukhari",
+              "6389",
+              "Anas ibn Malik",
+              "5502",
+              "Sahih al-Bukhari 6389",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
+          "dua-and-dhikr-dhikr",
+          "Dhikr",
+          [
+            quranReference(
+              "quran:dua-and-dhikr-dhikr:33-41",
+              ["33:41"],
+              "33:41",
+            ),
+            hadithReference(
+              "hadith:dua-and-dhikr-dhikr:hadeethenc-8402",
+              "The Prophet used to remember Allah at all times",
+              "muslim",
+              "Sahih Muslim",
+              "373",
+              "Aishah",
+              "8402",
+              "Sahih Muslim 373",
+            ),
+          ],
+        ),
+        referenceReadyTopic(
           "dua-and-dhikr-morning-and-evening-remembrance",
           "Morning and Evening Remembrance",
+          [
+            quranReference(
+              "quran:dua-and-dhikr-morning-and-evening-remembrance:33-42",
+              ["33:42"],
+              "33:42",
+            ),
+            hadithReference(
+              "hadith:dua-and-dhikr-morning-and-evening-remembrance:hadeethenc-5485",
+              "O Allah, I ask You for well-being in this world and the Hereafter",
+              "abu-dawud",
+              "Sunan Abi Dawud",
+              "5074",
+              "Abdullah ibn Umar",
+              "5485",
+              "Sunan Abi Dawud 5074",
+            ),
+          ],
         ),
-        plannedTopic(
+        referenceReadyTopic(
           "dua-and-dhikr-etiquette-of-supplication",
           "Etiquette of Supplication",
+          [
+            quranReference(
+              "quran:dua-and-dhikr-etiquette-of-supplication:7-55",
+              ["7:55"],
+              "7:55",
+            ),
+            hadithReference(
+              "hadith:dua-and-dhikr-etiquette-of-supplication:hadeethenc-3232",
+              "Supplication is answered as long as one is not hasty",
+              "muslim",
+              "Sahih Muslim",
+              "2735",
+              "Abu Hurayrah",
+              "3232",
+              "Sahih Muslim 2735",
+            ),
+          ],
         ),
       ],
     },

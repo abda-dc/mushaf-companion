@@ -32,19 +32,23 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 37);
+  assert.equal(hadithRefs.length, 41);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
 });
 
-test("2. Every existing M9R Hadith reference contains canonical collection identity (collectionId)", () => {
+test("2. Every existing M9R Hadith reference contains a registered canonical collection identity (collectionId)", () => {
   const hadithRefs = getM9RHadithReferences();
+  const registeredCollectionIds = new Set(
+    listHadithCollections().map((collection) => collection.id),
+  );
+
   for (const ref of hadithRefs) {
     assert.ok(ref.collectionId, `Missing collectionId on ${ref.id}`);
     assert.ok(
-      ref.collectionId === "muslim" || ref.collectionId === "bukhari",
-      `Unexpected collectionId ${ref.collectionId}`
+      registeredCollectionIds.has(ref.collectionId),
+      `Unregistered collectionId ${ref.collectionId}`,
     );
   }
 });
@@ -68,7 +72,7 @@ test("4. Every resolution returns a valid hadith:* target string", () => {
   for (const ref of hadithRefs) {
     const target = getIslamicReferenceHadithTarget(ref);
     assert.ok(target);
-    assert.match(target, /^hadith:(?:muslim|bukhari):[0-9]+$/);
+    assert.match(target, /^hadith:[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]+[a-z]?$/);
   }
 });
 
@@ -318,11 +322,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 132 references", () => {
+test("18. M9R reference IDs remain globally unique across all 140 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 132);
+  assert.equal(ids.length, 140);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -418,7 +422,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 64);
+  assert.equal(quranRefs.length, 68);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -439,25 +443,25 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 7 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 8 additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 35);
+  assert.equal(readyTopics.length, 39);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 14);
+  assert.equal(plannedTopics.length, 10);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 132);
-  assert.equal(getM9RHadithReferences().length, 37);
+  assert.equal(allRefs.length, 140);
+  assert.equal(getM9RHadithReferences().length, 41);
 
-  // Exactly 32 unique Hadith internal targets
+  // Exactly 36 unique Hadith internal targets
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 32);
+  assert.equal(uniqueTargets.size, 36);
 });
 
 test("27. M9H collection/content counts reflect approved seeded records", () => {
@@ -465,9 +469,9 @@ test("27. M9H collection/content counts reflect approved seeded records", () => 
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 32);
+  assert.equal(records.length, 36);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 32);
+  assert.equal(approved.length, 36);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
@@ -839,4 +843,74 @@ test("39. All five Halal and Haram Hadith references resolve correctly through g
   assert.equal(relResult.target, "hadith:bukhari:5232");
   assert.equal(relResult.hadithResolution?.record?.canonicalLabel, "Sahih al-Bukhari 5232");
   assert.equal(relResult.hadithResolution?.record?.narrator, "Uqbah ibn Amir");
+});
+test("40. All four Du'a and Dhikr Batch 8 Hadith references resolve correctly through the generic bridge", () => {
+  const collection = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.collections.find(
+    (c) => c.id === "dua-and-dhikr",
+  );
+  assert.ok(collection);
+  assert.equal(collection.topics.length, 4);
+
+  const expected = [
+    {
+      topicId: "dua-and-dhikr-dua",
+      referenceId: "hadith:dua-and-dhikr-dua:hadeethenc-5502",
+      collectionId: "bukhari",
+      locator: "6389",
+      providerId: "5502",
+      target: "hadith:bukhari:6389",
+      canonicalLabel: "Sahih al-Bukhari 6389",
+    },
+    {
+      topicId: "dua-and-dhikr-dhikr",
+      referenceId: "hadith:dua-and-dhikr-dhikr:hadeethenc-8402",
+      collectionId: "muslim",
+      locator: "373",
+      providerId: "8402",
+      target: "hadith:muslim:373",
+      canonicalLabel: "Sahih Muslim 373",
+    },
+    {
+      topicId: "dua-and-dhikr-morning-and-evening-remembrance",
+      referenceId: "hadith:dua-and-dhikr-morning-and-evening-remembrance:hadeethenc-5485",
+      collectionId: "abu-dawud",
+      locator: "5074",
+      providerId: "5485",
+      target: "hadith:abu-dawud:5074",
+      canonicalLabel: "Sunan Abi Dawud 5074",
+    },
+    {
+      topicId: "dua-and-dhikr-etiquette-of-supplication",
+      referenceId: "hadith:dua-and-dhikr-etiquette-of-supplication:hadeethenc-3232",
+      collectionId: "muslim",
+      locator: "2735",
+      providerId: "3232",
+      target: "hadith:muslim:2735",
+      canonicalLabel: "Sahih Muslim 2735",
+    },
+  ];
+
+  for (const item of expected) {
+    const hadithRef = collection.topics
+      .find((topic) => topic.id === item.topicId)
+      ?.references.find((reference) => reference.type === "hadith");
+
+    assert.ok(hadithRef, `Missing Hadith reference for ${item.topicId}`);
+    assert.equal(hadithRef.id, item.referenceId);
+    assert.equal(hadithRef.collectionId, item.collectionId);
+    assert.equal(hadithRef.locator, item.locator);
+    assert.equal(hadithRef.sourceRecordId, item.providerId);
+
+    const result = resolveIslamicReferenceHadith(hadithRef);
+    assert.equal(result.status, "resolved");
+    assert.equal(result.target, item.target);
+    assert.equal(
+      result.hadithResolution?.record?.canonicalLabel,
+      item.canonicalLabel,
+    );
+    assert.equal(
+      result.hadithResolution?.sourceRecord?.providerRecordId,
+      item.providerId,
+    );
+  }
 });

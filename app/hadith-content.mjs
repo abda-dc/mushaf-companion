@@ -45,7 +45,7 @@ export const HADITH_ALTERNATE_SCHEMES = Object.freeze(new Set([
   "provider",
 ]));
 
-const SAFE_ID = /^[a-z0-9]+:[a-z0-9._-]+$/i;
+const SAFE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9._-]+$/i;
 const SAFE_NUMBER = /^[0-9]+[a-z]?$/i;
 const FORBIDDEN_CHARACTERS = /[<>\u0000-\u0008\u000b\u000c\u000e-\u001f]/u;
 const ISO_INSTANT = /^[1-9]\d{3}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d{3})?Z$/;
@@ -1590,6 +1590,126 @@ const RAW_SEEDED_RECORDS = [
           grade: "Authentic",
           grader: "HadeethEnc Editorial Board",
           reference: "https://hadeethenc.com/en/browse/hadith/5888",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 33. Sahih al-Bukhari 6389 (Du'a / Most frequent supplication)
+  {
+    id: "bukhari:6389",
+    collectionId: "bukhari",
+    canonicalNumber: "6389",
+    canonicalLabel: "Sahih al-Bukhari 6389",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Anas ibn Malik",
+    text: buildHadeethEncTranslation("5502"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "5502",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/5502",
+        grading: {
+          grade: "Authentic",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/5502",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 34. Sahih Muslim 373 (Dhikr / Remembering Allah at all times)
+  {
+    id: "muslim:373",
+    collectionId: "muslim",
+    canonicalNumber: "373",
+    canonicalLabel: "Sahih Muslim 373",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Aishah",
+    text: buildHadeethEncTranslation("8402"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "8402",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/8402",
+        grading: {
+          grade: "Authentic",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/8402",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 35. Sunan Abi Dawud 5074 (Morning and Evening Remembrance / Well-being supplication)
+  {
+    id: "abu-dawud:5074",
+    collectionId: "abu-dawud",
+    canonicalNumber: "5074",
+    canonicalLabel: "Sunan Abi Dawud 5074",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Abdullah ibn Umar",
+    text: buildHadeethEncTranslation("5485"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "5485",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/5485",
+        grading: {
+          grade: "Authentic",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/5485",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 36. Sahih Muslim 2735 (Etiquette of Supplication / Avoiding haste)
+  {
+    id: "muslim:2735",
+    collectionId: "muslim",
+    canonicalNumber: "2735",
+    canonicalLabel: "Sahih Muslim 2735",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Abu Hurayrah",
+    text: buildHadeethEncTranslation("3232"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "3232",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/3232",
+        grading: {
+          grade: "Authentic hadith",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/3232",
         },
         rightsPolicy: "approved-redistribution",
         attribution: "HadeethEnc.com",

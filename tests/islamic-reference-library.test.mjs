@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v7");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v8");
 });
 
 test("production library validates successfully", () => {
@@ -159,19 +159,19 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 14);
-  assert.equal(ready.length, 35);
+  assert.equal(planned.length, 10);
+  assert.equal(ready.length, 39);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "dua-and-dhikr-dua");
+  const planned = findTopic(library, "ihsan-sincerity");
   planned.references.push(
     structuredClone(findCollection(library, "iman").references[0]),
   );
-  planned.references[0].id = "quran:dua-and-dhikr-dua:2-177";
+  planned.references[0].id = "quran:ihsan-sincerity:2-177";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -526,9 +526,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
 
-  assert.equal(allRefs.length, 132);
-  assert.equal(quranRefs.length, 64);
-  assert.equal(hadithRefs.length, 37);
+  assert.equal(allRefs.length, 140);
+  assert.equal(quranRefs.length, 68);
+  assert.equal(hadithRefs.length, 41);
   assert.equal(scholarlyRefs.length, 31);
 
   // Reused 4:36 verse key check
@@ -550,9 +550,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
     assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
   }
 
-  // All 14 remaining planned topics are empty
+  // All 10 remaining planned topics are empty
   const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 14);
+  assert.equal(plannedTopics.length, 10);
   assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
@@ -716,7 +716,7 @@ test("unapproved Quran coordinates fail closed", () => {
   assertInvalid(library, "verseKeys is invalid");
 });
 
-test("controlled Quran whitelist poststate contains exactly 76 keys and accepts Batch 4, Batch 5, Batch 6, and Batch 7 additions while rejecting unapproved candidates", () => {
+test("controlled Quran whitelist poststate contains exactly 80 keys and accepts Batch 4 through Batch 8 additions while rejecting unapproved candidates", () => {
   const librarySource = readFileSync(
     new URL("../app/islamic-reference-library.ts", import.meta.url),
     "utf8"
@@ -726,8 +726,8 @@ test("controlled Quran whitelist poststate contains exactly 76 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 76);
-  assert.equal(new Set(extractedKeys).size, 76);
+  assert.equal(extractedKeys.length, 80);
+  assert.equal(new Set(extractedKeys).size, 80);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -815,6 +815,23 @@ test("controlled Quran whitelist poststate contains exactly 76 keys and accepts 
     );
   }
 
+  // Explicitly prove the four Batch 8 keys are accepted
+  const batch8ApprovedKeys = ["40:60", "33:41", "33:42", "7:55"];
+  for (const key of batch8ApprovedKeys) {
+    const validLib = cloneLibrary();
+    firstReferenceOfType(validLib, "quran").verseKeys = [key];
+    const validation = validateIslamicReferenceLibrary(validLib);
+    assert.equal(
+      validation.valid,
+      true,
+      `Expected approved Batch 8 key ${key} to pass validation`,
+    );
+    assert.ok(
+      extractedKeys.includes(key),
+      `Batch 8 key ${key} missing from APPROVED_QURAN_VERSE_KEYS`,
+    );
+  }
+
   // Explicitly prove the rejected Batch 4 candidate keys are rejected and NOT in whitelist
   const batch4RejectedCandidateKeys = ["9:122", "53:3", "53:4"];
   for (const key of batch4RejectedCandidateKeys) {
@@ -864,6 +881,19 @@ test("controlled Quran whitelist poststate contains exactly 76 keys and accepts 
       extractedKeys.includes(key),
       false,
       `Rejected Batch 7 candidate ${key} should not be in whitelist`,
+    );
+  }
+
+  // Explicitly prove the omitted Batch 8 secondary candidates remain unapproved
+  const batch8RejectedCandidateKeys = ["2:186", "13:28", "7:205"];
+  for (const key of batch8RejectedCandidateKeys) {
+    const invalidLib = cloneLibrary();
+    firstReferenceOfType(invalidLib, "quran").verseKeys = [key];
+    assertInvalid(invalidLib, "verseKeys is invalid");
+    assert.equal(
+      extractedKeys.includes(key),
+      false,
+      `Rejected Batch 8 candidate ${key} should not be in whitelist`,
     );
   }
 });
@@ -1114,6 +1144,90 @@ test("all five Halal and Haram topics are reference-ready with vetted sources", 
   assert.equal(relHadith.locator, "5232");
   assert.equal(relHadith.sourceRecordId, "5888");
   assert.equal(rel.references.some((r) => r.type === "scholarly"), false);
+});
+
+test("all four Du'a and Dhikr topics are reference-ready with the exact Batch 8 source matrix", () => {
+  const collection = findCollection(
+    ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY,
+    "dua-and-dhikr",
+  );
+  assert.ok(collection);
+  assert.equal(collection.topics.length, 4);
+
+  const expected = [
+    {
+      topicId: "dua-and-dhikr-dua",
+      quranId: "quran:dua-and-dhikr-dua:40-60",
+      verseKey: "40:60",
+      hadithId: "hadith:dua-and-dhikr-dua:hadeethenc-5502",
+      collectionId: "bukhari",
+      locator: "6389",
+      providerId: "5502",
+    },
+    {
+      topicId: "dua-and-dhikr-dhikr",
+      quranId: "quran:dua-and-dhikr-dhikr:33-41",
+      verseKey: "33:41",
+      hadithId: "hadith:dua-and-dhikr-dhikr:hadeethenc-8402",
+      collectionId: "muslim",
+      locator: "373",
+      providerId: "8402",
+    },
+    {
+      topicId: "dua-and-dhikr-morning-and-evening-remembrance",
+      quranId: "quran:dua-and-dhikr-morning-and-evening-remembrance:33-42",
+      verseKey: "33:42",
+      hadithId: "hadith:dua-and-dhikr-morning-and-evening-remembrance:hadeethenc-5485",
+      collectionId: "abu-dawud",
+      locator: "5074",
+      providerId: "5485",
+    },
+    {
+      topicId: "dua-and-dhikr-etiquette-of-supplication",
+      quranId: "quran:dua-and-dhikr-etiquette-of-supplication:7-55",
+      verseKey: "7:55",
+      hadithId: "hadith:dua-and-dhikr-etiquette-of-supplication:hadeethenc-3232",
+      collectionId: "muslim",
+      locator: "2735",
+      providerId: "3232",
+    },
+  ];
+
+  for (const item of expected) {
+    const topic = findTopic(
+      ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY,
+      item.topicId,
+    );
+
+    assert.ok(topic, `Missing Batch 8 topic ${item.topicId}`);
+    assert.equal(topic.status, "reference-ready");
+    assert.equal(topic.references.length, 2);
+    assert.deepEqual(
+      topic.references.map((reference) => reference.type),
+      ["quran", "hadith"],
+    );
+
+    const quranRef = topic.references.find(
+      (reference) => reference.type === "quran",
+    );
+    assert.ok(quranRef);
+    assert.equal(quranRef.id, item.quranId);
+    assert.deepEqual(quranRef.verseKeys, [item.verseKey]);
+
+    const hadithRef = topic.references.find(
+      (reference) => reference.type === "hadith",
+    );
+    assert.ok(hadithRef);
+    assert.equal(hadithRef.id, item.hadithId);
+    assert.equal(hadithRef.collectionId, item.collectionId);
+    assert.equal(hadithRef.locator, item.locator);
+    assert.equal(hadithRef.sourceRecordId, item.providerId);
+
+    assert.equal(
+      topic.references.some((reference) => reference.type === "scholarly"),
+      false,
+    );
+  }
 });
 
 test("duplicate Quran coordinates inside one reference fail closed", () => {

@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 32
+  "recordCount": 36
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -33,6 +33,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/2758",
     "sha256": "e3ea18090673d180b8b547df88e76d78f2522a6889cd980fa1a8bd9028a669ea",
     "charCount": 291
+  },
+  "3232": {
+    "id": "3232",
+    "title": "Your supplication is answered as long as one of you is not in haste, saying: I have supplicated to my Lord, but He has not yet answered me",
+    "hadith_text": "Abu Hurayrah (may Allah be pleased with him) reported that the Prophet (may Allah's peace and blessings be upon him) said: “The supplication of one of you is answered, as long as he is not in haste, saying: ‘I have supplicated to my Lord, but He did not answer me.'\" In another narration by Muslim: “The supplication of a slave will continue to be answered, as long as he does not ask for a sin or sever a tie of kinship, and is not hasty.” It was said: “O Messenger of Allah, what is hastiness?” He said: “It is to say: 'I have supplicated and supplicated, but I have not seen it has been answered.' He would then lose hope and stop supplicating.”",
+    "grade": "[Authentic hadith]",
+    "takhrij": "[Narrated by Bukhari & Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/3232",
+    "sha256": "6d1c3a64cdf561e921dd3e4d01258ec1f4fa24216e6a2d150709c7acef2749ab",
+    "charCount": 648
   },
   "3272": {
     "id": "3272",
@@ -199,6 +210,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "sha256": "4c7f7aa0693e504dbbe6f82309dd0c15d7d9d1c66a04fa30aa402938c1279baa",
     "charCount": 422
   },
+  "5485": {
+    "id": "5485",
+    "title": "O Allah, I ask You for well-being in this world and the Hereafter",
+    "hadith_text": "Ibn ‘Umar (may Allah be pleased with him and his father) reported: The Messenger of Allah (may Allah's peace and blessings be upon him) never abandoned these supplications in the evening and the morning: \"O Allah, I ask You for well-being in this world and the Hereafter. O Allah, I ask You for pardon and well-being in my religion, my worldly life, my family, and my wealth. O Allah, conceal my imperfection—or  my imperfections—and secure my fears. O Allah, protect me from before me, from behind me, from my right, from my left, and from above me, and I seek refuge with Your greatness from being suddenly killed from beneath me.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Abu Dāwūd, An-Nasā’i, Ibn Mājah, and Ahmad]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5485",
+    "sha256": "d933a95e597b58a6e2c52942a8f77e20ab5940f754a7637c3489d617d04ffde0",
+    "charCount": 633
+  },
   "5493": {
     "id": "5493",
     "title": "The strong believer is better and dearer to Allah than the weak believer, and there is good in both",
@@ -220,6 +242,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/5497",
     "sha256": "6ce0cf8d9f73a07015b85b4aea2c3a3d31accb5752e2a3c31734d6103ea09378",
     "charCount": 399
+  },
+  "5502": {
+    "id": "5502",
+    "title": "The supplication that the Prophet (may Allah's peace and blessings be upon him) recited most was: \"Allāhumma rabbana ātina fi ad-dunya hasanah wa fi al-ākhirati hasanah wa qina ‘adhāb an-nār (O Allah our Lord, give us in this world that which is good and in the Hereafter that which is good and protect us from the torment of the Fire)",
+    "hadith_text": "Anas (may Allah be pleased with him) reported The supplication that the Prophet (may Allah's peace and blessings be upon him) recited most was: \"Allāhumma rabbana ātina fi ad-dunya hasanah wa fi al-ākhirati hasanah wa qina ‘adhāb an-nār (O Allah our Lord, give us in this world that which is good and in the Hereafter that which is good and protect us from the torment of the Fire).\"",
+    "grade": "[Authentic]",
+    "takhrij": "[Agreed upon]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/5502",
+    "sha256": "3b176e8e371c9ae05c294d502c7a624b3da3d1dc1524b7431752f0746bf48b62",
+    "charCount": 383
   },
   "5504": {
     "id": "5504",
@@ -286,6 +319,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/6383",
     "sha256": "77e448a101c38d03c481e9c8c3556e3e972e06a43ccfd3869e9c918a61b6f3db",
     "charCount": 298
+  },
+  "8402": {
+    "id": "8402",
+    "title": "The Prophet (may Allah's peace and blessings be upon him) used to remember Allah at all times",
+    "hadith_text": "‘Ā’ishah (may Allah be pleased with her) reported: The Prophet (may Allah's peace and blessings be upon him) used to remember Allah at all times.",
+    "grade": "[Authentic]",
+    "takhrij": "[Narrated by Muslim]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/8402",
+    "sha256": "a10510f63ee1878a6e0c54a0747924322d4c3fcd97c0296e38941fc593ad60b3",
+    "charCount": 145
   },
   "64643": {
     "id": "64643",

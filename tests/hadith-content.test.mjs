@@ -35,12 +35,12 @@ test("1. Dataset manifest is present, valid, and deeply frozen", () => {
   assert.equal(HADEETHENC_DATASET_MANIFEST.attribution, "HadeethEnc.com");
   assert.equal(HADEETHENC_DATASET_MANIFEST.contentScope, "translated-hadith-text");
   assert.equal(HADEETHENC_DATASET_MANIFEST.workbookChecksum, "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218");
-  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 32);
+  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 36);
   assert.ok(Object.isFrozen(HADEETHENC_DATASET_MANIFEST));
 });
 
-test("2. Exactly 32 translations are activated with translation-approved state", () => {
-  assert.equal(SEEDED_HADITH_RECORDS.length, 32);
+test("2. Exactly 36 translations are activated with translation-approved state", () => {
+  assert.equal(SEEDED_HADITH_RECORDS.length, 36);
   for (const record of SEEDED_HADITH_RECORDS) {
     assert.equal(record.activation, "translation-approved", `Record ${record.id} should be translation-approved`);
     assert.ok(record.text, `Record ${record.id} text should exist`);
@@ -59,11 +59,11 @@ test("2. Exactly 32 translations are activated with translation-approved state",
   }
 });
 
-test("3. Only the approved 32 provider IDs are activated", () => {
+test("3. Only the approved 36 provider IDs are activated", () => {
   const activatedProviderIds = SEEDED_HADITH_RECORDS.map((r) => r.text?.translations[0]?.providerRecordId);
   const expectedSet = new Set(APPROVED_HADEETHENC_IDS);
 
-  assert.equal(activatedProviderIds.length, 32);
+  assert.equal(activatedProviderIds.length, 36);
   for (const pid of activatedProviderIds) {
     assert.ok(expectedSet.has(pid), `Provider ID '${pid}' is not in approved list`);
   }
@@ -644,17 +644,21 @@ test("31. HadeethEnc 4308 resolves to Sahih Muslim 2553 with exact translation h
   assert.equal(translation.attribution, "HadeethEnc.com");
 });
 
-test("32. M9H seeded records breakdown: 15 Bukhari, 17 Muslim, 0 other collections", () => {
+test("32. M9H seeded records breakdown: 16 Bukhari, 19 Muslim, 1 Abu Dawud, 0 remaining collections", () => {
   const records = listHadithRecords();
-  assert.equal(records.length, 32);
+  assert.equal(records.length, 36);
 
   const bukhari = records.filter((r) => r.collectionId === "bukhari");
   const muslim = records.filter((r) => r.collectionId === "muslim");
-  const others = records.filter((r) => r.collectionId !== "bukhari" && r.collectionId !== "muslim");
+  const abuDawud = records.filter((r) => r.collectionId === "abu-dawud");
+  const remaining = records.filter((r) =>
+    !["bukhari", "muslim", "abu-dawud"].includes(r.collectionId)
+  );
 
-  assert.equal(bukhari.length, 15);
-  assert.equal(muslim.length, 17);
-  assert.equal(others.length, 0);
+  assert.equal(bukhari.length, 16);
+  assert.equal(muslim.length, 19);
+  assert.equal(abuDawud.length, 1);
+  assert.equal(remaining.length, 0);
 });
 
 test("33. HadeethEnc 65004 resolves to Sahih Muslim 223 with exact translation hash and null Arabic", () => {
@@ -849,5 +853,93 @@ test("43. Verify all disallowed provider records remain explicitly UNACTIVATED",
       r.text?.translations?.some((t) => t.providerRecordId === pid)
     );
     assert.equal(found, false, `Disallowed provider ID ${pid} must NOT be activated`);
+  }
+});
+test("44. Hyphenated registered collection IDs are valid Hadith record IDs", () => {
+  for (const [collectionId, canonicalNumber, canonicalLabel] of [
+    ["abu-dawud", "5074", "Sunan Abi Dawud 5074"],
+    ["ibn-majah", "2249a", "Sunan Ibn Majah 2249a"],
+  ]) {
+    const record = {
+      id: `${collectionId}:${canonicalNumber}`,
+      collectionId,
+      canonicalNumber,
+      canonicalLabel,
+      bookNumber: null,
+      bookName: null,
+      chapterNumber: null,
+      chapterName: null,
+      alternateReferences: [],
+      narrator: null,
+      text: null,
+      sourceRecords: [],
+      provenance: null,
+      activation: "metadata-only",
+    };
+
+    const validation = validateHadithRecord(record, VALID_COLLECTIONS);
+    assert.equal(validation.valid, true, validation.errors.join("; "));
+
+    const normalized = normalizeHadithRecord(record, VALID_COLLECTIONS);
+    assert.equal(normalized.id, `${collectionId}:${canonicalNumber}`);
+  }
+});
+
+test("45. Malformed hyphenated collection portions remain invalid in Hadith record IDs", () => {
+  const baseRecord = {
+    collectionId: "abu-dawud",
+    canonicalNumber: "5074",
+    canonicalLabel: "Sunan Abi Dawud 5074",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: null,
+    text: null,
+    sourceRecords: [],
+    provenance: null,
+    activation: "metadata-only",
+  };
+
+  for (const id of [
+    "abu--dawud:5074",
+    "-abu-dawud:5074",
+    "abu-dawud-:5074",
+  ]) {
+    const validation = validateHadithRecord({ ...baseRecord, id }, VALID_COLLECTIONS);
+    assert.equal(validation.valid, false, `${id} must be rejected`);
+    assert.match(
+      validation.errors.join(" "),
+      /Record id .* is invalid/,
+      `${id} must fail SAFE_ID validation`
+    );
+  }
+});
+
+test("46. Existing non-hyphenated Bukhari and Muslim record IDs remain valid", () => {
+  for (const [collectionId, canonicalNumber, canonicalLabel] of [
+    ["bukhari", "6389", "Sahih al-Bukhari 6389"],
+    ["muslim", "2735", "Sahih Muslim 2735"],
+  ]) {
+    const record = {
+      id: `${collectionId}:${canonicalNumber}`,
+      collectionId,
+      canonicalNumber,
+      canonicalLabel,
+      bookNumber: null,
+      bookName: null,
+      chapterNumber: null,
+      chapterName: null,
+      alternateReferences: [],
+      narrator: null,
+      text: null,
+      sourceRecords: [],
+      provenance: null,
+      activation: "metadata-only",
+    };
+
+    const validation = validateHadithRecord(record, VALID_COLLECTIONS);
+    assert.equal(validation.valid, true, validation.errors.join("; "));
   }
 });

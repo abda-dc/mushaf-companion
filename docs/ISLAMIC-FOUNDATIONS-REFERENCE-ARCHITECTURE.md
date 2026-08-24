@@ -44,10 +44,12 @@ The required core registry contains ten collections:
 6. Akhlaq and Adab — Moral Character & Etiquette (Reference-ready: 6 topics)
 7. Taharah — Purification & Cleanliness (Reference-ready: 4 topics)
 8. Halal and Haram — The Lawful & The Prohibited (Reference-ready: 5 topics)
-9. Du'a and Dhikr — Supplication & Remembrance (Planned: 4 topics)
+9. Du'a and Dhikr — Supplication & Remembrance (Reference-ready: 4 topics)
 10. Akhirah — Accountability & The Afterlife (Planned: 7 topics)
 
-Total production status: **35 reference-ready topics**, **14 planned topics**, **132 total references** (64 Qur'an, 37 Hadith, 31 Scholarly).
+Total production status: **39 reference-ready topics**, **10 planned topics**, **140 total references** (68 Qur'an, 41 Hadith, 31 Scholarly).
+
+Current production revision: **`m9r-v8`** with schema version **2**. The controlled Qur'an whitelist contains **80 unique verse keys**.
 
 The registry establishes the required production baseline, not a permanent upper limit.
 
@@ -75,6 +77,10 @@ Coordinates must be both syntactically valid and present in the approved coordin
 HadeethEnc is the approved external hadith source for this version. Hadith records store canonical collection identity (`collectionId`, `collection`, `locator`), narrator when known, explicit grading metadata, HadeethEnc record ID (`sourceRecordId`), and an HTTPS source URL on `hadeethenc.com` (`sourceUrl`).
 
 Under M9RH-1, Hadith references use `action: "internal-hadith-navigation"` and `contentPolicy: "metadata-only"`. They resolve through the Islamic Reference Hadith Bridge to internal M9H Hadith Reader targets (e.g. `hadith:muslim:8`), while the HadeethEnc `sourceUrl` remains preserved for provenance and external fallback. Translated hadith bodies, explanations, copied HTML, excerpts, and other external content are not bundled into M9R.
+
+At `m9r-v8`, M9H contains **36 translation-approved seeded records**: **16 Sahih al-Bukhari**, **19 Sahih Muslim**, and **1 Sunan Abi Dawud**; Jami' at-Tirmidhi, Sunan an-Nasa'i, and Sunan Ibn Majah currently have zero locally approved records. Batch 8 introduced the first local `abu-dawud` seed (`abu-dawud:5074`). The registry and resolver already supported safe hyphenated collection IDs; a narrowly scoped M9H content-ID validator correction aligned record validation with that existing collection grammar without changing registry, resolver, bridge, schema, or routing behavior.
+
+For Batch 8 source provenance and the exact Du'a/Dhikr source matrix, see [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md).
 
 For detailed cross-domain integration documentation, see [ISLAMIC-FOUNDATIONS-HADITH-INTEGRATION.md](file:///C:/Users/Kiya/Documents/Mushaf-m9rh/docs/ISLAMIC-FOUNDATIONS-HADITH-INTEGRATION.md).
 
@@ -105,7 +111,12 @@ M9R is also independent of M8 Evidence. References in this library do not create
 
 ## M9R-3 UI boundary
 
-This milestone defines and validates the reference data only. Learn-panel integration, routing, browsing and search interfaces, bookmarks, notes, and other presentation behavior belong to M9R-3 or later work. UI code must consume this library without changing its reference-only semantics.
+M9R-3 provides Learn-panel integration, routing, browsing, search, and source-action behavior for the validated reference library. Later source batches, including M9R-8, extend the source data without changing the library's reference-only semantics. UI code consumes validated reference metadata and does not duplicate Qur'an, Hadith, or scholarly source bodies.
+
+## Recent production revision history
+
+- **`m9r-v7` — Source Batch 7:** Halal and Haram became reference-ready, producing 35 reference-ready topics, 14 planned topics, 132 total references, and 32 seeded M9H records. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-7-HALAL-HARAM.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-7-HALAL-HARAM.md).
+- **`m9r-v8` — Source Batch 8:** Du'a and Dhikr became fully reference-ready with four Qur'an anchors and four Hadith references, producing 39 reference-ready topics, 10 planned topics, 140 total references, an 80-key Qur'an whitelist, and 36 seeded M9H records. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md).
 
 ## Future content expansion
 
