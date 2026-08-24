@@ -111,18 +111,22 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const loaded = loadPrayerPreferences();
+    const hydrationTimer = window.setTimeout(() => {
+      const loaded = loadPrayerPreferences();
 
-    setPreferences(loaded);
-    setTimeZone(getDeviceTimeZone());
+      setPreferences(loaded);
+      setTimeZone(getDeviceTimeZone());
 
-    if (loaded.rememberLocation && loaded.rememberedLocation) {
-      setCoordinates({ ...loaded.rememberedLocation });
-      setLocationState("ready");
-      setLocationMessage("Using your remembered approximate location.");
-    }
+      if (loaded.rememberLocation && loaded.rememberedLocation) {
+        setCoordinates({ ...loaded.rememberedLocation });
+        setLocationState("ready");
+        setLocationMessage("Using your remembered approximate location.");
+      }
 
-    setPreferencesLoaded(true);
+      setPreferencesLoaded(true);
+    }, 0);
+
+    return () => window.clearTimeout(hydrationTimer);
   }, []);
 
   useEffect(() => {
