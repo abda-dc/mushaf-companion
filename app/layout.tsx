@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaRegister } from "./pwa-register";
+import { PrayerNotificationLifecycle } from "./prayer-notification-lifecycle";
 
 export const metadata: Metadata = {
   title: "Mushaf Companion — Faithful Quran Reading",
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
+        <PrayerNotificationLifecycle />
         <PwaRegister />
       </body>
     </html>

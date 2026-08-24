@@ -7,10 +7,24 @@ import {
   type PrayerAdjustments,
   type PrayerCalculationMethodId,
   type PrayerCoordinates,
+  type SalahName,
 } from "./prayer-times.ts";
+import { findApprovedAdhanCue } from "./adhan-assets.ts";
 
-export const PRAYER_PREFERENCE_STORAGE_KEY = "mushaf:prayer-v1";
-export const PRAYER_PREFERENCE_SCHEMA_VERSION = 1 as const;
+export const PRAYER_PREFERENCE_STORAGE_KEY = "mushaf:prayer-v2";
+export const LEGACY_PRAYER_PREFERENCE_STORAGE_KEY = "mushaf:prayer-v1";
+export const PRAYER_PREFERENCE_SCHEMA_VERSION = 2 as const;
+
+export type PrayerNotificationAlertMode =
+  | "notification"
+  | "notification-with-adhan-cue";
+
+export interface PrayerNotificationPreferences {
+  enabled: boolean;
+  salah: Record<SalahName, boolean>;
+  alertMode: PrayerNotificationAlertMode;
+  adhanCueId: string | null;
+}
 
 export interface PrayerPreferences {
   schemaVersion: typeof PRAYER_PREFERENCE_SCHEMA_VERSION;
@@ -19,6 +33,7 @@ export interface PrayerPreferences {
   adjustments: PrayerAdjustments;
   rememberLocation: boolean;
   rememberedLocation: PrayerCoordinates | null;
+  notifications: PrayerNotificationPreferences;
 }
 
 interface PrayerPreferenceStorage {
@@ -30,6 +45,23 @@ const CALCULATION_METHOD_IDS = new Set(
   PRAYER_CALCULATION_METHODS.map((method) => method.id),
 );
 
+const DEFAULT_SALAH_NOTIFICATIONS: Readonly<Record<SalahName, boolean>> =
+  Object.freeze({
+    fajr: true,
+    dhuhr: true,
+    asr: true,
+    maghrib: true,
+    isha: true,
+  });
+
+export const DEFAULT_PRAYER_NOTIFICATION_PREFERENCES: Readonly<PrayerNotificationPreferences> =
+  Object.freeze({
+    enabled: false,
+    salah: DEFAULT_SALAH_NOTIFICATIONS,
+    alertMode: "notification",
+    adhanCueId: null,
+  });
+
 export const DEFAULT_PRAYER_PREFERENCES: Readonly<PrayerPreferences> =
   Object.freeze({
     schemaVersion: PRAYER_PREFERENCE_SCHEMA_VERSION,
@@ -38,6 +70,7 @@ export const DEFAULT_PRAYER_PREFERENCES: Readonly<PrayerPreferences> =
     adjustments: Object.freeze({ ...DEFAULT_PRAYER_ADJUSTMENTS }),
     rememberLocation: false,
     rememberedLocation: null,
+    notifications: DEFAULT_PRAYER_NOTIFICATION_PREFERENCES,
   });
 
 function cloneDefaults(): PrayerPreferences {
@@ -48,6 +81,12 @@ function cloneDefaults(): PrayerPreferences {
     adjustments: { ...DEFAULT_PRAYER_ADJUSTMENTS },
     rememberLocation: false,
     rememberedLocation: null,
+    notifications: {
+      enabled: false,
+      salah: { ...DEFAULT_SALAH_NOTIFICATIONS },
+      alertMode: "notification",
+      adhanCueId: null,
+    },
   };
 }
 
@@ -66,6 +105,44 @@ function isCalculationMethod(
 
 function isAsrCalculation(value: unknown): value is AsrCalculation {
   return value === "standard" || value === "hanafi";
+}
+
+function normalizeNotificationPreferences(
+  value: unknown,
+): PrayerNotificationPreferences {
+  const normalized: PrayerNotificationPreferences = {
+    enabled: false,
+    salah: { ...DEFAULT_SALAH_NOTIFICATIONS },
+    alertMode: "notification",
+    adhanCueId: null,
+  };
+
+  if (!isRecord(value)) {
+    return normalized;
+  }
+
+  normalized.enabled = value.enabled === true;
+
+  if (isRecord(value.salah)) {
+    for (const salah of Object.keys(
+      DEFAULT_SALAH_NOTIFICATIONS,
+    ) as SalahName[]) {
+      if (typeof value.salah[salah] === "boolean") {
+        normalized.salah[salah] = value.salah[salah];
+      }
+    }
+  }
+
+  const approvedCue = findApprovedAdhanCue(value.adhanCueId);
+  if (
+    value.alertMode === "notification-with-adhan-cue" &&
+    approvedCue
+  ) {
+    normalized.alertMode = "notification-with-adhan-cue";
+    normalized.adhanCueId = approvedCue.id;
+  }
+
+  return normalized;
 }
 
 /**
@@ -106,6 +183,7 @@ export function sanitizeRememberedPrayerLocation(
   }
 }
 
+/** Accepts both schema v1 and v2. V1 receives notification-safe defaults. */
 export function normalizePrayerPreferences(
   value: unknown,
 ): PrayerPreferences {
@@ -113,7 +191,7 @@ export function normalizePrayerPreferences(
     return cloneDefaults();
   }
 
-  if (value.schemaVersion !== PRAYER_PREFERENCE_SCHEMA_VERSION) {
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
     return cloneDefaults();
   }
 
@@ -171,6 +249,12 @@ export function normalizePrayerPreferences(
     }
   }
 
+  if (value.schemaVersion === 2) {
+    preferences.notifications = normalizeNotificationPreferences(
+      value.notifications,
+    );
+  }
+
   return preferences;
 }
 
@@ -194,13 +278,33 @@ export function loadPrayerPreferences(
   }
 
   try {
-    const raw = storage.getItem(PRAYER_PREFERENCE_STORAGE_KEY);
+    const currentRaw = storage.getItem(PRAYER_PREFERENCE_STORAGE_KEY);
 
-    if (!raw) {
+    if (currentRaw) {
+      try {
+        return normalizePrayerPreferences(JSON.parse(currentRaw));
+      } catch {
+        // A valid legacy record can still recover an unreadable v2 record.
+      }
+    }
+
+    const legacyRaw = storage.getItem(
+      LEGACY_PRAYER_PREFERENCE_STORAGE_KEY,
+    );
+    if (!legacyRaw) {
       return cloneDefaults();
     }
 
-    return normalizePrayerPreferences(JSON.parse(raw));
+    const migrated = normalizePrayerPreferences(JSON.parse(legacyRaw));
+    try {
+      storage.setItem(
+        PRAYER_PREFERENCE_STORAGE_KEY,
+        JSON.stringify(migrated),
+      );
+    } catch {
+      // A readable v1 record remains usable when storage is read-only.
+    }
+    return migrated;
   } catch {
     return cloneDefaults();
   }

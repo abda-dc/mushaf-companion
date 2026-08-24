@@ -18,6 +18,7 @@ import {
   type PrayerCalculationMethodId,
   type PrayerCoordinates,
   type PrayerTimeName,
+  type SalahName,
 } from "./prayer-times.ts";
 
 import {
@@ -28,12 +29,22 @@ import {
   rememberPrayerLocation,
   savePrayerPreferences,
   type PrayerPreferences,
+  type PrayerNotificationAlertMode,
 } from "./prayer-preferences.ts";
 
 import {
   getDeviceTimeZone,
   requestPrayerLocation,
 } from "./prayer-location.ts";
+import { APPROVED_ADHAN_ASSETS } from "./adhan-assets.ts";
+import {
+  inspectPrayerNotificationCapabilities,
+  openPrayerExactAlarmSettings,
+  requestPrayerNotificationPermission,
+  sendPrayerNotificationTest,
+  synchronizePrayerNotifications,
+} from "./prayer-notification-controller.ts";
+import type { PrayerNotificationCapabilities } from "./prayer-notification-platform.ts";
 
 export interface PrayerPanelProps {
   onClose: () => void;
@@ -53,6 +64,26 @@ const PRAYER_TIME_ROWS: readonly {
   { name: "maghrib", label: "Maghrib", isSalah: true },
   { name: "isha", label: "Isha", isSalah: true },
 ];
+
+const SALAH_NOTIFICATION_ROWS: readonly {
+  name: SalahName;
+  label: string;
+}[] = [
+  { name: "fajr", label: "Fajr" },
+  { name: "dhuhr", label: "Dhuhr" },
+  { name: "asr", label: "Asr" },
+  { name: "maghrib", label: "Maghrib" },
+  { name: "isha", label: "Isha" },
+];
+
+const INITIAL_NOTIFICATION_CAPABILITIES: PrayerNotificationCapabilities = {
+  platform: "unsupported",
+  permission: "unsupported",
+  displayAvailable: false,
+  backgroundSchedulingAvailable: false,
+  exactScheduling: "not-applicable",
+  message: "Checking notification capabilities…",
+};
 
 function createTomorrowDate(date: Date): Date {
   const tomorrow = new Date(date.getTime());
@@ -109,6 +140,14 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
     "Use your device location to calculate prayer times and Qibla.",
   );
   const [now, setNow] = useState(() => new Date());
+  const [notificationCapabilities, setNotificationCapabilities] =
+    useState<PrayerNotificationCapabilities>(
+      INITIAL_NOTIFICATION_CAPABILITIES,
+    );
+  const [notificationStatus, setNotificationStatus] = useState(
+    "Prayer notifications are off by default.",
+  );
+  const [notificationBusy, setNotificationBusy] = useState(false);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -124,6 +163,10 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
       }
 
       setPreferencesLoaded(true);
+
+      void inspectPrayerNotificationCapabilities().then(
+        setNotificationCapabilities,
+      );
     }, 0);
 
     return () => window.clearTimeout(hydrationTimer);
@@ -144,6 +187,39 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!preferencesLoaded) {
+      return;
+    }
+
+    let cancelled = false;
+    const synchronize = async () => {
+      const result = await synchronizePrayerNotifications({
+        preferences,
+        coordinates,
+      });
+      const capabilities = await inspectPrayerNotificationCapabilities();
+      if (cancelled) {
+        return;
+      }
+      setNotificationStatus(result.message);
+      setNotificationCapabilities(capabilities);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        setTimeZone(getDeviceTimeZone());
+        void synchronize();
+      }
+    };
+
+    void synchronize();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [coordinates, preferences, preferencesLoaded]);
 
   const calculationState = useMemo(() => {
     if (!coordinates) {
@@ -322,6 +398,137 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
         [prayer]: value,
       },
     }));
+  }
+
+  async function handleNotificationsEnabled(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const enabled = event.target.checked;
+
+    if (!enabled) {
+      setPreferences((current) => ({
+        ...current,
+        notifications: { ...current.notifications, enabled: false },
+      }));
+      setNotificationStatus("Prayer notifications are off.");
+      return;
+    }
+
+    setNotificationBusy(true);
+    try {
+      let capabilities = await inspectPrayerNotificationCapabilities();
+      if (capabilities.permission === "prompt") {
+        capabilities = await requestPrayerNotificationPermission();
+      }
+
+      setNotificationCapabilities(capabilities);
+      setPreferences((current) => ({
+        ...current,
+        notifications: { ...current.notifications, enabled: true },
+      }));
+
+      setNotificationStatus(
+        capabilities.permission === "granted"
+          ? capabilities.backgroundSchedulingAvailable
+            ? "Permission granted. Synchronizing the next seven days."
+            : "Permission granted for browser tests. Closed-app scheduling requires future Web Push infrastructure."
+          : capabilities.permission === "denied"
+            ? "Notifications are blocked by the OS or browser. Your prayer settings remain saved."
+            : capabilities.message,
+      );
+    } finally {
+      setNotificationBusy(false);
+    }
+  }
+
+  function handleSalahNotification(
+    salah: SalahName,
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    setPreferences((current) => ({
+      ...current,
+      notifications: {
+        ...current.notifications,
+        salah: {
+          ...current.notifications.salah,
+          [salah]: event.target.checked,
+        },
+      },
+    }));
+  }
+
+  function handleAlertMode(event: ChangeEvent<HTMLSelectElement>) {
+    const mode = event.target.value as PrayerNotificationAlertMode;
+    if (
+      mode !== "notification" &&
+      mode !== "notification-with-adhan-cue"
+    ) {
+      return;
+    }
+
+    const cue = APPROVED_ADHAN_ASSETS[0] ?? null;
+    setPreferences((current) => ({
+      ...current,
+      notifications: {
+        ...current.notifications,
+        alertMode:
+          mode === "notification-with-adhan-cue" && cue
+            ? mode
+            : "notification",
+        adhanCueId:
+          mode === "notification-with-adhan-cue" && cue ? cue.id : null,
+      },
+    }));
+  }
+
+  function handleAdhanCue(event: ChangeEvent<HTMLSelectElement>) {
+    const cue = APPROVED_ADHAN_ASSETS.find(
+      (asset) => asset.id === event.target.value,
+    );
+    if (!cue) return;
+    setPreferences((current) => ({
+      ...current,
+      notifications: {
+        ...current.notifications,
+        alertMode: "notification-with-adhan-cue",
+        adhanCueId: cue.id,
+      },
+    }));
+  }
+
+  async function handleSendTestNotification() {
+    setNotificationBusy(true);
+    try {
+      let capabilities = await inspectPrayerNotificationCapabilities();
+      if (capabilities.permission === "prompt") {
+        capabilities = await requestPrayerNotificationPermission();
+        setNotificationCapabilities(capabilities);
+      }
+
+      if (capabilities.permission !== "granted") {
+        setNotificationStatus(
+          capabilities.permission === "denied"
+            ? "Notifications are blocked in OS or browser settings."
+            : capabilities.message,
+        );
+        return;
+      }
+
+      const result = await sendPrayerNotificationTest();
+      setNotificationStatus(result.message);
+    } finally {
+      setNotificationBusy(false);
+    }
+  }
+
+  async function handleOpenExactAlarmSettings() {
+    setNotificationBusy(true);
+    try {
+      const result = await openPrayerExactAlarmSettings();
+      setNotificationStatus(result.message);
+    } finally {
+      setNotificationBusy(false);
+    }
   }
 
   function formatTime(date: Date): string {
@@ -603,6 +810,138 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
             </div>
           </div>
         </details>
+
+        <section
+          className="prayer-notifications-card"
+          aria-labelledby="prayer-notifications-heading"
+        >
+          <header>
+            <div>
+              <span className="prayer-section-kicker">ADHAN &amp; NOTIFICATIONS</span>
+              <h3 id="prayer-notifications-heading">Prayer alerts</h3>
+            </div>
+            <span className={`prayer-notification-state state-${notificationCapabilities.permission}`}>
+              {notificationCapabilities.permission === "granted"
+                ? "Allowed"
+                : notificationCapabilities.permission === "denied"
+                  ? "Blocked"
+                  : notificationCapabilities.permission === "prompt"
+                    ? "Not requested"
+                    : "Unavailable"}
+            </span>
+          </header>
+
+          <label className="prayer-notification-master">
+            <span>
+              <strong>Prayer notifications</strong>
+              <small>
+                Permission is requested only when you turn this on.
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={preferences.notifications.enabled}
+              onChange={handleNotificationsEnabled}
+              disabled={notificationBusy}
+              aria-label="Enable prayer notifications"
+            />
+          </label>
+
+          <fieldset
+            className="prayer-notification-prayers"
+            disabled={!preferences.notifications.enabled || notificationBusy}
+          >
+            <legend>Salah alerts</legend>
+            {SALAH_NOTIFICATION_ROWS.map((row) => (
+              <label key={row.name}>
+                <input
+                  type="checkbox"
+                  checked={preferences.notifications.salah[row.name]}
+                  onChange={(event) =>
+                    handleSalahNotification(row.name, event)
+                  }
+                />
+                {row.label}
+              </label>
+            ))}
+          </fieldset>
+
+          <label className="prayer-notification-select">
+            <span>Alert sound</span>
+            <select
+              value={preferences.notifications.alertMode}
+              onChange={handleAlertMode}
+              disabled={!preferences.notifications.enabled || notificationBusy}
+            >
+              <option value="notification">System notification sound</option>
+              {APPROVED_ADHAN_ASSETS.length > 0 && (
+                <option value="notification-with-adhan-cue">
+                  Approved short Adhan cue
+                </option>
+              )}
+            </select>
+          </label>
+
+          {preferences.notifications.alertMode ===
+            "notification-with-adhan-cue" &&
+            APPROVED_ADHAN_ASSETS.length > 0 && (
+              <label className="prayer-notification-select">
+                <span>Adhan cue</span>
+                <select
+                  value={preferences.notifications.adhanCueId ?? ""}
+                  onChange={handleAdhanCue}
+                  disabled={notificationBusy}
+                >
+                  {APPROVED_ADHAN_ASSETS.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+          <div className="prayer-notification-actions">
+            <button
+              type="button"
+              className="prayer-primary-action"
+              onClick={handleSendTestNotification}
+              disabled={
+                notificationBusy ||
+                !notificationCapabilities.displayAvailable ||
+                notificationCapabilities.permission === "denied"
+              }
+            >
+              Send test notification
+            </button>
+
+            {notificationCapabilities.platform === "native-android" &&
+              notificationCapabilities.exactScheduling === "unavailable" && (
+                <button
+                  type="button"
+                  className="prayer-secondary-action"
+                  onClick={handleOpenExactAlarmSettings}
+                  disabled={notificationBusy}
+                >
+                  Open Alarms &amp; reminders
+                </button>
+              )}
+          </div>
+
+          <p className="prayer-notification-status" role="status" aria-live="polite">
+            {notificationStatus}
+          </p>
+          <p className="prayer-notification-capability">
+            {notificationCapabilities.message}
+          </p>
+          {APPROVED_ADHAN_ASSETS.length === 0 && (
+            <small className="prayer-notification-asset-note">
+              No licensed Adhan recording is bundled. Alerts use the system
+              notification sound; a short cue will appear only after its license
+              and provenance are approved.
+            </small>
+          )}
+        </section>
 
         <footer className="prayer-panel-note">
           <strong>About calculated times</strong>

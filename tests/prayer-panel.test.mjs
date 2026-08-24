@@ -54,6 +54,25 @@ test("Sunrise is visibly distinguished from the five Salah prayers", async () =>
     code,
     /Solar marker .* not a Salah or Adhan target/,
   );
+
+  const alertRows = code.match(/const SALAH_NOTIFICATION_ROWS:[\s\S]*?\];/)?.[0] ?? "";
+  assert.doesNotMatch(alertRows, /sunrise/i);
+});
+
+test("notification permission is opt-in and five-Salah controls are accessible", async () => {
+  const code = await panelCode();
+
+  assert.match(code, /Adhan &amp; notifications/i);
+  assert.match(code, /aria-label="Enable prayer notifications"/);
+  assert.match(code, /Permission is requested only when you turn this on/);
+  assert.match(code, /requestPrayerNotificationPermission/);
+  assert.match(code, /Send test notification/);
+  assert.match(code, /role="status" aria-live="polite"/);
+  assert.match(code, /Open Alarms &amp; reminders/);
+  assert.doesNotMatch(
+    code,
+    /useEffect\([\s\S]{0,180}requestPrayerNotificationPermission\(/,
+  );
 });
 
 test("panel exposes calculation method and Asr method controls", async () => {
