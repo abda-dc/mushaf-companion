@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 32 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 36 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 32);
+  assert.equal(allRecords.length, 36);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -178,12 +178,14 @@ test("9. HadeethEnc source record is distinct from canonical collection numberin
 
 test("10. Deterministic metadata search across canonical number, label, narrator, and collection", () => {
   const umarResults = searchHadithMetadata("Umar");
-  assert.equal(umarResults.length, 2); // muslim:8 (Umar ibn al-Khattab) and bukhari:6014 (Abdullah ibn Umar)
+  assert.equal(umarResults.length, 3);
   assert.ok(umarResults.some((r) => r.id === "muslim:8"));
   assert.ok(umarResults.some((r) => r.id === "bukhari:6014"));
+  assert.ok(umarResults.some((r) => r.id === "abu-dawud:5074"));
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 15); // 4485, 528, 1397, 1521, 2856, 2736, 5027, 3461, 7137, 6014, 164, 272, 6954, 1471, 5232
+  assert.equal(bukhariResults.length, 16);
+  assert.ok(bukhariResults.some((r) => r.id === "bukhari:6389"));
 
   const specificNumber = searchHadithMetadata("4485");
   assert.equal(specificNumber.length, 1);
@@ -383,4 +385,55 @@ test("14. Resolver resolves Batch 5 Akhlaq and Adab Hadith targets", () => {
   assert.equal(res2553.record?.id, "muslim:2553");
   assert.equal(res2553.record?.narrator, "An-Nawwas ibn Sim'an");
   assert.equal(res2553.sourceRecord?.providerRecordId, "4308");
+});
+test("16. Resolver resolves all four Batch 8 Du'a and Dhikr Hadith targets", () => {
+  const targets = [
+    {
+      collectionId: "bukhari",
+      number: "6389",
+      target: "hadith:bukhari:6389",
+      narrator: "Anas ibn Malik",
+      providerId: "5502",
+    },
+    {
+      collectionId: "muslim",
+      number: "373",
+      target: "hadith:muslim:373",
+      narrator: "Aishah",
+      providerId: "8402",
+    },
+    {
+      collectionId: "abu-dawud",
+      number: "5074",
+      target: "hadith:abu-dawud:5074",
+      narrator: "Abdullah ibn Umar",
+      providerId: "5485",
+    },
+    {
+      collectionId: "muslim",
+      number: "2735",
+      target: "hadith:muslim:2735",
+      narrator: "Abu Hurayrah",
+      providerId: "3232",
+    },
+  ];
+
+  for (const expected of targets) {
+    const result = resolveHadithReference({
+      collectionId: expected.collectionId,
+      number: expected.number,
+    });
+
+    assert.equal(result.status, "resolved-translation-approved");
+    assert.equal(result.target, expected.target);
+    assert.equal(
+      result.record?.id,
+      `${expected.collectionId}:${expected.number}`,
+    );
+    assert.equal(result.record?.narrator, expected.narrator);
+    assert.equal(
+      result.sourceRecord?.providerRecordId,
+      expected.providerId,
+    );
+  }
 });
