@@ -29,6 +29,14 @@ import { PrayerPanel } from "./prayer-panel";
 import { OPEN_PRAYER_EVENT } from "./prayer-notification-lifecycle";
 import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
+import { resolveQuranPageEdition } from "./content/quran-page-editions";
+import {
+  DEFAULT_READING_ID,
+  QURAN_READINGS,
+  getReadingById,
+  isSupportedReadingId,
+  type ReadingId,
+} from "./reading-registry.mjs";
 import { appPath } from "./runtime-config";
 import { createTranslationPackService, type TranslationPackService } from "./translation-packs.mjs";
 import {
@@ -137,8 +145,10 @@ interface HifzLoop {
   pauseMs: HifzPauseMs;
 }
 
-const TOTAL_PAGES = 604;
-const PAGE_DATA_REVISION = "2026-08-06-phase-three";
+const DEFAULT_PAGE_EDITION = resolveQuranPageEdition(DEFAULT_READING_ID);
+const RUNTIME_SELECTABLE_READINGS = QURAN_READINGS.filter(
+  (reading) => reading.id === DEFAULT_READING_ID,
+);
 const JUZ_START_PAGES = [1, 22, 42, 62, 82, 102, 121, 142, 162, 182, 201, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582] as const;
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const READING_FONTS: Array<{ id: ReadingFont; label: string }> = [
@@ -178,23 +188,44 @@ interface SelectedWordContext {
   tajweedRules: TajweedRule[];
 }
 
-function clampPage(value: number) {
-  return Math.min(TOTAL_PAGES, Math.max(1, Math.round(value)));
+function registeredReadingForId(readingId: ReadingId) {
+  const reading = getReadingById(readingId);
+  if (!reading) {
+    throw new Error(`Registered Quran reading '${readingId}' is unavailable.`);
+  }
+  return reading;
 }
 
-function isVerifiedPage(value: unknown, expectedPage: number): value is QuranPage {
+function isRuntimeSelectableReadingId(value: string): value is ReadingId {
+  return RUNTIME_SELECTABLE_READINGS.some((reading) => reading.id === value);
+}
+
+function clampPage(value: number, maximumPage: number) {
+  return Math.min(maximumPage, Math.max(1, Math.round(value)));
+}
+
+function quranPageCacheKey(readingId: ReadingId, page: number) {
+  return `${readingId}:${page}`;
+}
+
+function isVerifiedPage(
+  value: unknown,
+  expectedPage: number,
+  readingId: ReadingId,
+): value is QuranPage {
   if (!value || typeof value !== "object") return false;
+  const edition = resolveQuranPageEdition(readingId);
   const page = value as Partial<QuranPage>;
   return page.page === expectedPage
     && Array.isArray(page.lines)
-    && page.lines.length === 15
+    && page.lines.length === edition.lineCount
     && page.lines.every((line, index) => line.number === index + 1 && Array.isArray(line.words))
     && Array.isArray(page.verses)
     && page.verses.length > 0
     && page.verses.every((verse) => /^\d{1,3}:\d{1,3}$/.test(verse.key))
     && page.provenance?.verified === true
-    && page.provenance.manifestRevision === PAGE_DATA_REVISION
-    && page.provenance.mushafId === 1
+    && page.provenance.manifestRevision === edition.manifestRevision
+    && page.provenance.mushafId === edition.mushafId
     && /^[a-f0-9]{64}$/.test(page.provenance.pageChecksum ?? "");
 }
 
@@ -225,6 +256,10 @@ function chapterForVerse(pageData: QuranPage, verseKey: string) {
 
 export default function Home() {
   const contentTransport = getReaderTransport();
+  const [activeReadingId, setActiveReadingId] = useState<ReadingId>(DEFAULT_READING_ID);
+  const activeReading = registeredReadingForId(activeReadingId);
+  const activePageEdition = resolveQuranPageEdition(activeReadingId);
+  const totalPages = activePageEdition.pages;
   const [overlay, setOverlay] = useState<Overlay>(null);
 
   useEffect(() => {
@@ -332,8 +367,10 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const playingRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const pageCacheRef = useRef(new Map<number, QuranPage>());
-  const lastGoodPageRef = useRef(FALLBACK_PAGE);
+  const pageCacheRef = useRef(new Map<string, QuranPage>());
+  const lastGoodPageRef = useRef(
+    new Map<ReadingId, QuranPage>([[DEFAULT_READING_ID, FALLBACK_PAGE]]),
+  );
   const pendingVerseRef = useRef<string | null>(null);
   const pendingWordRef = useRef<WordCoordinate | null>(null);
   const pendingEdgeRef = useRef<PageEdge>(null);
@@ -365,7 +402,7 @@ export default function Home() {
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
   const displayedTafsir = tafsirDocument?.requestedVerseKey === selectedVerseKey ? tafsirDocument : null;
   const canStudyPrevious = currentVerseIndex > 0 || pageData.page > 1;
-  const canStudyNext = currentVerseIndex >= 0 && (currentVerseIndex < pageData.verses.length - 1 || pageData.page < TOTAL_PAGES);
+  const canStudyNext = currentVerseIndex >= 0 && (currentVerseIndex < pageData.verses.length - 1 || pageData.page < totalPages);
   const currentBookmark = `${pageData.page}|${selectedVerseKey}`;
   const wordCoordinateIndex = useMemo(() => buildPageWordCoordinateIndex(pageData), [pageData]);
   const foundation125 = useMemo(() => VOCABULARY_CURRICULUM_REGISTRY.list().find((curriculum) => curriculum.id === FOUNDATION_125_ID) ?? null, []);
@@ -383,7 +420,7 @@ export default function Home() {
   const selectedWordNotes = selectedWordNoteKey ? studyNoteIndex.byAnchor.get(selectedWordNoteKey) ?? [] : [];
   const wordRecord = selectedWordKey && wordRecordResult?.key === selectedWordKey ? wordRecordResult.record : null;
   const wordStudyLoading = Boolean(selectedWordKey && wordRecordResult?.key !== selectedWordKey);
-  const pageProgress = (pageData.page / TOTAL_PAGES) * 100;
+  const pageProgress = (pageData.page / totalPages) * 100;
   const currentReciter = RECITERS.find((item) => item.id === reciter) ?? RECITERS[0];
   const isSurahPlayback = currentReciter.scope === "surah" || surahPlaybackChapter !== null;
   const isOfflinePackPlayback = offlinePackQueue.length > 0;
@@ -447,7 +484,12 @@ export default function Home() {
     const preferences = loadPreferences(localStorage);
     const urlPage = Number(new URL(window.location.href).searchParams.get("page"));
     const savedPage = preferences.reader.lastPage;
-    const initialPage = clampPage(Number.isInteger(urlPage) && urlPage >= 1 && urlPage <= TOTAL_PAGES ? urlPage : savedPage);
+    const initialPage = clampPage(
+      Number.isInteger(urlPage) && urlPage >= 1 && urlPage <= DEFAULT_PAGE_EDITION.pages
+        ? urlPage
+        : savedPage,
+      DEFAULT_PAGE_EDITION.pages,
+    );
     const savedVerse = preferences.reader.lastVerse;
     const savedVersePage = preferences.reader.lastVersePage;
     pendingVerseRef.current = savedVersePage === initialPage ? savedVerse : null;
@@ -489,10 +531,11 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     let cancelled = false;
-    const cached = pageCacheRef.current.get(page);
+    const cacheKey = quranPageCacheKey(activeReadingId, page);
+    const cached = pageCacheRef.current.get(cacheKey);
     const applyPage = (data: QuranPage) => {
       if (cancelled) return;
-      lastGoodPageRef.current = data;
+      lastGoodPageRef.current.set(activeReadingId, data);
       setPageData(data);
       setRecentPages((pages) => [data.page, ...pages.filter((item) => item !== data.page)].slice(0, 6));
       setTajweedFocus(null);
@@ -538,14 +581,19 @@ export default function Home() {
       return () => { cancelled = true; };
     }
     setLoadingPage(true);
-    contentTransport.loadPage(page)
+    contentTransport.loadPageForReading(activeReadingId, page)
       .then((data) => {
-        if (!isVerifiedPage(data, page)) throw new Error("Page integrity check failed");
-        pageCacheRef.current.set(page, data);
+        if (!isVerifiedPage(data, page, activeReadingId)) throw new Error("Page integrity check failed");
+        pageCacheRef.current.set(cacheKey, data);
         applyPage(data);
-        [page - 1, page + 1].filter((item) => item >= 1 && item <= TOTAL_PAGES && !pageCacheRef.current.has(item)).forEach((item) => {
-          contentTransport.loadPage(item).then((next) => {
-            if (isVerifiedPage(next, item)) pageCacheRef.current.set(item, next);
+        [page - 1, page + 1].filter((item) => {
+          if (item < 1 || item > totalPages) return false;
+          return !pageCacheRef.current.has(quranPageCacheKey(activeReadingId, item));
+        }).forEach((item) => {
+          contentTransport.loadPageForReading(activeReadingId, item).then((next) => {
+            if (isVerifiedPage(next, item, activeReadingId)) {
+              pageCacheRef.current.set(quranPageCacheKey(activeReadingId, item), next);
+            }
           }).catch(() => undefined);
         });
       })
@@ -554,15 +602,21 @@ export default function Home() {
         pendingAutoplayRef.current = false;
         pendingEdgeRef.current = null;
         updatePlaying(false);
-        const previous = lastGoodPageRef.current;
-        setPage(previous.page);
-        setJumpValue(String(previous.page));
+        const previous = lastGoodPageRef.current.get(activeReadingId);
+        if (previous) {
+          setPage(previous.page);
+          setJumpValue(String(previous.page));
+        }
         setLoadingPage(false);
         setTurnDirection("");
-        setNotice("Verified page data is temporarily unavailable. Your last confirmed page is still open.");
+        setNotice(
+          previous
+            ? "Verified page data is temporarily unavailable. Your last confirmed page is still open."
+            : "Verified page data for this Quran reading is temporarily unavailable.",
+        );
       });
     return () => { cancelled = true; };
-  }, [page, hydrated, contentTransport]);
+  }, [page, hydrated, contentTransport, activeReadingId, totalPages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -844,7 +898,7 @@ export default function Home() {
         goToPage(1, "previous");
       } else if (event.key === "End") {
         event.preventDefault();
-        goToPage(TOTAL_PAGES, "next");
+        goToPage(totalPages, "next");
       }
     };
     window.addEventListener("keydown", handleKey);
@@ -913,6 +967,27 @@ export default function Home() {
     return { coordinate: trustedCoordinate, surfaceText: word.text, tajweedRules: rulesForTajweedHtml(word.tajweedHtml) };
   }
 
+  function selectReading(nextReadingId: string) {
+    if (
+      !isSupportedReadingId(nextReadingId)
+      || !isRuntimeSelectableReadingId(nextReadingId)
+    ) {
+      setNotice("That Quran reading is not available in this verified Mushaf build.");
+      return;
+    }
+
+    if (nextReadingId === activeReadingId) return;
+
+    const nextEdition = resolveQuranPageEdition(nextReadingId);
+    stopPlayback(false);
+    setActiveReadingId(nextReadingId);
+
+    if (page > nextEdition.pages) {
+      setPage(nextEdition.pages);
+      setJumpValue(String(nextEdition.pages));
+    }
+  }
+
   function selectReciter(nextReciter: ReciterId) {
     setOfflinePackQueue([]);
     setOfflinePackIndex(0);
@@ -921,7 +996,7 @@ export default function Home() {
   }
 
   function goToPage(target: number, direction?: "next" | "previous", verseKey?: string, keepPlaying = false) {
-    const next = clampPage(target);
+    const next = clampPage(target, totalPages);
     if (next === pageData.page && !verseKey) return;
     if (hifzLoop && next !== pageData.page) stopHifzLoop(false);
     if (offlinePackQueue.length) {
@@ -952,8 +1027,8 @@ export default function Home() {
   function submitJump(event: React.FormEvent) {
     event.preventDefault();
     const target = Number(jumpValue);
-    if (!Number.isFinite(target) || target < 1 || target > TOTAL_PAGES) {
-      setJumpError("Enter a page number from 1 to 604.");
+    if (!Number.isFinite(target) || target < 1 || target > totalPages) {
+      setJumpError(`Enter a page number from 1 to ${totalPages}.`);
       return;
     }
     setJumpError("");
@@ -1019,7 +1094,7 @@ export default function Home() {
       selectAyah(pageData.verses[nextIndex].key);
       return;
     }
-    if (direction === 1 && pageData.page < TOTAL_PAGES) {
+    if (direction === 1 && pageData.page < totalPages) {
       pendingEdgeRef.current = "first";
       goToPage(pageData.page + 1, "next", undefined, playing);
     } else if (direction === -1 && pageData.page > 1) {
@@ -1100,7 +1175,7 @@ export default function Home() {
           updateSurahPlayback(null);
           updatePlaying(false);
         }
-      } else if (pageData.page < TOTAL_PAGES) {
+      } else if (pageData.page < totalPages) {
         pendingAutoplayRef.current = true;
         pendingEdgeRef.current = "first";
         goToPage(pageData.page + 1, "next", undefined, true);
@@ -1453,17 +1528,18 @@ export default function Home() {
     try {
       const anchor = await revalidateStudyAnchor(capturedAnchor, {
         resolveVerse: async (verseKey) => {
-          const cachedPage = pageCacheRef.current.get(capturedAnchor.page) ?? (pageData.page === capturedAnchor.page ? pageData : null);
-          if (cachedPage && isVerifiedPage(cachedPage, capturedAnchor.page) && cachedPage.verses.some((verse) => verse.key === verseKey)) {
+          const cachedPage = pageCacheRef.current.get(quranPageCacheKey(activeReadingId, capturedAnchor.page)) ?? (pageData.page === capturedAnchor.page ? pageData : null);
+          if (cachedPage && isVerifiedPage(cachedPage, capturedAnchor.page, activeReadingId) && cachedPage.verses.some((verse) => verse.key === verseKey)) {
             return { verseKey, page: capturedAnchor.page };
           }
           return contentTransport.lookupVerse(verseKey);
         },
         resolveWord: async (wordAnchor) => {
-          const cachedPage = pageCacheRef.current.get(wordAnchor.page);
-          const trustedPage = cachedPage ?? await contentTransport.loadPage(wordAnchor.page);
-          if (!isVerifiedPage(trustedPage, wordAnchor.page)) return null;
-          if (!cachedPage) pageCacheRef.current.set(wordAnchor.page, trustedPage);
+          const wordCacheKey = quranPageCacheKey(activeReadingId, wordAnchor.page);
+          const cachedPage = pageCacheRef.current.get(wordCacheKey);
+          const trustedPage = cachedPage ?? await contentTransport.loadPageForReading(activeReadingId, wordAnchor.page);
+          if (!isVerifiedPage(trustedPage, wordAnchor.page, activeReadingId)) return null;
+          if (!cachedPage) pageCacheRef.current.set(wordCacheKey, trustedPage);
           const word = pageWordForCoordinate(trustedPage, wordAnchor);
           const coordinate = word ? coordinateForPageWord(trustedPage, word) : null;
           return coordinate?.sourceWordId === undefined ? null : { type: "word" as const, ...coordinate, sourceWordId: coordinate.sourceWordId };
@@ -1697,7 +1773,7 @@ export default function Home() {
       selectAyah(nextVerse.key);
       return;
     }
-    if (direction === 1 && pageData.page < TOTAL_PAGES) {
+    if (direction === 1 && pageData.page < totalPages) {
       pendingEdgeRef.current = "first";
       goToPage(pageData.page + 1, "next");
     } else if (direction === -1 && pageData.page > 1) {
@@ -1970,10 +2046,10 @@ export default function Home() {
           </div>
           <form className="header-page-jump desktop-page-jump" onSubmit={submitJump} aria-label="Jump to Quran page" noValidate>
             <label htmlFor="page-jump">PAGE</label>
-            <input id="page-jump" type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-label="Page number" />
-            <span>/ {TOTAL_PAGES}</span><button type="submit">Go</button>
+            <input id="page-jump" type="number" min="1" max={totalPages} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-label="Page number" />
+            <span>/ {totalPages}</span><button type="submit">Go</button>
           </form>
-          <button type="button" className="mobile-jump-trigger" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><small>PAGE</small><strong>{pageData.page}</strong><span>⌄</span></button>
+          <button type="button" className="mobile-jump-trigger" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${totalPages}`}><small>PAGE</small><strong>{pageData.page}</strong><span>⌄</span></button>
           <div className="header-tools">
             <button type="button" className={`toggle-control desktop-learning-toggle ${tajweed ? "active" : ""}`} onClick={() => setTajweed((value) => !value)} aria-label="Toggle Tajweed"><span className="tajweed-dot" /> <span>Tajweed</span></button>
             <button type="button" className={`toggle-control desktop-learning-toggle ${transliteration ? "active" : ""}`} onClick={() => setTransliteration((value) => !value)} aria-label="Toggle Transliteration"><span>Transliteration</span></button>
@@ -2005,7 +2081,7 @@ export default function Home() {
         <section className="reading-area" aria-label="Mushaf reader">
           <button type="button" className="page-turn-control previous" onClick={previousPage} disabled={loadingPage} aria-label={pageData.page === 1 ? "Open Tajweed guide before page one" : "Previous page"}><span>‹</span><small>{pageData.page === 1 ? "GUIDE" : "PREVIOUS"}</small></button>
           <div className="book-stage">
-            <div className="book-meta"><span>JUZ {pageData.juz}</span>{currentChapter ? <button type="button" onClick={() => setNotice(`Double-click Sūrah ${currentChapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(currentChapter.id)} aria-label={`Sūrah ${currentChapter.id}, ${currentChapter.name}. Double-click to play from the beginning`}>{currentChapter.id} · {currentChapter.name}</button> : <span>Quran</span>}<span>HIZB {pageData.hizb}</span></div>
+            <div className="book-meta"><span>JUZ {pageData.juz}</span>{currentChapter ? <button type="button" onClick={() => setNotice(`Double-click Sūrah ${currentChapter.id} to play it from the beginning.`)} onDoubleClick={() => startSurahPlayback(currentChapter.id)} aria-label={`Sūrah ${currentChapter.id}, ${currentChapter.name}. Double-click to play from the beginning`}>{currentChapter.id} · {currentChapter.name}</button> : <span>Quran</span>}<span>HIZB {pageData.hizb} · READING {activeReading.label}</span></div>
             <article
               ref={readerArticleRef}
               tabIndex={-1}
@@ -2026,11 +2102,11 @@ export default function Home() {
             {verseActionsOpen && selectedVerse && <aside className="verse-actions" aria-label={`Actions for ayah ${selectedVerse.key}`}><span>AYAH {selectedVerse.key}</span><div><button type="button" onClick={togglePlay}>{playing ? "Pause" : "Listen"}</button><button type="button" className="context-action" onClick={(event) => openContextLens(event.currentTarget)}>Study lens</button><button type="button" className="tafsir-action" onClick={openTafsir}>Study tafsir</button><button type="button" className={bookmarks.includes(currentBookmark) ? "active" : ""} onClick={toggleBookmark}>{bookmarks.includes(currentBookmark) ? "Bookmarked" : "Bookmark"}</button><button type="button" className={memorizedVerseKeys.has(selectedVerse.key) ? "memorized-action" : ""} onClick={toggleMemorized}>{memorizedVerseKeys.has(selectedVerse.key) ? "✓ Memorized" : "Mark memorized"}</button><button type="button" className="verse-actions-close" onClick={() => setVerseActionsOpen(false)} aria-label="Close ayah actions">×</button></div></aside>}
             <div className="mobile-page-controls">
               <button type="button" onClick={previousPage}>{pageData.page === 1 ? "‹ Guide" : "‹ Previous"}</button>
-              <button type="button" className="mobile-jump-button" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${TOTAL_PAGES}`}><strong>{pageData.page}</strong><span>/ {TOTAL_PAGES}</span></button>
-              <button type="button" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES}>Next ›</button>
+              <button type="button" className="mobile-jump-button" onClick={openJump} aria-label={`Open page jump. Current page ${pageData.page} of ${totalPages}`}><strong>{pageData.page}</strong><span>/ {totalPages}</span></button>
+              <button type="button" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= totalPages}>Next ›</button>
             </div>
           </div>
-          <button type="button" className="page-turn-control next" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= TOTAL_PAGES || loadingPage} aria-label="Next page"><span>›</span><small>NEXT</small></button>
+          <button type="button" className="page-turn-control next" onClick={() => goToPage(page + 1, "next")} disabled={pageData.page >= totalPages || loadingPage} aria-label="Next page"><span>›</span><small>NEXT</small></button>
         </section>
       </section>
 
@@ -2223,8 +2299,8 @@ export default function Home() {
               <header><div><span className="panel-kicker">GO TO A PLACE</span><h2 id="jump-title">Jump in the mushaf</h2></div>{closeButton}</header>
               <div className="jump-content">
                 <form className="jump-page-form" onSubmit={submitJump} noValidate>
-                  <label htmlFor="jump-sheet-page"><span>PAGE NUMBER</span><strong>1–604</strong></label>
-                  <div><input id="jump-sheet-page" autoFocus type="number" min="1" max={TOTAL_PAGES} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-describedby={jumpError ? "jump-error" : undefined} /><span>/ {TOTAL_PAGES}</span><button type="submit">Go</button></div>
+                  <label htmlFor="jump-sheet-page"><span>PAGE NUMBER</span><strong>1–{totalPages}</strong></label>
+                  <div><input id="jump-sheet-page" autoFocus type="number" min="1" max={totalPages} inputMode="numeric" value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpError(""); }} aria-describedby={jumpError ? "jump-error" : undefined} /><span>/ {totalPages}</span><button type="submit">Go</button></div>
                 </form>
 
                 <div className="jump-selectors">
@@ -2298,6 +2374,33 @@ export default function Home() {
               <div className="settings-content">
                 <section className="settings-group"><h3>Appearance</h3><div className="setting-row"><span><strong>Theme</strong><small>Choose the reading surface.</small></span><div className="segmented"><button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>Light</button><button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>Night</button></div></div><div className="setting-row"><span><strong>Page size</strong><small>Preserves all 15 line slots.</small></span><select value={pageScale} onChange={(event) => setPageScale(event.target.value as PageScale)} aria-label="Page size"><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></div><div className="setting-row"><span><strong>Reading font</strong><small>Uthman Taha is the page-faithful default.</small></span><select value={readingFont} onChange={(event) => setReadingFont(event.target.value as ReadingFont)} aria-label="Reading font">{READING_FONTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div></section>
                 <section className="settings-group">
+                  <h3>Quran reading</h3>
+                  <div className="setting-row">
+                    <span>
+                      <strong>Active reading</strong>
+                      <small>
+                        Mushaf text and page layout are selected here, separately from the reciter.
+                      </small>
+                    </span>
+                    <select
+                      value={activeReadingId}
+                      onChange={(event) => selectReading(event.target.value)}
+                      aria-label="Quran reading"
+                      disabled={RUNTIME_SELECTABLE_READINGS.length === 1}
+                    >
+                      {RUNTIME_SELECTABLE_READINGS.map((reading) => (
+                        <option key={reading.id} value={reading.id}>
+                          {reading.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="audio-scope-note">
+                    {activeReading.arabicLabel} · Only verified readings are selectable.
+                  </p>
+                </section>
+
+                <section className="settings-group">
                   <h3>Audio</h3>
                   <div className="setting-row">
                     <span><strong>Default reciter</strong><small>{currentReciter.scope === "surah" ? "Continuous sūrah playback." : "Used for verse playback."}</small></span>
@@ -2320,7 +2423,7 @@ export default function Home() {
                 </section>
                 <section className="settings-group offline-settings"><h3>Offline audio</h3><p>{offlineAudioStats.completePacks} verified packs · {formatAudioBytes(offlineAudioStats.usedBytes)} on this device.</p><button type="button" onClick={openDownloads}>Manage downloads <span>→</span></button><small>Surah and juz packs are stored privately in this browser.</small></section>
                 <section className="settings-group data-portability"><h3>Private backup</h3><p>Your private notes, reading history, and mastery map stay on this device unless you explicitly download a backup.</p><div><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInputRef.current?.click()}>Restore backup</button><input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} hidden /></div></section>
-                <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · Hafs · 15-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href={contentTransport.contentManifestUrl} target="_blank" rel="noreferrer">view sources</a></small></footer>
+                <footer className="edition-note"><span>VERIFIED CONTENT</span><strong>Madani Mushaf · {activeReading.label} · {activePageEdition.lineCount}-line page map</strong><small>Manifest {pageData.provenance.manifestRevision} · SHA-256 {pageData.provenance.pageChecksum.slice(0, 12)}… · <a href={contentTransport.contentManifestUrl} target="_blank" rel="noreferrer">view sources</a></small></footer>
               </div>
             </section>
           )}

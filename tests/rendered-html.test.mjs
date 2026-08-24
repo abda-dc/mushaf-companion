@@ -67,7 +67,9 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
     readFile(new URL("../LICENSE", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /TOTAL_PAGES = 604/);
+  assert.match(page, /const \[activeReadingId, setActiveReadingId\] = useState<ReadingId>\(DEFAULT_READING_ID\)/);
+  assert.match(page, /const activePageEdition = resolveQuranPageEdition\(activeReadingId\)/);
+  assert.match(page, /const totalPages = activePageEdition\.pages/);
   assert.match(page, /loadPreferences\(localStorage\)/);
   assert.match(page, /savePreferences\(localStorage/);
   assert.match(page, /new URL\(window\.location\.href\)\.searchParams\.get\("page"\)/);
@@ -75,23 +77,24 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(page, /event\.key === "ArrowLeft"/);
   assert.match(page, /handlePointerDown/);
   assert.match(page, /handlePointerUp/);
-  assert.match(page, /type="number" min="1" max=\{TOTAL_PAGES\}/);
+  assert.match(page, /type="number" min="1" max=\{totalPages\}/);
   assert.match(page, /Open page jump\. Current page/);
   assert.match(page, /Jump in the mushaf/);
   assert.match(page, /JUZ_START_PAGES/);
   assert.match(page, /Recent pages/);
   assert.match(page, /Saved places/);
   assert.match(page, /setRecentPages/);
-  assert.match(page, /contentTransport\.loadPage\(page\)/);
+  assert.match(page, /contentTransport\.loadPageForReading\(activeReadingId, page\)/);
+  assert.match(page, /quranPageCacheKey\(activeReadingId, page\)/);
   assert.match(page, /pageCacheRef/);
-  assert.match(runtimeSource, /mushaf: "1"/);
-  assert.match(runtimeSource, /line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4/);
+  assert.match(runtimeSource, /mushaf: String\(edition\.mushafId\)/);
+  assert.match(runtimeSource, /edition\.wordTextField/);
   assert.match(runtimeSource, /qcfGlyphFromWord\(word\.text\)/);
-  assert.match(runtimeSource, /uthmani_tajweed\?page_number/);
-  assert.match(runtimeSource, /Array\.from\(\{ length: 15 \}/);
+  assert.match(runtimeSource, /edition\.tajweedRoute/);
+  assert.match(runtimeSource, /length: edition\.lineCount/);
   assert.match(runtimeSource, /sha256Hex/);
   assert.match(pageRoute, /CONTENT_MANIFEST/);
-  assert.match(runtimeSource, /translations: "20,57"/);
+  assert.match(runtimeSource, /edition\.translationResourceId/);
   assert.match(page, /new FontFace/);
   assert.match(page, /qcfTajweedCode/);
   assert.match(styles, /grid-template-rows: repeat\(15/);

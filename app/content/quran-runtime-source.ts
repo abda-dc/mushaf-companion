@@ -1,5 +1,9 @@
 import { AUDIO_MANIFEST_REVISION, createAudioPackManifest, type AudioPackManifest, type AudioPackType } from "../audio-manifest.mjs";
-import { CONTENT_MANIFEST } from "../content-manifest.ts";
+import { DEFAULT_READING_ID } from "../reading-registry.mjs";
+import {
+  resolveQuranPageEdition,
+  type QuranPageEditionDefinition,
+} from "./quran-page-editions.ts";
 import type { ChapterStart, PageChapter, PageLine, PageVerse, PageWord, QuranChapterInfo, QuranPage, SearchResult } from "../quran-data.ts";
 import { normalizeTafsirPayload, TAFSIR_RESOURCE, type TafsirDocument } from "../tafsir-source.mjs";
 import type { SearchResponse } from "./runtime-transport.types.ts";
@@ -57,6 +61,18 @@ function qcfGlyphFromWord(value?: string) {
   return /[\uFB50-\uFDFF\uFE70-\uFEFF]/u.test(value) ? value : undefined;
 }
 
+function verseTextForEdition(verse: ApiVerse, edition: QuranPageEditionDefinition) {
+  if (edition.verseTextField === "text_uthmani") return verse.text_uthmani;
+  throw new Error("Configured Quran verse text field is unavailable.");
+}
+
+function wordTextForEdition(word: ApiWord, edition: QuranPageEditionDefinition) {
+  if (edition.wordTextField === "text_qpc_hafs") {
+    return word.text_qpc_hafs || word.text_uthmani || word.text;
+  }
+  throw new Error("Configured Quran word text field is unavailable.");
+}
+
 function cleanLearningText(value?: string) {
   return (value ?? "")
     .replace(/<sup[^>]*>.*?<\/sup>/gi, "")
@@ -82,12 +98,17 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function assertVerifiedStructure(page: number, verses: ApiVerse[], lineMap: Map<number, PageWord[]>) {
+function assertVerifiedStructure(
+  page: number,
+  verses: ApiVerse[],
+  lineMap: Map<number, PageWord[]>,
+  edition: QuranPageEditionDefinition,
+) {
   if (!verses.length || !verses.every((verse) => /^\d{1,3}:\d{1,3}$/.test(verse.verse_key) && verse.words.length)) {
     throw new Error("Verified verse identity coverage is incomplete.");
   }
   const mappedWords = Array.from(lineMap.entries()).flatMap(([lineNumber, words]) => words.map((word) => ({ lineNumber, word })));
-  if (!mappedWords.length || mappedWords.some(({ lineNumber, word }) => lineNumber < 1 || lineNumber > 15 || word.pageNumber !== page)) {
+  if (!mappedWords.length || mappedWords.some(({ lineNumber, word }) => lineNumber < 1 || lineNumber > edition.lineCount || word.pageNumber !== page)) {
     throw new Error("Verified page-line mapping is invalid.");
   }
 }
@@ -138,8 +159,11 @@ export async function normalizeQuranPage(
   versePayload: { verses?: ApiVerse[] },
   tajweedPayload: { verses?: Array<{ verse_key: string; text_uthmani_tajweed: string }> },
   chapterPayload: { chapters?: ApiChapter[] },
+  edition: QuranPageEditionDefinition = resolveQuranPageEdition(DEFAULT_READING_ID),
 ): Promise<QuranPage> {
-  if (!Number.isInteger(page) || page < 1 || page > 604) throw new Error("Page must be between 1 and 604.");
+  if (!Number.isInteger(page) || page < 1 || page > edition.pages) {
+    throw new Error("Page must be between 1 and " + edition.pages + ".");
+  }
   if (!versePayload.verses?.length || !tajweedPayload.verses?.length || !chapterPayload.chapters?.length) {
     throw new Error("Verified page content is incomplete.");
   }
@@ -156,9 +180,9 @@ export async function normalizeQuranPage(
       key: verse.verse_key,
       number: verse.verse_number,
       chapterId,
-      uthmani: verse.text_uthmani,
-      transliteration: cleanLearningText(verse.translations?.find((item) => item.resource_id === CONTENT_MANIFEST.resources.transliteration.id)?.text ?? verse.translations?.[1]?.text),
-      translation: cleanLearningText(verse.translations?.find((item) => item.resource_id === CONTENT_MANIFEST.resources.translation.id)?.text ?? verse.translations?.[0]?.text),
+      uthmani: verseTextForEdition(verse, edition),
+      transliteration: cleanLearningText(verse.translations?.find((item) => item.resource_id === edition.transliterationResourceId)?.text ?? verse.translations?.[1]?.text),
+      translation: cleanLearningText(verse.translations?.find((item) => item.resource_id === edition.translationResourceId)?.text ?? verse.translations?.[0]?.text),
       sajdahNumber: verse.sajdah_number ?? undefined,
     });
     const contentWords = verse.words.filter((word) => word.char_type_name !== "end");
@@ -167,10 +191,11 @@ export async function normalizeQuranPage(
     for (const word of verse.words) {
       const isEnd = word.char_type_name === "end";
       const qcfCode = word.code_v2 ?? qcfGlyphFromWord(word.text);
+      const editionText = wordTextForEdition(word, edition);
       const mapped: PageWord = {
         id: word.id,
-        text: word.text_qpc_hafs || word.text_uthmani || word.text,
-        tajweedHtml: isEnd ? "" : alignedTajweed[contentIndex] ?? (word.text_qpc_hafs || word.text_uthmani || word.text),
+        text: editionText,
+        tajweedHtml: isEnd ? "" : alignedTajweed[contentIndex] ?? editionText,
         verseKey: verse.verse_key,
         isEnd,
         qcfCode,
@@ -198,9 +223,9 @@ export async function normalizeQuranPage(
       arabicName: chapter.name_arabic,
       revelationPlace: chapter.revelation_place,
     }));
-  const lines: PageLine[] = Array.from({ length: 15 }, (_, index) => ({ number: index + 1, words: lineMap.get(index + 1) ?? [] }));
+  const lines: PageLine[] = Array.from({ length: edition.lineCount }, (_, index) => ({ number: index + 1, words: lineMap.get(index + 1) ?? [] }));
   const firstVerse = versePayload.verses[0];
-  assertVerifiedStructure(page, versePayload.verses, lineMap);
+  assertVerifiedStructure(page, versePayload.verses, lineMap, edition);
   const pageChecksum = await sha256Hex(JSON.stringify({
     page,
     verses: verses.map((verse) => ({ key: verse.key, uthmani: verse.uthmani, translation: verse.translation, transliteration: verse.transliteration })),
@@ -216,33 +241,76 @@ export async function normalizeQuranPage(
     chapterStarts,
     provenance: {
       verified: true,
-      manifestRevision: CONTENT_MANIFEST.revision,
-      mushafId: CONTENT_MANIFEST.edition.mushafId,
-      arabicResource: CONTENT_MANIFEST.resources.arabic.id,
-      tajweedResource: CONTENT_MANIFEST.resources.tajweed.id,
-      translationResource: CONTENT_MANIFEST.resources.translation.id,
-      transliterationResource: CONTENT_MANIFEST.resources.transliteration.id,
+      manifestRevision: edition.manifestRevision,
+      mushafId: edition.mushafId,
+      arabicResource: edition.arabicResourceId,
+      tajweedResource: edition.tajweedResourceId,
+      translationResource: edition.translationResourceId,
+      transliterationResource: edition.transliterationResourceId,
       pageChecksum,
     },
   };
 }
 
-export async function fetchQuranPageFromSource(page: number, fetchImpl: typeof fetch = fetch, signal?: AbortSignal): Promise<QuranPage> {
+export async function fetchQuranPageForReadingFromSource(
+  readingId: string,
+  page: number,
+  fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<QuranPage> {
+  // Resolve before creating or issuing any provider request. Unsupported readings
+  // must never inherit the default Hafs content path implicitly.
+  const edition = resolveQuranPageEdition(readingId);
+
   const pageQuery = new URLSearchParams({
-    mushaf: "1",
+    mushaf: String(edition.mushafId),
     words: "true",
-    translations: "20,57",
-    fields: "text_uthmani,sajdah_number",
-    word_fields: "line_number,page_number,text_uthmani,text_qpc_hafs,code_v2,code_v4",
+    translations: edition.translationResourceId + "," + edition.transliterationResourceId,
+    fields: edition.verseTextField + ",sajdah_number",
+    word_fields: [
+      "line_number",
+      "page_number",
+      "text_uthmani",
+      edition.wordTextField,
+      "code_v2",
+      "code_v4",
+    ].join(","),
     per_page: "50",
   });
+
   const [verseResponse, tajweedResponse, chapterResponse] = await Promise.all([
     fetchImpl(`${QURAN_API_ROOT}/verses/by_page/${page}?${pageQuery}`, { signal }),
-    fetchImpl(`${QURAN_API_ROOT}/quran/verses/uthmani_tajweed?page_number=${page}`, { signal }),
+    fetchImpl(
+      `${QURAN_API_ROOT}/${edition.tajweedRoute}?${edition.tajweedPageParameter}=${page}`,
+      { signal },
+    ),
     fetchImpl(`${QURAN_API_ROOT}/chapters?language=en`, { signal }),
   ]);
-  if (!verseResponse.ok || !tajweedResponse.ok || !chapterResponse.ok) throw new Error("Quran content source returned an error.");
-  return normalizeQuranPage(page, await verseResponse.json(), await tajweedResponse.json(), await chapterResponse.json());
+
+  if (!verseResponse.ok || !tajweedResponse.ok || !chapterResponse.ok) {
+    throw new Error("Quran content source returned an error.");
+  }
+
+  return normalizeQuranPage(
+    page,
+    await verseResponse.json(),
+    await tajweedResponse.json(),
+    await chapterResponse.json(),
+    edition,
+  );
+}
+
+export async function fetchQuranPageFromSource(
+  page: number,
+  fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<QuranPage> {
+  return fetchQuranPageForReadingFromSource(
+    DEFAULT_READING_ID,
+    page,
+    fetchImpl,
+    signal,
+  );
 }
 
 export function normalizeChapters(chapterPayload: { chapters?: ApiChapter[] }, juzPayload: { juzs?: ApiJuz[] }): QuranChapterInfo[] {

@@ -30,6 +30,13 @@ export function createServerReaderTransport(): ReaderContentTransport {
     loadPage(page, signal) {
       return requestJson<QuranPage>(appPath(`api/pages/${page}?v=2026-08-06-phase-three`), signal, "Verified Quran page data is temporarily unavailable.");
     },
+    loadPageForReading(readingId, page, signal) {
+      return requestJson<QuranPage>(
+        appPath(`api/pages/${page}?v=2026-08-06-phase-three&reading=${encodeURIComponent(readingId)}`),
+        signal,
+        "Verified Quran page data is temporarily unavailable.",
+      );
+    },
     search(query, signal) {
       return requestJson<SearchResponse>(appPath(`api/search?q=${encodeURIComponent(query)}`), signal, "Search is temporarily unavailable.");
     },

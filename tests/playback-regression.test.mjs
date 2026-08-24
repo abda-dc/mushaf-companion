@@ -23,7 +23,7 @@ test("complete Surah playback explicitly preserves autoplay across ayah and page
 
   assert.match(
     page,
-    /\} else if \(pageData\.page < TOTAL_PAGES\) \{\s+pendingAutoplayRef\.current = true;\s+pendingEdgeRef\.current = "first";\s+goToPage\(pageData\.page \+ 1, "next", undefined, true\);/,
+    /\} else if \(pageData\.page < totalPages\) \{\s+pendingAutoplayRef\.current = true;\s+pendingEdgeRef\.current = "first";\s+goToPage\(pageData\.page \+ 1, "next", undefined, true\);/,
   );
 });
 
@@ -82,7 +82,7 @@ test("page-load failure clears pending autoplay and edge navigation before resto
   const autoplayClear = failureBlock.indexOf("pendingAutoplayRef.current = false;");
   const edgeClear = failureBlock.indexOf("pendingEdgeRef.current = null;");
   const stopPlaying = failureBlock.indexOf("updatePlaying(false);");
-  const restorePage = failureBlock.indexOf("const previous = lastGoodPageRef.current;");
+  const restorePage = failureBlock.indexOf("const previous = lastGoodPageRef.current.get(activeReadingId);");
 
   assert.ok(autoplayClear >= 0 && autoplayClear < restorePage, "autoplay intent must clear before restoring the page");
   assert.ok(edgeClear >= 0 && edgeClear < restorePage, "page-edge intent must clear before restoring the page");

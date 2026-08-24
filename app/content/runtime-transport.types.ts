@@ -3,6 +3,7 @@ import type { QuranChapterInfo, QuranPage, SearchResult } from "../quran-data.ts
 import type { TafsirDocument } from "../tafsir-source.mjs";
 import type { ReaderRuntimeMode } from "../runtime-config.ts";
 import type { EducationCatalogResult } from "../education-content.ts";
+import type { ReadingId } from "../reading-registry.mjs";
 
 export interface SearchResponse {
   results: SearchResult[];
@@ -13,6 +14,7 @@ export interface ReaderContentTransport {
   readonly mode: ReaderRuntimeMode;
   readonly contentManifestUrl: string;
   loadPage(page: number, signal?: AbortSignal): Promise<QuranPage>;
+  loadPageForReading(readingId: ReadingId, page: number, signal?: AbortSignal): Promise<QuranPage>;
   search(query: string, signal?: AbortSignal): Promise<SearchResponse>;
   loadChapters(signal?: AbortSignal): Promise<QuranChapterInfo[]>;
   lookupVerse(verseKey: string, signal?: AbortSignal): Promise<{ page: number; verseKey: string }>;

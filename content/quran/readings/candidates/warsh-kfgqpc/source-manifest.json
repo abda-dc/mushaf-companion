@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "candidate:kfgqpc:warsh-an-nafi",
+  "readingIdentity": {
+    "readingId": "warsh-an-nafi",
+    "qiraah": "nafi",
+    "riwayah": "warsh",
+    "label": "Warsh ʿan Nāfiʿ"
+  },
+  "responsibleOrganization": "King Fahd Glorious Qur'an Printing Complex",
+  "sourceStatus": "artifact-not-received",
+  "productionEligible": false,
+  "landingPage": "https://qurancomplex.gov.sa/en/techquran/dev/",
+  "package": {
+    "providerRevision": "6.0",
+    "providerLastModified": "2022-09-07",
+    "advertisedSize": "8.62MB",
+    "downloadUrl": null,
+    "receivedPath": null,
+    "receivedAt": null,
+    "publishedChecksums": {
+      "md5": "4701e8bbf053098220cf2cf4cda206a1",
+      "sha1": "44ecea8feb23817fdc01a8ee2162a6a0cf08cae7"
+    },
+    "locallyVerifiedChecksums": {
+      "md5": null,
+      "sha1": null,
+      "sha256": null
+    }
+  },
+  "publishedDataContract": {
+    "fields": [
+      "id",
+      "jozz",
+      "page",
+      "sura_no",
+      "sura_name_en",
+      "sura_name_ar",
+      "line_start",
+      "line_end",
+      "aya_no",
+      "aya_text"
+    ],
+    "pageFieldType": "varchar",
+    "pageFieldNote": "Some ayat span two pages; the provider documentation says page values are separated with an en dash.",
+    "textFontFamily": "kfgqpc_warsh_uthmanic_script"
+  },
+  "evidenceStatus": "official-index-metadata-only"
+}
