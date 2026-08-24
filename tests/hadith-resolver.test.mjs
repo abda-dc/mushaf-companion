@@ -57,9 +57,9 @@ test("2. Resolver finds bukhari:4485 by structured reference", () => {
   assert.equal(result.record.text?.translations[0]?.providerRecordId, "65046");
 });
 
-test("3. Resolver resolves all 42 seeded records as resolved-translation-approved", () => {
+test("3. Resolver resolves all 44 seeded records as resolved-translation-approved", () => {
   const allRecords = listHadithRecords();
-  assert.equal(allRecords.length, 42);
+  assert.equal(allRecords.length, 44);
 
   for (const record of allRecords) {
     const result = resolveHadithReference({
@@ -85,6 +85,24 @@ test("3g. Resolver resolves all seven Akhirah Hadith targets to their approved H
   ];
 
   for (const target of akhirahTargets) {
+    const result = resolveHadithReference({
+      collectionId: target.collectionId,
+      number: target.number,
+    });
+    assert.equal(result.status, "resolved-translation-approved");
+    assert.equal(result.target, `hadith:${target.collectionId}:${target.number}`);
+    assert.equal(result.sourceRecord?.providerRecordId, target.providerId);
+  }
+});
+
+test("3h. Resolver resolves all Ihsan Hadith targets to their approved HadeethEnc provider IDs", () => {
+  const ihsanTargets = [
+    { collectionId: "bukhari", number: "1", providerId: "66511" },
+    { collectionId: "muslim", number: "8", providerId: "4563" },
+    { collectionId: "tirmidhi", number: "1987", providerId: "4302" },
+  ];
+
+  for (const target of ihsanTargets) {
     const result = resolveHadithReference({
       collectionId: target.collectionId,
       number: target.number,
@@ -200,13 +218,14 @@ test("9. HadeethEnc source record is distinct from canonical collection numberin
 
 test("10. Deterministic metadata search across canonical number, label, narrator, and collection", () => {
   const umarResults = searchHadithMetadata("Umar");
-  assert.equal(umarResults.length, 3);
+  assert.equal(umarResults.length, 4);
   assert.ok(umarResults.some((r) => r.id === "muslim:8"));
   assert.ok(umarResults.some((r) => r.id === "bukhari:6014"));
   assert.ok(umarResults.some((r) => r.id === "abu-dawud:5074"));
+  assert.ok(umarResults.some((r) => r.id === "bukhari:1"));
 
   const bukhariResults = searchHadithMetadata("Bukhari");
-  assert.equal(bukhariResults.length, 19);
+  assert.equal(bukhariResults.length, 20);
   assert.ok(bukhariResults.some((r) => r.id === "bukhari:6389"));
 
   const specificNumber = searchHadithMetadata("4485");

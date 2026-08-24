@@ -249,6 +249,9 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "21:35",
   "66:6",
   "82:19",
+  "3:102",
+  "57:4",
+  "98:5",
 ]);
 
 const HADEETHENC_RECORD_ID = /^[1-9]\d*$/;
@@ -794,7 +797,7 @@ function whatAMuslimMustKnowScholarlyReference(
   };
 }
 
-function plannedTopic(id: string, title: string): IslamicReferenceTopic {
+function _plannedTopic(id: string, title: string): IslamicReferenceTopic {
   return {
     id,
     title,
@@ -822,7 +825,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v9",
+  revision: "m9r-v10",
   collections: [
     {
       id: "islam",
@@ -1235,9 +1238,57 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
             "Sahih Muslim 8",
           ),
         ]),
-        plannedTopic("ihsan-sincerity", "Sincerity"),
-        plannedTopic("ihsan-awareness-of-allah", "Awareness of Allah"),
-        plannedTopic("ihsan-taqwa", "Taqwa"),
+        referenceReadyTopic("ihsan-sincerity", "Sincerity", [
+          quranReference(
+            "quran:ihsan-sincerity:98-5",
+            ["98:5"],
+            "98:5",
+          ),
+          hadithReference(
+            "hadith:ihsan-sincerity:hadeethenc-66511",
+            "Hadith of Intention",
+            "bukhari",
+            "Sahih al-Bukhari",
+            "1",
+            "'Umar ibn al-Khattab",
+            "66511",
+            "Sahih al-Bukhari 1",
+          ),
+        ]),
+        referenceReadyTopic("ihsan-awareness-of-allah", "Awareness of Allah", [
+          quranReference(
+            "quran:ihsan-awareness-of-allah:57-4",
+            ["57:4"],
+            "57:4",
+          ),
+          hadithReference(
+            "hadith:ihsan-awareness-of-allah:hadeethenc-4563",
+            "Hadith of Jibril (Awareness of Allah)",
+            "muslim",
+            "Sahih Muslim",
+            "8",
+            "Umar ibn al-Khattab",
+            "4563",
+            "Sahih Muslim 8",
+          ),
+        ]),
+        referenceReadyTopic("ihsan-taqwa", "Taqwa", [
+          quranReference(
+            "quran:ihsan-taqwa:3-102",
+            ["3:102"],
+            "3:102",
+          ),
+          hadithReference(
+            "hadith:ihsan-taqwa:hadeethenc-4302",
+            "Fear Allah Wherever You Are",
+            "tirmidhi",
+            "Jami' at-Tirmidhi",
+            "1987",
+            "Abu Dharr",
+            "4302",
+            "Jami' at-Tirmidhi 1987",
+          ),
+        ]),
       ],
     },
     {

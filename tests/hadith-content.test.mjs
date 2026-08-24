@@ -35,12 +35,12 @@ test("1. Dataset manifest is present, valid, and deeply frozen", () => {
   assert.equal(HADEETHENC_DATASET_MANIFEST.attribution, "HadeethEnc.com");
   assert.equal(HADEETHENC_DATASET_MANIFEST.contentScope, "translated-hadith-text");
   assert.equal(HADEETHENC_DATASET_MANIFEST.workbookChecksum, "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218");
-  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 42);
+  assert.equal(HADEETHENC_DATASET_MANIFEST.recordCount, 44);
   assert.ok(Object.isFrozen(HADEETHENC_DATASET_MANIFEST));
 });
 
-test("2. Exactly 42 translations are activated with translation-approved state", () => {
-  assert.equal(SEEDED_HADITH_RECORDS.length, 42);
+test("2. Exactly 44 translations are activated with translation-approved state", () => {
+  assert.equal(SEEDED_HADITH_RECORDS.length, 44);
   for (const record of SEEDED_HADITH_RECORDS) {
     assert.equal(record.activation, "translation-approved", `Record ${record.id} should be translation-approved`);
     assert.ok(record.text, `Record ${record.id} text should exist`);
@@ -59,11 +59,11 @@ test("2. Exactly 42 translations are activated with translation-approved state",
   }
 });
 
-test("3. Only the approved 42 provider IDs are activated", () => {
+test("3. Only the approved 44 provider IDs are activated", () => {
   const activatedProviderIds = SEEDED_HADITH_RECORDS.map((r) => r.text?.translations[0]?.providerRecordId);
   const expectedSet = new Set(APPROVED_HADEETHENC_IDS);
 
-  assert.equal(activatedProviderIds.length, 42);
+  assert.equal(activatedProviderIds.length, 44);
   for (const pid of activatedProviderIds) {
     assert.ok(expectedSet.has(pid), `Provider ID '${pid}' is not in approved list`);
   }
@@ -644,9 +644,9 @@ test("31. HadeethEnc 4308 resolves to Sahih Muslim 2553 with exact translation h
   assert.equal(translation.attribution, "HadeethEnc.com");
 });
 
-test("32. M9H seeded records breakdown: 19 Bukhari, 21 Muslim, 1 Abu Dawud, 1 Tirmidhi, 0 remaining collections", () => {
+test("32. M9H seeded records breakdown: 20 Bukhari, 21 Muslim, 1 Abu Dawud, 2 Tirmidhi, 0 remaining collections", () => {
   const records = listHadithRecords();
-  assert.equal(records.length, 42);
+  assert.equal(records.length, 44);
 
   const bukhari = records.filter((r) => r.collectionId === "bukhari");
   const muslim = records.filter((r) => r.collectionId === "muslim");
@@ -656,10 +656,10 @@ test("32. M9H seeded records breakdown: 19 Bukhari, 21 Muslim, 1 Abu Dawud, 1 Ti
     !["bukhari", "muslim", "abu-dawud", "tirmidhi"].includes(r.collectionId)
   );
 
-  assert.equal(bukhari.length, 19);
+  assert.equal(bukhari.length, 20);
   assert.equal(muslim.length, 21);
   assert.equal(abuDawud.length, 1);
-  assert.equal(tirmidhi.length, 1);
+  assert.equal(tirmidhi.length, 2);
   assert.equal(remaining.length, 0);
 });
 
@@ -1029,4 +1029,39 @@ test("47. M9R-9 Akhirah Hadith records resolve with verified translation checksu
     const computedHash = crypto.createHash("sha256").update(translation.text, "utf8").digest("hex");
     assert.equal(computedHash, expected.checksum);
   }
+});
+
+test("48. M9R-10 Ihsan Hadith records resolve with verified translation checksums, charCounts, and collection breakdown", () => {
+  const allRecords = listHadithRecords();
+  assert.equal(allRecords.length, 44);
+
+  const collections = {
+    bukhari: 20,
+    muslim: 21,
+    "abu-dawud": 1,
+    tirmidhi: 2,
+    nasai: 0,
+    "ibn-majah": 0,
+  };
+
+  for (const [col, expectedCount] of Object.entries(collections)) {
+    const count = allRecords.filter((r) => r.collectionId === col).length;
+    assert.equal(count, expectedCount, `Collection ${col} count should be ${expectedCount}`);
+  }
+
+  // bukhari:1 (Sincerity / HadeethEnc 66511)
+  const bukhari1 = getHadithRecord("bukhari:1");
+  assert.ok(bukhari1);
+  assert.equal(bukhari1.narrator, "'Umar ibn al-Khattab");
+  assert.equal(bukhari1.text?.translations[0].providerRecordId, "66511");
+  assert.equal(bukhari1.text?.translations[0].checksum, "0c065b7ece5d0ed39a3232799ce204541612f0b3899449c82352945ba7f4255c");
+  assert.equal(bukhari1.text?.translations[0].text.length, 532);
+
+  // tirmidhi:1987 (Taqwa / HadeethEnc 4302)
+  const tirmidhi1987 = getHadithRecord("tirmidhi:1987");
+  assert.ok(tirmidhi1987);
+  assert.equal(tirmidhi1987.narrator, "Abu Dharr");
+  assert.equal(tirmidhi1987.text?.translations[0].providerRecordId, "4302");
+  assert.equal(tirmidhi1987.text?.translations[0].checksum, "00a1f06f42e912dedc80854529543ab91a8dc0cef48ab202c07fe5ba052f50ff");
+  assert.equal(tirmidhi1987.text?.translations[0].text.length, 281);
 });

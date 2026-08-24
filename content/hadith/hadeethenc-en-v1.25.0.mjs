@@ -19,7 +19,7 @@ export const HADEETHENC_DATASET_MANIFEST = Object.freeze({
   "attribution": "HadeethEnc.com",
   "contentScope": "translated-hadith-text",
   "workbookChecksum": "339d148eb7425b7f2d48dd7521a969e4aa4a35b5d35a7c4a1c1b67043b5ee218",
-  "recordCount": 42
+  "recordCount": 44
 });
 
 export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
@@ -165,6 +165,17 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/4206",
     "sha256": "006f1567bf6f9ac0070684f506658c6ef8a774800d5431a142d41dee97625773",
     "charCount": 449
+  },
+  "4302": {
+    "id": "4302",
+    "title": "Fear Allah wherever you are; follow a bad deed with a good deed and it will erase it; and treat people with good morals",
+    "hadith_text": "Abu Dharr, Jundub ibn Junādah, and Abu ‘Abdur-Rahmān, Mu‘ādh ibn Jabal (may Allah be pleased with both of them) reported that the Messenger of Allah (ﷺ) said: \"Fear Allah wherever you are; follow a bad deed with a good deed and it will erase it; and treat people with good morals.\"",
+    "grade": "[At-Tirmidhi said: It is a Hasan (sound) Hadīth]",
+    "takhrij": "[Narrated by At-Tirmidhi]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/4302",
+    "sha256": "00a1f06f42e912dedc80854529543ab91a8dc0cef48ab202c07fe5ba052f50ff",
+    "charCount": 281
   },
   "4308": {
     "id": "4308",
@@ -484,5 +495,16 @@ export const HADEETHENC_ENGLISH_TRANSLATIONS = Object.freeze({
     "link": "https://hadeethenc.com/en/browse/hadith/66232",
     "sha256": "f6ff559e78e246e702ec3583bd81c85b7f1f4a65ea504b21a85aa4c1cee1c759",
     "charCount": 194
+  },
+  "66511": {
+    "id": "66511",
+    "title": "Verily, the reward of deeds depends on intentions, and each person will be rewarded according to what he intended",
+    "hadith_text": "The Commander of the Believers, Abu Hafs ‘Umar ibn al-Khattāb (may Allah be pleased with him) reported: I heard the Messenger of Allah (ﷺ) say: \"Verily, the reward of deeds depends on intentions, and each person will be rewarded according to what he intended. So, he whose emigration is for the sake of Allah and His Messenger, his emigration will be for the sake of Allah and His Messenger, and he whose emigration is to achieve some worldly gain or take some woman in marriage, his migration will be for what he has migrated for.\"",
+    "grade": "[Authentic]",
+    "takhrij": "[It was narrated by the two Imāms of the scholars of Hadīth - Abu ‘Abdullāh Muhammad ibn Ismā‘īl ibn Ibrāhīm ibn al-Mughīrah ibn Bardizbah al-Bukhāri and Abu al-Husayn Muslim ibn al-Hajjāj ibn Muslim a]",
+    "lang": "en",
+    "link": "https://hadeethenc.com/en/browse/hadith/66511",
+    "sha256": "0c065b7ece5d0ed39a3232799ce204541612f0b3899449c82352945ba7f4255c",
+    "charCount": 532
   }
 });

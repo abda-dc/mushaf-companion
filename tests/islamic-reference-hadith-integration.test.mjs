@@ -32,7 +32,7 @@ function getM9RHadithReferences() {
 
 test("1. Every existing M9R Hadith reference uses internal-hadith-navigation action", () => {
   const hadithRefs = getM9RHadithReferences();
-  assert.equal(hadithRefs.length, 48);
+  assert.equal(hadithRefs.length, 51);
   for (const ref of hadithRefs) {
     assert.equal(ref.action, "internal-hadith-navigation");
   }
@@ -322,11 +322,11 @@ test("17. Multiple M9R references safely reuse Muslim 8 (Hadith Jibril)", () => 
   assert.equal(resAngels.target, "hadith:muslim:8");
 });
 
-test("18. M9R reference IDs remain globally unique across all 154 references", () => {
+test("18. M9R reference IDs remain globally unique across all 160 references", () => {
   const allRefs = getAllM9RReferences();
   const ids = allRefs.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 154);
+  assert.equal(ids.length, 160);
 });
 
 test("19. Malformed and unregistered collection ID fails safely", () => {
@@ -422,7 +422,7 @@ test("23. External fallback remains approved HadeethEnc HTTPS URL", () => {
 
 test("24. Quran references remain unaffected by Hadith integration", () => {
   const quranRefs = getAllM9RReferences().filter((r) => r.type === "quran");
-  assert.equal(quranRefs.length, 75);
+  assert.equal(quranRefs.length, 78);
   for (const ref of quranRefs) {
     assert.equal(ref.action, "internal-quran-navigation");
     assert.ok(ref.verseKeys.length > 0);
@@ -443,25 +443,25 @@ test("25. Scholarly external references remain unaffected by Hadith integration"
   }
 });
 
-test("26. M9R collection/topic/reference counts reflect Batch 9 additions", () => {
+test("26. M9R collection/topic/reference counts reflect Batch 10 additions", () => {
   const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
   assert.equal(library.collections.length, 10);
   const allTopics = library.collections.flatMap((c) => c.topics);
   assert.equal(allTopics.length, 49);
   const readyTopics = allTopics.filter((t) => t.status === "reference-ready");
-  assert.equal(readyTopics.length, 46);
+  assert.equal(readyTopics.length, 49);
   const plannedTopics = allTopics.filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 3);
+  assert.equal(plannedTopics.length, 0);
 
   const allRefs = getAllM9RReferences();
-  assert.equal(allRefs.length, 154);
-  assert.equal(getM9RHadithReferences().length, 48);
+  assert.equal(allRefs.length, 160);
+  assert.equal(getM9RHadithReferences().length, 51);
 
-  // Exactly 42 unique Hadith internal targets
+  // Exactly 44 unique Hadith internal targets
   const uniqueTargets = new Set(
     getM9RHadithReferences().map((r) => getIslamicReferenceHadithTarget(r))
   );
-  assert.equal(uniqueTargets.size, 42);
+  assert.equal(uniqueTargets.size, 44);
 });
 
 test("27. M9H collection/content counts reflect approved seeded records", () => {
@@ -469,9 +469,9 @@ test("27. M9H collection/content counts reflect approved seeded records", () => 
   assert.equal(collections.length, 6);
 
   const records = listHadithRecords();
-  assert.equal(records.length, 42);
+  assert.equal(records.length, 44);
   const approved = records.filter((r) => r.activation === "translation-approved");
-  assert.equal(approved.length, 42);
+  assert.equal(approved.length, 44);
 
   assert.equal(HADEETHENC_DATASET_MANIFEST.datasetVersion, "v1.25.0");
 });
@@ -988,6 +988,66 @@ test("40. All seven Akhirah Batch 9 Hadith references resolve correctly through 
 
   for (const item of expected) {
     const hadithRef = akhirahCollection.topics
+      .find((topic) => topic.id === item.topicId)
+      ?.references.find((reference) => reference.type === "hadith");
+
+    assert.ok(hadithRef, `Missing Hadith reference for ${item.topicId}`);
+    assert.equal(hadithRef.id, item.referenceId);
+    assert.equal(hadithRef.collectionId, item.collectionId);
+    assert.equal(hadithRef.locator, item.locator);
+    assert.equal(hadithRef.sourceRecordId, item.providerId);
+
+    const result = resolveIslamicReferenceHadith(hadithRef);
+    assert.equal(result.status, "resolved");
+    assert.equal(result.target, item.target);
+    assert.equal(
+      result.hadithResolution?.record?.canonicalLabel,
+      item.canonicalLabel,
+    );
+    assert.equal(
+      result.hadithResolution?.sourceRecord?.providerRecordId,
+      item.providerId,
+    );
+  }
+});
+
+test("41. M9R-10 Ihsan Hadith references resolve to approved Hadith records through the bridge", () => {
+  const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
+  const ihsanCollection = library.collections.find((collection) => collection.id === "ihsan");
+  assert.ok(ihsanCollection);
+
+  const expected = [
+    {
+      topicId: "ihsan-sincerity",
+      referenceId: "hadith:ihsan-sincerity:hadeethenc-66511",
+      collectionId: "bukhari",
+      locator: "1",
+      providerId: "66511",
+      target: "hadith:bukhari:1",
+      canonicalLabel: "Sahih al-Bukhari 1",
+    },
+    {
+      topicId: "ihsan-awareness-of-allah",
+      referenceId: "hadith:ihsan-awareness-of-allah:hadeethenc-4563",
+      collectionId: "muslim",
+      locator: "8",
+      providerId: "4563",
+      target: "hadith:muslim:8",
+      canonicalLabel: "Sahih Muslim 8",
+    },
+    {
+      topicId: "ihsan-taqwa",
+      referenceId: "hadith:ihsan-taqwa:hadeethenc-4302",
+      collectionId: "tirmidhi",
+      locator: "1987",
+      providerId: "4302",
+      target: "hadith:tirmidhi:1987",
+      canonicalLabel: "Jami' at-Tirmidhi 1987",
+    },
+  ];
+
+  for (const item of expected) {
+    const hadithRef = ihsanCollection.topics
       .find((topic) => topic.id === item.topicId)
       ?.references.find((reference) => reference.type === "hadith");
 

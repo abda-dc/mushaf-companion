@@ -28,7 +28,7 @@ The initial organization begins with Islam, Iman, and Ihsan:
 
 - **Islam** contains collection-level references for the overview of the Five Pillars, and five reference-ready topics (Shahadah, Salah, Zakat, Sawm, and Hajj) populated in Batch 1.
 - **Iman** contains collection-level references for the overview of faith, and all six reference-ready topics for the Articles of Iman (Belief in Allah, Belief in the Angels, Belief in the Revealed Books, Belief in the Messengers, Belief in the Last Day, and Belief in Qadr) completed across initial migration and Batch 2.
-- **Ihsan** contains a reference-ready meaning topic supported by the approved Hadith Jibril record.
+- **Ihsan** contains four reference-ready topics (Meaning of Ihsan, Sincerity, Awareness of Allah, Taqwa) completed in Batch 10.
 
 These labels organize source navigation. They do not add unsourced doctrinal summaries.
 
@@ -38,7 +38,7 @@ The required core registry contains ten collections:
 
 1. Islam — Outer Practice & Submission (Reference-ready: 5 topics)
 2. Iman — Inner Conviction & Faith (Reference-ready: 6 topics)
-3. Ihsan — Spiritual Excellence (Reference-ready: 1 topic, Planned: 3 topics)
+3. Ihsan — Spiritual Excellence (Reference-ready: 4 topics)
 4. Tawhid — The Oneness of Allah (Reference-ready: 4 topics)
 5. Qur'an and Sunnah — Primary Sources of Guidance (Reference-ready: 4 topics)
 6. Akhlaq and Adab — Moral Character & Etiquette (Reference-ready: 6 topics)
@@ -47,9 +47,9 @@ The required core registry contains ten collections:
 9. Du'a and Dhikr — Supplication & Remembrance (Reference-ready: 4 topics)
 10. Akhirah — Accountability & The Afterlife (Reference-ready: 7 topics)
 
-Total production status: **46 reference-ready topics**, **3 planned topics**, **154 total references** (75 Qur'an, 48 Hadith, 31 Scholarly).
+Total production status: **49 reference-ready topics**, **0 planned topics**, **160 total references** (78 Qur'an, 51 Hadith, 31 Scholarly).
 
-Current production revision: **`m9r-v9`** with schema version **2**. The controlled Qur'an whitelist contains **85 unique verse keys**.
+Current production revision: **`m9r-v10`** with schema version **2**. The controlled Qur'an whitelist contains **88 unique verse keys**.
 
 The registry establishes the required production baseline, not a permanent upper limit.
 

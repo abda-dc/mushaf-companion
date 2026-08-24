@@ -1898,6 +1898,66 @@ const RAW_SEEDED_RECORDS = [
     provenance: null,
     activation: "translation-approved",
   },
+  // 43. Sahih al-Bukhari 1 (Ihsan / Sincerity)
+  {
+    id: "bukhari:1",
+    collectionId: "bukhari",
+    canonicalNumber: "1",
+    canonicalLabel: "Sahih al-Bukhari 1",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "'Umar ibn al-Khattab",
+    text: buildHadeethEncTranslation("66511"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "66511",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/66511",
+        grading: {
+          grade: "Authentic",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/66511",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
+  // 44. Jami' at-Tirmidhi 1987 (Ihsan / Taqwa)
+  {
+    id: "tirmidhi:1987",
+    collectionId: "tirmidhi",
+    canonicalNumber: "1987",
+    canonicalLabel: "Jami' at-Tirmidhi 1987",
+    bookNumber: null,
+    bookName: null,
+    chapterNumber: null,
+    chapterName: null,
+    alternateReferences: [],
+    narrator: "Abu Dharr",
+    text: buildHadeethEncTranslation("4302"),
+    sourceRecords: [
+      {
+        provider: "hadeethenc",
+        providerRecordId: "4302",
+        sourceUrl: "https://hadeethenc.com/en/browse/hadith/4302",
+        grading: {
+          grade: "At-Tirmidhi said: Hasan",
+          grader: "HadeethEnc Editorial Board",
+          reference: "https://hadeethenc.com/en/browse/hadith/4302",
+        },
+        rightsPolicy: "approved-redistribution",
+        attribution: "HadeethEnc.com",
+      },
+    ],
+    provenance: null,
+    activation: "translation-approved",
+  },
 ];
 
 const VALID_COLLECTION_ID_SET = new Set(CORE_HADITH_COLLECTION_IDS);

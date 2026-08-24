@@ -55,7 +55,7 @@ test("production library uses schema version 2 and the Islamic Foundations ident
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.schemaVersion, 2);
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.id, "islamic-foundations");
   assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.title, "Islamic Foundations");
-  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v9");
+  assert.equal(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY.revision, "m9r-v10");
 });
 
 test("production library validates successfully", () => {
@@ -159,19 +159,21 @@ test("planned and reference-ready production topics obey status semantics", () =
   const ready = topics.filter((topic) => topic.status === "reference-ready");
 
   assert.equal(topics.length, 49);
-  assert.equal(planned.length, 3);
-  assert.equal(ready.length, 46);
+  assert.equal(planned.length, 0);
+  assert.equal(ready.length, 49);
   assert.ok(planned.every((topic) => topic.references.length === 0));
   assert.ok(ready.every((topic) => topic.references.length >= 1));
 });
 
 test("planned topics containing references fail closed", () => {
   const library = cloneLibrary();
-  const planned = findTopic(library, "ihsan-sincerity");
-  planned.references.push(
-    structuredClone(findCollection(library, "iman").references[0]),
-  );
-  planned.references[0].id = "quran:ihsan-sincerity:2-177";
+  library.collections[0].topics.push({
+    id: "synthetic-planned-topic",
+    title: "Synthetic Planned Topic",
+    status: "planned",
+    references: [structuredClone(findCollection(library, "iman").references[0])],
+  });
+  library.collections[0].topics[library.collections[0].topics.length - 1].references[0].id = "quran:synthetic:1-1";
 
   assertInvalid(library, "planned topics must not contain references");
 });
@@ -526,9 +528,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
   const hadithRefs = allRefs.filter((r) => r.type === "hadith");
   const scholarlyRefs = allRefs.filter((r) => r.type === "scholarly");
 
-  assert.equal(allRefs.length, 154);
-  assert.equal(quranRefs.length, 75);
-  assert.equal(hadithRefs.length, 48);
+  assert.equal(allRefs.length, 160);
+  assert.equal(quranRefs.length, 78);
+  assert.equal(hadithRefs.length, 51);
   assert.equal(scholarlyRefs.length, 31);
 
   // Reused 4:36 verse key check
@@ -550,9 +552,9 @@ test("all six Akhlaq and Adab topics are reference-ready with vetted sources", (
     assert.equal(allVerseKeys.has(k), true, `Missing approved Batch 5 key ${k}`);
   }
 
-  // All 3 remaining planned topics are empty
+  // 0 remaining planned topics globally
   const plannedTopics = allTopics(ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY).filter((t) => t.status === "planned");
-  assert.equal(plannedTopics.length, 3);
+  assert.equal(plannedTopics.length, 0);
   assert.ok(plannedTopics.every((t) => t.references.length === 0));
 });
 
@@ -726,8 +728,8 @@ test("controlled Quran whitelist poststate contains exactly 80 keys and accepts 
   );
   assert.ok(match, "Could not locate APPROVED_QURAN_VERSE_KEYS in source");
   const extractedKeys = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(extractedKeys.length, 85);
-  assert.equal(new Set(extractedKeys).size, 85);
+  assert.equal(extractedKeys.length, 88);
+  assert.equal(new Set(extractedKeys).size, 88);
 
   // Explicitly prove the seven Batch 4 keys are accepted
   const batch4ApprovedKeys = [
@@ -1454,4 +1456,49 @@ test("all seven Akhirah topics are reference-ready with vetted sources", () => {
     assert.equal(topic.references[0].action, "internal-quran-navigation");
     assert.equal(topic.references[1].action, "internal-hadith-navigation");
   }
+});
+
+test("all four Ihsan topics are reference-ready with vetted sources and 0 planned topics remain", () => {
+  const library = ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY;
+  const ihsan = findCollection(library, "ihsan");
+  assert.ok(ihsan);
+  assert.equal(ihsan.topics.length, 4);
+
+  const topicIds = [
+    "ihsan-meaning-of-ihsan",
+    "ihsan-sincerity",
+    "ihsan-awareness-of-allah",
+    "ihsan-taqwa",
+  ];
+
+  assert.deepEqual(ihsan.topics.map((t) => t.id), topicIds);
+
+  const allTopicsInLib = library.collections.flatMap((c) => c.topics);
+  assert.equal(allTopicsInLib.length, 49);
+  assert.equal(allTopicsInLib.filter((t) => t.status === "reference-ready").length, 49);
+  assert.equal(allTopicsInLib.filter((t) => t.status === "planned").length, 0);
+
+  // Sincerity
+  const sincerity = findTopic(library, "ihsan-sincerity");
+  assert.equal(sincerity.status, "reference-ready");
+  assert.equal(sincerity.references.length, 2);
+  assert.equal(sincerity.references[0].id, "quran:ihsan-sincerity:98-5");
+  assert.equal(sincerity.references[1].id, "hadith:ihsan-sincerity:hadeethenc-66511");
+
+  // Awareness of Allah (Reuses muslim:8)
+  const awareness = findTopic(library, "ihsan-awareness-of-allah");
+  assert.equal(awareness.status, "reference-ready");
+  assert.equal(awareness.references.length, 2);
+  assert.equal(awareness.references[0].id, "quran:ihsan-awareness-of-allah:57-4");
+  assert.equal(awareness.references[1].id, "hadith:ihsan-awareness-of-allah:hadeethenc-4563");
+  assert.equal(awareness.references[1].collectionId, "muslim");
+  assert.equal(awareness.references[1].locator, "8");
+  assert.equal(awareness.references[1].sourceRecordId, "4563");
+
+  // Taqwa
+  const taqwa = findTopic(library, "ihsan-taqwa");
+  assert.equal(taqwa.status, "reference-ready");
+  assert.equal(taqwa.references.length, 2);
+  assert.equal(taqwa.references[0].id, "quran:ihsan-taqwa:3-102");
+  assert.equal(taqwa.references[1].id, "hadith:ihsan-taqwa:hadeethenc-4302");
 });
