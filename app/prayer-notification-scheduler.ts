@@ -18,6 +18,12 @@ const PRAYER_LABELS: Readonly<Record<SalahName, string>> = Object.freeze({
   isha: "Isha",
 });
 
+export type PrayerNotificationSchedulingMode =
+  | "exact"
+  | "inexact"
+  | "not-applicable"
+  | "unknown";
+
 export interface PrayerNotificationEntry {
   id: number;
   salah: SalahName;
@@ -32,6 +38,7 @@ export interface PrayerNotificationEntry {
 
 export interface PendingPrayerNotification extends PrayerNotificationEntry {
   owner: typeof PRAYER_NOTIFICATION_OWNER;
+  schedulingMode: PrayerNotificationSchedulingMode;
 }
 
 export interface PrayerNotificationReconciliation {
@@ -129,6 +136,7 @@ export function buildPrayerNotificationSchedule(input: {
 function matchingEntry(
   desired: PrayerNotificationEntry,
   pending: PendingPrayerNotification,
+  expectedSchedulingMode?: Exclude<PrayerNotificationSchedulingMode, "unknown">,
 ): boolean {
   return (
     desired.id === pending.id &&
@@ -139,13 +147,16 @@ function matchingEntry(
     desired.body === pending.body &&
     desired.alertMode === pending.alertMode &&
     desired.adhanCueId === pending.adhanCueId &&
-    desired.navigationTarget === pending.navigationTarget
+    desired.navigationTarget === pending.navigationTarget &&
+    (expectedSchedulingMode === undefined ||
+      pending.schedulingMode === expectedSchedulingMode)
   );
 }
 
 export function reconcilePrayerNotificationSchedule(
   desired: readonly PrayerNotificationEntry[],
   pending: readonly PendingPrayerNotification[],
+  expectedSchedulingMode?: Exclude<PrayerNotificationSchedulingMode, "unknown">,
 ): PrayerNotificationReconciliation {
   const desiredById = new Map(desired.map((entry) => [entry.id, entry]));
   const retainedIds = new Set<number>();
@@ -164,7 +175,7 @@ export function reconcilePrayerNotificationSchedule(
     if (
       expected &&
       !retainedIds.has(existing.id) &&
-      matchingEntry(expected, existing)
+      matchingEntry(expected, existing, expectedSchedulingMode)
     ) {
       retainedIds.add(existing.id);
       retain.push(expected);
