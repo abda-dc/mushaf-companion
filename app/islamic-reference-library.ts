@@ -244,6 +244,11 @@ const APPROVED_QURAN_VERSE_KEYS = new Set([
   "112:2",
   "112:3",
   "112:4",
+  "3:133",
+  "14:27",
+  "21:35",
+  "66:6",
+  "82:19",
 ]);
 
 const HADEETHENC_RECORD_ID = /^[1-9]\d*$/;
@@ -817,7 +822,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
   schemaVersion: 2,
   id: "islamic-foundations",
   title: "Islamic Foundations",
-  revision: "m9r-v8",
+  revision: "m9r-v9",
   collections: [
     {
       id: "islam",
@@ -1978,13 +1983,125 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
       description: "Browse references and topics related to the Akhirah.",
       references: [],
       topics: [
-        plannedTopic("akhirah-death", "Death"),
-        plannedTopic("akhirah-life-of-the-grave", "Life of the Grave"),
-        plannedTopic("akhirah-resurrection", "Resurrection"),
-        plannedTopic("akhirah-day-of-judgment", "Day of Judgment"),
-        plannedTopic("akhirah-accountability", "Accountability"),
-        plannedTopic("akhirah-paradise", "Paradise"),
-        plannedTopic("akhirah-hellfire", "Hellfire"),
+        referenceReadyTopic("akhirah-death", "Death", [
+          quranReference(
+            "quran:akhirah-death:21-35",
+            ["21:35"],
+            "21:35",
+          ),
+          hadithReference(
+            "hadith:akhirah-death:hadeethenc-66232",
+            "Remember the destroyer of pleasures frequently,\" meaning death",
+            "tirmidhi",
+            "Jami' at-Tirmidhi",
+            "2307",
+            "Abu Hurayrah",
+            "66232",
+            "https://hadeethenc.com/en/browse/hadith/66232",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-life-of-the-grave", "Life of the Grave", [
+          quranReference(
+            "quran:akhirah-life-of-the-grave:14-27",
+            ["14:27"],
+            "14:27",
+          ),
+          hadithReference(
+            "hadith:akhirah-life-of-the-grave:hadeethenc-4206",
+            "When a Muslim is questioned in the grave, he testifies that no deity is worthy of worship except Allah and that Muhammad is the Messenger of Allah",
+            "bukhari",
+            "Sahih al-Bukhari",
+            "4699",
+            "Al-Bara' ibn 'Azib",
+            "4206",
+            "https://hadeethenc.com/en/browse/hadith/4206",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-resurrection", "Resurrection", [
+          quranReference(
+            "quran:akhirah-resurrection:22-7",
+            ["22:7"],
+            "22:7",
+          ),
+          hadithReference(
+            "hadith:akhirah-resurrection:hadeethenc-5460",
+            "People will be gathered on the Day of Judgment barefooted, naked, and uncircumcised",
+            "muslim",
+            "Sahih Muslim",
+            "2859",
+            "'Aishah",
+            "5460",
+            "https://hadeethenc.com/en/browse/hadith/5460",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-day-of-judgment", "Day of Judgment", [
+          quranReference(
+            "quran:akhirah-day-of-judgment:82-19",
+            ["82:19"],
+            "82:19",
+          ),
+          hadithReference(
+            "hadith:akhirah-day-of-judgment:hadeethenc-8345",
+            "Allah will gather the people, the first and the last, in one place, where they will hear the caller and they will be sighted clearly...",
+            "bukhari",
+            "Sahih al-Bukhari",
+            "4712",
+            "Abu Hurayrah",
+            "8345",
+            "https://hadeethenc.com/en/browse/hadith/8345",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-accountability", "Accountability", [
+          quranReference(
+            "quran:akhirah-accountability:99-7-8",
+            ["99:7", "99:8"],
+            "99:7-8",
+          ),
+          hadithReference(
+            "hadith:akhirah-accountability:hadeethenc-3165",
+            "The bankrupt in my Ummah is the one who will come on the Day of Judgment with prayer, fasting and Zakah, but since he hurled abuse at others...",
+            "muslim",
+            "Sahih Muslim",
+            "2581",
+            "Abu Hurayrah",
+            "3165",
+            "https://hadeethenc.com/en/browse/hadith/3165",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-paradise", "Paradise", [
+          quranReference(
+            "quran:akhirah-paradise:3-133",
+            ["3:133"],
+            "3:133",
+          ),
+          hadithReference(
+            "hadith:akhirah-paradise:hadeethenc-10404",
+            "Allah, the Blessed and Exalted, said: I have prepared for My righteous slaves what no eye has ever seen, no ear has ever heard, and no human heart has ever imagined",
+            "bukhari",
+            "Sahih al-Bukhari",
+            "4779",
+            "Abu Hurayrah",
+            "10404",
+            "https://hadeethenc.com/en/browse/hadith/10404",
+          ),
+        ]),
+        referenceReadyTopic("akhirah-hellfire", "Hellfire", [
+          quranReference(
+            "quran:akhirah-hellfire:66-6",
+            ["66:6"],
+            "66:6",
+          ),
+          hadithReference(
+            "hadith:akhirah-hellfire:hadeethenc-3370",
+            "This is a stone that was thrown into Hellfire seventy years ago and it was falling into Hellfire until it reached its bottom",
+            "muslim",
+            "Sahih Muslim",
+            "2844",
+            "Abu Hurayrah",
+            "3370",
+            "https://hadeethenc.com/en/browse/hadith/3370",
+          ),
+        ]),
       ],
     },
   ],
