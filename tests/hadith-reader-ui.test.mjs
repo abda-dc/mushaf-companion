@@ -64,10 +64,10 @@ test("2. Sahih Muslim displays exactly 21 locally approved records", () => {
   ]);
 });
 
-test("3. Sahih al-Bukhari displays exactly 19 locally approved records", () => {
+test("3. Sahih al-Bukhari displays exactly 20 locally approved records", () => {
   const allRecords = listHadithRecords();
   const bukhariRecords = allRecords.filter((r) => r.collectionId === "bukhari");
-  assert.equal(bukhariRecords.length, 19);
+  assert.equal(bukhariRecords.length, 20);
   const numbers = bukhariRecords.map((r) => r.canonicalNumber);
   assert.deepEqual(numbers, [
     "4485",
@@ -89,10 +89,11 @@ test("3. Sahih al-Bukhari displays exactly 19 locally approved records", () => {
     "4699",
     "4712",
     "4779",
+    "1",
   ]);
 });
 
-test("4. Abu Dawud and Tirmidhi display one approved record each and the remaining two collections display zero", () => {
+test("4. Abu Dawud displays one approved record, Tirmidhi displays two, and the remaining two collections display zero", () => {
   const allRecords = listHadithRecords();
 
   const abuDawudRecords = allRecords.filter((r) => r.collectionId === "abu-dawud");
@@ -101,9 +102,11 @@ test("4. Abu Dawud and Tirmidhi display one approved record each and the remaini
   assert.equal(abuDawudRecords[0].canonicalLabel, "Sunan Abi Dawud 5074");
 
   const tirmidhiRecords = allRecords.filter((r) => r.collectionId === "tirmidhi");
-  assert.equal(tirmidhiRecords.length, 1);
-  assert.equal(tirmidhiRecords[0].canonicalNumber, "2307");
-  assert.equal(tirmidhiRecords[0].canonicalLabel, "Jami' at-Tirmidhi 2307");
+  assert.equal(tirmidhiRecords.length, 2);
+  assert.deepEqual(
+    tirmidhiRecords.map((r) => r.canonicalNumber),
+    ["2307", "1987"]
+  );
 
   for (const collectionId of ["nasai", "ibn-majah"]) {
     const colRecords = allRecords.filter((r) => r.collectionId === collectionId);
