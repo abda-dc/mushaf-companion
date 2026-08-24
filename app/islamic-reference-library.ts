@@ -739,6 +739,7 @@ function hadithReference(
   narrator: string | null,
   sourceRecordId: string,
   gradingReference: string,
+  gradingLabel = "Authentic",
 ): HadithReference {
   return {
     id,
@@ -749,7 +750,7 @@ function hadithReference(
     locator,
     narrator,
     grading: {
-      label: "Authentic",
+      label: gradingLabel,
       authority: "HadeethEnc",
       reference: gradingReference,
     },
@@ -1287,6 +1288,7 @@ const RAW_ISLAMIC_FOUNDATIONS_REFERENCE_LIBRARY: IslamicReferenceLibrary = {
             "Abu Dharr",
             "4302",
             "Jami' at-Tirmidhi 1987",
+            "At-Tirmidhi said: Hasan",
           ),
         ]),
       ],
