@@ -57,8 +57,12 @@ function notifications(overrides = {}) {
   };
 }
 
-function pending(entry) {
-  return { ...entry, owner: PRAYER_NOTIFICATION_OWNER };
+function pending(entry, schedulingMode = "unknown") {
+  return {
+    ...entry,
+    owner: PRAYER_NOTIFICATION_OWNER,
+    schedulingMode,
+  };
 }
 
 test("seven-day planning schedules only the five Salah prayers", () => {
@@ -151,13 +155,40 @@ test("unchanged reconciliation is idempotent and retains matching entries", () =
   const first = reconcilePrayerNotificationSchedule(desired, []);
   const second = reconcilePrayerNotificationSchedule(
     desired,
-    desired.map(pending),
+    desired.map((entry) => pending(entry, "exact")),
+    "exact",
   );
 
   assert.equal(first.add.length, 5);
   assert.equal(second.add.length, 0);
   assert.equal(second.cancelIds.length, 0);
   assert.equal(second.retain.length, 5);
+});
+
+test("exact-alarm access upgrades replace inexact and legacy pending alerts", () => {
+  const desired = buildPrayerNotificationSchedule({
+    days: [prayerDay(10)],
+    now: at(10, 4),
+    notifications: notifications(),
+  });
+
+  const inexactUpgrade = reconcilePrayerNotificationSchedule(
+    desired,
+    desired.map((entry) => pending(entry, "inexact")),
+    "exact",
+  );
+  assert.equal(inexactUpgrade.cancelIds.length, 5);
+  assert.equal(inexactUpgrade.add.length, 5);
+  assert.equal(inexactUpgrade.retain.length, 0);
+
+  const legacyUpgrade = reconcilePrayerNotificationSchedule(
+    desired,
+    desired.map((entry) => pending(entry)),
+    "exact",
+  );
+  assert.equal(legacyUpgrade.cancelIds.length, 5);
+  assert.equal(legacyUpgrade.add.length, 5);
+  assert.equal(legacyUpgrade.retain.length, 0);
 });
 
 test("duplicate and stale owned entries are cancelled without touching unrelated notifications", () => {
