@@ -26,6 +26,7 @@ import { LearnPanel } from "./learn-panel";
 import { HadithReaderPanel } from "./hadith-reader-panel";
 import { IslamicFoundationsPanel } from "./islamic-foundations-panel";
 import { PrayerPanel } from "./prayer-panel";
+import { OPEN_PRAYER_EVENT } from "./prayer-notification-lifecycle";
 import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
@@ -225,6 +226,33 @@ function chapterForVerse(pageData: QuranPage, verseKey: string) {
 export default function Home() {
   const contentTransport = getReaderTransport();
   const [overlay, setOverlay] = useState<Overlay>(null);
+
+  useEffect(() => {
+    const openPrayer = () => {
+      setOverlay("Prayer");
+      if (window.location.hash === "#prayer") {
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}`,
+        );
+      }
+    };
+    const handlePrayerHash = () => {
+      if (window.location.hash === "#prayer") {
+        openPrayer();
+      }
+    };
+
+    handlePrayerHash();
+
+    window.addEventListener(OPEN_PRAYER_EVENT, openPrayer);
+    window.addEventListener("hashchange", handlePrayerHash);
+    return () => {
+      window.removeEventListener(OPEN_PRAYER_EVENT, openPrayer);
+      window.removeEventListener("hashchange", handlePrayerHash);
+    };
+  }, []);
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState<QuranPage>(FALLBACK_PAGE);
   const [jumpValue, setJumpValue] = useState("1");

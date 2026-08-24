@@ -26,7 +26,7 @@ test("PrayerPanel is integrated through the existing overlay mechanism", () => {
 
 test("Prayer and Qibla is discoverable from Home and More", () => {
   const opens = page.match(/setOverlay\("Prayer"\)/g) ?? [];
-  assert.equal(opens.length, 2);
+  assert.equal(opens.length, 3);
   assert.match(page, /<strong>Prayer &amp; Qibla<\/strong>/);
   assert.match(page, /Local Salah times and Qibla direction/);
 });

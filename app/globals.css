@@ -1429,6 +1429,7 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .prayer-times-card,
 .prayer-qibla-card,
 .prayer-settings-card,
+.prayer-notifications-card,
 .prayer-panel-note,
 .prayer-empty-state {
   border: 1px solid rgba(112, 87, 51, .18);
@@ -1488,6 +1489,21 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 
 .prayer-primary-action:hover:not(:disabled) {
   background: var(--forest-deep);
+}
+
+.prayer-panel button:focus-visible,
+.prayer-panel input:focus-visible,
+.prayer-panel select:focus-visible,
+.prayer-panel summary:focus-visible {
+  outline: 3px solid rgba(164, 124, 67, .48);
+  outline-offset: 2px;
+}
+
+.prayer-panel button:disabled,
+.prayer-panel input:disabled,
+.prayer-panel select:disabled {
+  cursor: not-allowed;
+  opacity: .58;
 }
 
 .prayer-remember-location {
@@ -1763,6 +1779,166 @@ button:disabled { cursor: not-allowed; opacity: .35; }
   text-align: center;
 }
 
+.prayer-notifications-card {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.prayer-notifications-card > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prayer-notification-state {
+  padding: 5px 9px;
+  border: 1px solid rgba(110, 117, 111, .24);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prayer-notification-state.state-granted {
+  border-color: rgba(57, 120, 98, .34);
+  background: rgba(57, 120, 98, .07);
+  color: var(--forest);
+}
+
+.prayer-notification-state.state-denied {
+  border-color: rgba(168, 79, 70, .34);
+  background: rgba(168, 79, 70, .06);
+  color: #793c36;
+}
+
+.prayer-notification-master {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prayer-notification-master span {
+  display: grid;
+  gap: 4px;
+}
+
+.prayer-notification-master strong {
+  font-size: 11px;
+}
+
+.prayer-notification-master small,
+.prayer-notification-asset-note {
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.prayer-notification-master input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--forest);
+  flex: 0 0 auto;
+}
+
+.prayer-notification-prayers {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.prayer-notification-prayers legend {
+  width: 100%;
+  margin-bottom: 9px;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.prayer-notification-prayers label {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 1px solid rgba(87, 70, 46, .16);
+  background: rgba(255, 255, 255, .42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.prayer-notification-prayers input {
+  accent-color: var(--forest);
+}
+
+.prayer-notification-select {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.35fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.prayer-notification-select > span {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.prayer-notification-select select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(87, 70, 46, .2);
+  background: rgba(255, 255, 255, .58);
+  color: var(--ink);
+}
+
+.prayer-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.prayer-secondary-action {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(23, 63, 52, .28);
+  background: transparent;
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.prayer-notification-status,
+.prayer-notification-capability {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.prayer-notification-status {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.prayer-notification-capability {
+  color: var(--ink-soft);
+}
+
 .prayer-panel-note {
   padding: 15px 17px;
   background: rgba(164, 124, 67, .045);
@@ -1828,6 +2004,15 @@ button:disabled { cursor: not-allowed; opacity: .35; }
     gap: 7px;
   }
 
+  .prayer-notification-select {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .prayer-notification-prayers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .prayer-adjustments {
     grid-template-columns: 1fr 1fr;
   }
@@ -1852,5 +2037,8 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 
   .prayer-adjustments {
     grid-template-columns: 1fr;
+  }
+  .prayer-notification-prayers {
+    grid-template-columns: 1fr 1fr;
   }
 }

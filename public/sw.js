@@ -48,3 +48,20 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL("./#prayer", self.registration.scope).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windowClients) => {
+      const existing = windowClients.find((client) => client.url.startsWith(self.registration.scope));
+      if (existing) {
+        existing.postMessage({ type: "OPEN_PRAYER" });
+        const navigated = "navigate" in existing ? await existing.navigate(targetUrl) : existing;
+        return navigated?.focus();
+      }
+      return self.clients.openWindow(targetUrl);
+    }),
+  );
+});
