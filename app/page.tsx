@@ -25,6 +25,7 @@ import { StudyNotesIndex } from "./study-notes-ui";
 import { LearnPanel } from "./learn-panel";
 import { HadithReaderPanel } from "./hadith-reader-panel";
 import { IslamicFoundationsPanel } from "./islamic-foundations-panel";
+import { PrayerPanel } from "./prayer-panel";
 import { scheduleLearnFocusRestore } from "./learn-focus.mjs";
 import { getReaderTransport } from "./content/runtime-transport";
 import { appPath } from "./runtime-config";
@@ -118,7 +119,7 @@ import {
 
 type NavItem = "Home" | "Contents" | "Read" | "Learn" | "Listen" | "Bookmarks" | "Search" | "Settings";
 type MobileNavItem = "Home" | "Read" | "Learn" | "Listen" | "More";
-type Overlay = Exclude<NavItem, "Read"> | "More" | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | "Hadith" | "Foundations" | null;
+type Overlay = Exclude<NavItem, "Read"> | "More" | "Hifz" | "Downloads" | "Tafsir" | "Context" | "Jump" | "Hadith" | "Foundations" | "Prayer" | null;
 type RepeatMode = "off" | "ayah" | "range";
 type PageEdge = "first" | "last" | null;
 type PageScale = "compact" | "comfortable" | "large";
@@ -329,8 +330,8 @@ export default function Home() {
   const desktopLearnNavRef = useRef<HTMLButtonElement | null>(null);
   const mobileLearnNavRef = useRef<HTMLButtonElement | null>(null);
 
-  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" || overlay === "More" || overlay === "Hadith" || overlay === "Foundations" ? "Read" : overlay ?? "Read";
-  const activeMobileNav: MobileNavItem = overlay === "Home" ? "Home" : overlay === "Learn" || overlay === "Hadith" || overlay === "Foundations" ? "Learn" : overlay === "Listen" || overlay === "Downloads" ? "Listen" : overlay === "More" || overlay === "Contents" || overlay === "Bookmarks" || overlay === "Search" || overlay === "Settings" ? "More" : "Read";
+  const activeNav: NavItem = overlay === "Hifz" || overlay === "Downloads" || overlay === "Tafsir" || overlay === "Context" || overlay === "Jump" || overlay === "More" || overlay === "Hadith" || overlay === "Foundations" || overlay === "Prayer" ? "Read" : overlay ?? "Read";
+  const activeMobileNav: MobileNavItem = overlay === "Home" ? "Home" : overlay === "Learn" || overlay === "Hadith" || overlay === "Foundations" ? "Learn" : overlay === "Listen" || overlay === "Downloads" ? "Listen" : overlay === "More" || overlay === "Contents" || overlay === "Bookmarks" || overlay === "Search" || overlay === "Settings" || overlay === "Prayer" ? "More" : "Read";
   const selectedVerse = pageData.verses.find((verse) => verse.key === selectedVerseKey) ?? pageData.verses[0];
   const currentChapter = chapterForVerse(pageData, selectedVerse?.key ?? "1:1");
   const currentVerseIndex = pageData.verses.findIndex((verse) => verse.key === selectedVerseKey);
@@ -2042,14 +2043,14 @@ export default function Home() {
             <section className="panel-shell home-panel" role="dialog" aria-modal="true" aria-labelledby="home-title">
               <header><div><span className="panel-kicker">MUSHAF COMPANION</span><h2 id="home-title">Peaceful return</h2></div>{closeButton}</header>
               <div className="continue-card"><span>LAST READ</span><strong>{currentChapter?.name ?? "Quran"}</strong><p>Page {pageData.page} · Ayah {selectedVerseKey}</p><button type="button" onClick={() => setOverlay(null)}>Continue reading</button></div>
-              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => { setSavedSection("bookmarks"); setOverlay("Bookmarks"); }}><span>◇</span><strong>Saved study</strong><small>{bookmarks.length} bookmarks · {studyNotes.notes.length} private notes</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button></div>
+              <div className="home-shortcuts"><button type="button" onClick={openContents}><span>☷</span><strong>Table of contents</strong><small>114 sūrahs with juz and revelation details</small></button><button type="button" onClick={() => { setOverlay(null); setTajweedGuideOpen(true); }}><span>?</span><strong>Learn Tajweed</strong><small>17 color rules with five examples each</small></button><button type="button" onClick={() => setOverlay("Search")}><span>⌕</span><strong>Find a passage</strong><small>Sūrah, āyah, page, or juz</small></button><button type="button" onClick={() => { setSavedSection("bookmarks"); setOverlay("Bookmarks"); }}><span>◇</span><strong>Saved study</strong><small>{bookmarks.length} bookmarks · {studyNotes.notes.length} private notes</small></button><button type="button" className="memorize-home-card" onClick={() => setOverlay("Hifz")}><span>◉</span><strong>My Mushaf</strong><small>{dueReviews} due · {hifzProgress.memorized.length} ayāt mapped</small></button><button type="button" onClick={() => setOverlay("Prayer")}><span>⌖</span><strong>Prayer &amp; Qibla</strong><small>Local Salah times and Qibla direction</small></button></div>
             </section>
           )}
 
           {overlay === "More" && (
             <section className="panel-shell more-panel" role="dialog" aria-modal="true" aria-labelledby="more-title">
               <header><div><span className="panel-kicker">MORE DESTINATIONS</span><h2 id="more-title">More</h2></div>{closeButton}</header>
-              <div className="more-nav-grid">{(["Contents", "Bookmarks", "Search", "Settings"] as NavItem[]).map((item) => <button type="button" onClick={() => chooseNav(item)} key={item}><strong>{item}</strong><small>{item === "Contents" ? "Browse 114 surahs" : item === "Bookmarks" ? "Bookmarks and private notes" : item === "Search" ? "Find a verified passage" : "Reader and private-data preferences"}</small></button>)}</div>
+              <div className="more-nav-grid">{(["Contents", "Bookmarks", "Search", "Settings"] as NavItem[]).map((item) => <button type="button" onClick={() => chooseNav(item)} key={item}><strong>{item}</strong><small>{item === "Contents" ? "Browse 114 surahs" : item === "Bookmarks" ? "Bookmarks and private notes" : item === "Search" ? "Find a verified passage" : "Reader and private-data preferences"}</small></button>)}<button type="button" onClick={() => setOverlay("Prayer")}><strong>Prayer &amp; Qibla</strong><small>Local Salah times and Qibla direction</small></button></div>
             </section>
           )}
 
@@ -2116,6 +2117,9 @@ export default function Home() {
             />
           )}
 
+          {overlay === "Prayer" && (
+            <PrayerPanel onClose={() => setOverlay(null)} />
+          )}
           {overlay === "Hifz" && (
             <section className="panel-shell hifz-panel" role="dialog" aria-modal="true" aria-labelledby="hifz-title">
               <header><div><span className="panel-kicker">PERSONAL MASTERY MAP</span><h2 id="hifz-title">My Mushaf</h2></div>{closeButton}</header>

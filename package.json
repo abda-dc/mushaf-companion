@@ -28,6 +28,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
+    "adhan": "4.4.4",
     "drizzle-orm": "0.45.2",
     "next": "^16.3.0",
     "react": "19.2.6",
