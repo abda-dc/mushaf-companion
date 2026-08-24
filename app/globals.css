@@ -930,6 +930,182 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .more-nav-grid strong { font: 500 14px Georgia,serif; }
 .more-nav-grid small { margin-top: 5px; color: var(--ink-soft); font-size: 8px; }
 
+/* Hadith Reader UI */
+.hadith-panel { width: min(1080px, 100%); }
+.hadith-content { max-height: calc(90vh - 82px); padding: 20px 24px 28px; overflow-y: auto; }
+.hadith-notice { padding: 12px 16px; margin-bottom: 16px; border: 1px solid rgba(185,105,72,.4); background: rgba(185,105,72,.08); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hadith-notice p { margin: 0; color: var(--ink); font-size: 11px; }
+.hadith-notice button { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; font-size: 9px; font-weight: 700; }
+.hadith-search-bar { position: relative; margin-bottom: 20px; display: flex; align-items: center; }
+.hadith-search-bar input { width: 100%; min-height: 48px; padding: 0 42px 0 16px; border: 1px solid var(--line); background: rgba(255,255,255,.45); color: inherit; font: 14px Georgia, serif; border-radius: 4px; }
+.hadith-search-bar input:focus { outline: 2px solid var(--forest); }
+.hadith-search-clear { position: absolute; right: 8px; width: 34px; height: 34px; border: 0; background: transparent; color: var(--ink-soft); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.hadith-section-heading { margin-bottom: 12px; color: var(--brass); font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.hadith-results-grid { display: grid; gap: 12px; }
+.hadith-search-result-card { padding: 16px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.2); cursor: pointer; text-align: left; display: block; width: 100%; }
+.hadith-search-result-card:hover { border-color: var(--forest); background: rgba(47,122,86,.04); }
+.result-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.collection-tag { padding: 2px 7px; border: 1px solid rgba(47,122,86,.3); background: rgba(47,122,86,.08); color: #2f7a56; font-size: 7px; font-weight: 700; text-transform: uppercase; border-radius: 2px; }
+.result-card-top strong { font: 500 15px Georgia, serif; color: var(--ink); }
+.result-narrator { display: block; color: var(--brass); font-size: 8px; font-weight: 600; margin-bottom: 6px; }
+.result-snippet { margin: 6px 0 10px; color: var(--ink-soft); font: 11px/1.55 Georgia, serif; }
+.result-action { display: inline-block; color: var(--forest); font-size: 8px; font-weight: 700; }
+.hadith-hero-banner { padding: 20px 24px; border: 1px solid var(--line); background: rgba(255,255,255,.2); display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 22px; }
+.hadith-hero-banner h3 { margin: 5px 0 0; font: 500 21px/1.25 Georgia, serif; }
+.hadith-hero-banner p { margin: 7px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.55; max-width: 580px; }
+.banner-kicker { color: var(--brass); font-size: 7px; font-weight: 700; letter-spacing: .14em; }
+.hadith-hero-stat { text-align: right; flex-shrink: 0; }
+.hadith-hero-stat strong { display: block; font: 500 36px Georgia, serif; color: var(--forest); line-height: 1; }
+.hadith-hero-stat small { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 8px; }
+.hadith-collections-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+.hadith-collection-card { padding: 18px 20px; border: 1px solid var(--line); background: rgba(255,255,255,.15); display: flex; flex-direction: column; justify-content: space-between; min-height: 180px; }
+.hadith-collection-card.has-records { border-color: rgba(47,122,86,.32); background: rgba(47,122,86,.035); }
+.hadith-collection-card.empty-collection { border-style: dashed; }
+.collection-names { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.hadith-collection-card h4 { margin: 0; font: 500 17px Georgia, serif; color: var(--ink); }
+.arabic-collection-name { font: 16px "UthmanicHafs", "Traditional Arabic", serif; color: var(--brass); }
+.collection-count-badge { display: inline-block; padding: 3px 8px; font-size: 8px; border-radius: 2px; font-weight: 700; }
+.collection-count-badge.active-badge { color: #2f7a56; background: rgba(47,122,86,.1); border: 1px solid rgba(47,122,86,.25); }
+.collection-count-badge.pending-badge { color: var(--ink-soft); background: rgba(0,0,0,.04); border: 1px solid var(--line); }
+.collection-summary { margin: 10px 0 14px; color: var(--ink-soft); font-size: 9px; line-height: 1.5; flex-grow: 1; }
+.collection-open-button { min-height: 44px; padding: 0 16px; border: 1px solid var(--forest); background: var(--forest); color: #fff; cursor: pointer; font-size: 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.hadith-view-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.hadith-back-button { min-height: 44px; padding: 0 14px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; }
+.hadith-back-button:hover { border-color: var(--forest); }
+.collection-status-pill, .hadith-target-tag { padding: 4px 10px; border: 1px solid var(--line); background: rgba(255,255,255,.2); color: var(--ink-soft); font-size: 8px; font-weight: 700; border-radius: 2px; }
+.collection-view-header { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.collection-eyebrow { color: var(--brass); font-size: 7px; font-weight: 700; letter-spacing: .14em; }
+.collection-view-header h3 { margin: 4px 0 0; font: 500 24px Georgia, serif; color: var(--ink); }
+.collection-header-arabic { display: block; margin-top: 4px; font: 20px "UthmanicHafs", "Traditional Arabic", serif; color: var(--brass); }
+.collection-records-list { display: grid; gap: 12px; }
+.hadith-list-card { padding: 18px 20px; border: 1px solid var(--line); background: rgba(255,255,255,.2); }
+.hadith-list-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.record-number-tag { color: var(--brass); font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.hadith-list-card h4 { margin: 3px 0 0; font: 500 16px Georgia, serif; color: var(--ink); }
+.activation-badge { padding: 2px 7px; border: 1px solid rgba(47,122,86,.3); background: rgba(47,122,86,.08); color: #2f7a56; font-size: 7px; font-weight: 700; border-radius: 2px; }
+.record-narrator-row { margin: 6px 0 8px; font-size: 9px; color: var(--ink-soft); }
+.record-narrator-row span { color: var(--brass); font-weight: 700; margin-right: 5px; }
+.record-narrator-row strong { color: var(--ink); font-weight: 600; }
+.record-preview-snippet { margin: 8px 0 12px; font: 12px/1.55 Georgia, serif; color: var(--ink-soft); }
+.read-hadith-button { min-height: 44px; padding: 0 16px; border: 1px solid var(--forest); background: var(--forest); color: #fff; cursor: pointer; font-size: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.empty-collection-view { padding: 48px 24px; text-align: center; border: 1px dashed var(--line); background: rgba(255,255,255,.1); }
+.empty-collection-icon { display: block; font-size: 28px; color: var(--brass); margin-bottom: 10px; }
+.empty-collection-view h4 { margin: 0 0 8px; font: 500 18px Georgia, serif; color: var(--ink); }
+.empty-collection-view p { margin: 0 auto 12px; max-width: 500px; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+.neutral-note { font-style: italic; }
+.empty-collection-view button { margin-top: 10px; }
+.reader-record-header { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-end; }
+.reader-collection-name { color: var(--brass); font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.reader-record-header h3 { margin: 4px 0 0; font: 500 24px Georgia, serif; color: var(--ink); }
+.reader-arabic-collection { font: 20px "UthmanicHafs", "Traditional Arabic", serif; color: var(--brass); }
+.reader-narrator-box { padding: 12px 18px; border: 1px solid rgba(164,124,67,.3); background: rgba(164,124,67,.06); margin-bottom: 20px; display: flex; align-items: baseline; gap: 10px; }
+.reader-narrator-box span { color: var(--brass); font-size: 7px; font-weight: 700; letter-spacing: .12em; }
+.reader-narrator-box strong { font: 500 15px Georgia, serif; color: var(--ink); }
+.reader-content-section { margin-bottom: 20px; padding: 20px 24px; border: 1px solid var(--line); background: rgba(255,255,255,.25); }
+.section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.section-header span:first-child { color: var(--brass); font-size: 7px; font-weight: 700; letter-spacing: .12em; }
+.section-header h4 { margin: 2px 0 0; font: 500 16px Georgia, serif; color: var(--ink); }
+.provenance-chip { padding: 3px 8px; border: 1px solid rgba(47,122,86,.3); background: rgba(47,122,86,.06); color: #2f7a56; font-size: 7px; font-weight: 700; border-radius: 2px; }
+.arabic-status-tag { padding: 3px 8px; border: 1px solid var(--line); background: rgba(0,0,0,.04); color: var(--ink-soft); font-size: 7px; font-weight: 700; border-radius: 2px; }
+.hadith-translation-body { font: 15px/1.75 Georgia, serif; color: var(--ink); }
+.hadith-text-paragraph { margin: 0 0 14px; }
+.hadith-text-paragraph:last-child { margin-bottom: 0; }
+.arabic-unavailable-box { padding: 16px 20px; border: 1px dashed var(--line); background: rgba(0,0,0,.02); }
+.arabic-unavailable-box p { margin: 0 0 5px; color: var(--ink-soft); font: 12px Georgia, serif; }
+.arabic-unavailable-box small { color: var(--ink-soft); font-size: 8px; opacity: .8; }
+.reader-provenance-section { padding: 20px 24px; border: 1px solid rgba(47,122,86,.3); background: rgba(47,122,86,.04); }
+.reader-provenance-section header h4 { margin: 2px 0 0; font: 500 16px Georgia, serif; color: #2f7a56; }
+.reader-provenance-section header span { color: #2f7a56; font-size: 7px; font-weight: 700; letter-spacing: .12em; }
+.provenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 18px; margin-top: 14px; }
+.provenance-grid dt { font-size: 8px; color: var(--ink-soft); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; }
+.provenance-grid dd { margin: 3px 0 0; font: 500 13px Georgia, serif; color: var(--ink); }
+.open-source-link { min-height: 44px; padding: 0 18px; border: 1px solid var(--forest); background: var(--forest); color: #fff; cursor: pointer; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; margin-top: 18px; border-radius: 2px; }
+.open-source-link:hover { opacity: .92; }
+.hadith-empty-state { padding: 36px 18px; text-align: center; color: var(--ink-soft); font: 12px Georgia, serif; border: 1px dashed var(--line); }
+
+/* Islamic Foundations Reference Library */
+.islamic-foundations-panel { max-width: 960px; width: 94vw; max-height: 90dvh; }
+.foundations-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.foundations-header-titles { display: flex; flex-direction: column; gap: 2px; }
+.foundations-header-titles h2 { margin: 0; font: 500 22px Georgia, serif; color: var(--ink); }
+.foundations-header-controls { display: flex; align-items: center; gap: 12px; }
+.foundations-back-button { min-height: 38px; padding: 0 14px; border: 1px solid var(--line); background: rgba(0,0,0,.04); color: var(--ink); font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.foundations-back-button:hover { background: rgba(0,0,0,.08); }
+.foundations-panel-content { padding: 24px; overflow-y: auto; max-height: calc(90dvh - 80px); display: flex; flex-direction: column; gap: 24px; }
+.foundations-error-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(198,40,40,.08); border: 1px solid rgba(198,40,40,.25); border-radius: 4px; color: #c62828; font-size: 13px; gap: 12px; }
+.foundations-hero-card { padding: 24px; background: rgba(164,124,67,.06); border: 1px solid rgba(164,124,67,.25); border-radius: 6px; display: flex; flex-direction: column; gap: 18px; }
+.hero-kicker { font-size: 8px; font-weight: 700; letter-spacing: .12em; color: var(--brass); text-transform: uppercase; }
+.foundations-hero-card h3 { margin: 4px 0 8px; font: 500 18px Georgia, serif; color: var(--ink); }
+.foundations-hero-card p { margin: 0; font: 14px/1.6 Georgia, serif; color: var(--ink-soft); }
+.foundations-library-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding-top: 14px; border-top: 1px solid rgba(164,124,67,.18); }
+.foundations-library-stats > div { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.foundations-library-stats strong { font: 700 20px Georgia, serif; color: var(--ink); }
+.foundations-library-stats small { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+.foundations-search-bar { position: relative; width: 100%; }
+.foundations-search-bar input { width: 100%; min-height: 44px; padding: 0 40px 0 16px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.5); font: 14px Georgia, serif; color: var(--ink); }
+.foundations-search-bar input:focus { outline: 2px solid var(--forest); }
+.search-clear-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: none; background: transparent; font-size: 18px; color: var(--ink-soft); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.foundations-collection-grid-section { display: flex; flex-direction: column; gap: 16px; }
+.section-title-row { display: flex; justify-content: space-between; align-items: baseline; }
+.section-title-row h3 { margin: 0; font: 500 17px Georgia, serif; color: var(--ink); }
+.section-title-row small { font-size: 11px; color: var(--ink-soft); }
+.foundations-collection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.foundations-collection-card { padding: 18px 20px; border: 1px solid var(--line); background: rgba(255,255,255,.35); border-radius: 6px; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.foundations-collection-card:hover { border-color: rgba(47,122,86,.4); box-shadow: 0 4px 12px rgba(0,0,0,.04); }
+.foundations-collection-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.foundations-collection-card header strong { font: 600 16px Georgia, serif; color: var(--ink); }
+.foundations-collection-card p { margin: 0; font: 13px/1.5 Georgia, serif; color: var(--ink-soft); flex-grow: 1; }
+.foundations-collection-card footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+.foundations-collection-card footer small { font-size: 11px; color: var(--ink-soft); font-weight: 500; }
+.foundations-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 3px; font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+.badge-ready { background: rgba(47,122,86,.08); border: 1px solid rgba(47,122,86,.3); color: #2f7a56; }
+.badge-ready .badge-dot { background: #2f7a56; }
+.badge-partial { background: rgba(164,124,67,.08); border: 1px solid rgba(164,124,67,.3); color: var(--brass); }
+.badge-partial .badge-dot { background: var(--brass); }
+.badge-planned { background: rgba(0,0,0,.04); border: 1px solid var(--line); color: var(--ink-soft); }
+.badge-planned .badge-dot { background: var(--ink-soft); }
+.foundations-collection-view, .foundations-topic-view { display: flex; flex-direction: column; gap: 24px; }
+.collection-view-header, .topic-view-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 1px solid var(--line); gap: 16px; }
+.collection-view-meta, .topic-view-meta { display: flex; flex-direction: column; gap: 4px; }
+.view-kicker { font-size: 8px; font-weight: 700; letter-spacing: .12em; color: var(--brass); }
+.collection-view-meta h3, .topic-view-meta h3 { margin: 0; font: 500 20px Georgia, serif; color: var(--ink); }
+.collection-view-meta p, .topic-view-meta p { margin: 0; font: 14px/1.5 Georgia, serif; color: var(--ink-soft); }
+.collection-readiness-summary, .topic-readiness-summary { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.collection-readiness-summary small, .topic-readiness-summary small { font-size: 11px; color: var(--ink-soft); }
+.sub-section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.section-kicker, .group-kicker { font-size: 8px; font-weight: 700; letter-spacing: .12em; color: var(--brass); display: block; }
+.sub-section-header h4, .group-header h4 { margin: 2px 0 0; font: 500 16px Georgia, serif; color: var(--ink); }
+.sub-section-header small, .group-header small { font-size: 11px; color: var(--ink-soft); }
+.foundations-topic-list { display: flex; flex-direction: column; gap: 12px; }
+.foundations-topic-card { padding: 16px 20px; border: 1px solid var(--line); background: rgba(255,255,255,.35); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.topic-card-body { display: flex; flex-direction: column; gap: 4px; }
+.topic-collection-tag { font-size: 8px; font-weight: 700; letter-spacing: .1em; color: var(--brass); text-transform: uppercase; }
+.topic-card-body h4 { margin: 0; font: 600 15px Georgia, serif; color: var(--ink); }
+.topic-card-body p { margin: 0; font: 13px/1.5 Georgia, serif; color: var(--ink-soft); }
+.topic-planned-explainer { font-size: 11px !important; color: var(--ink-soft) !important; font-style: italic; }
+.topic-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.topic-planned-note { font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 4px 8px; border: 1px dashed var(--line); border-radius: 3px; }
+.foundations-primary-action { min-height: 44px; padding: 0 16px; border: 1px solid var(--forest); background: var(--forest); color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.foundations-primary-action:hover { opacity: .92; }
+.foundations-reference-list { display: flex; flex-direction: column; gap: 12px; }
+.foundations-ref-card { padding: 16px 20px; border: 1px solid var(--line); background: rgba(255,255,255,.35); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.ref-quran { border-left: 4px solid var(--forest); }
+.ref-hadith { border-left: 4px solid var(--brass); }
+.ref-scholarly { border-left: 4px solid #4a6fa5; }
+.ref-card-main { display: flex; flex-direction: column; gap: 4px; }
+.ref-card-header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ref-type-tag { font-size: 7px; font-weight: 700; letter-spacing: .12em; color: var(--brass); text-transform: uppercase; }
+.ref-title { font: 600 15px Georgia, serif; color: var(--ink); }
+.ref-author { font: 500 13px Georgia, serif; color: var(--ink-soft); }
+.ref-grading-tag { font-size: 7px; font-weight: 700; padding: 2px 6px; border: 1px solid rgba(47,122,86,.3); background: rgba(47,122,86,.06); color: #2f7a56; border-radius: 2px; }
+.ref-description, .ref-provenance, .ref-locator { margin: 0; font: 12px Georgia, serif; color: var(--ink-soft); }
+.ref-card-action { flex-shrink: 0; }
+.foundations-action-button, .foundations-action-link { min-height: 44px; padding: 0 16px; border: 1px solid var(--forest); background: var(--forest); color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.foundations-action-button:hover, .foundations-action-link:hover { opacity: .92; }
+.topic-view-footer { margin-top: 24px; padding: 16px; border-top: 1px solid var(--line); text-align: center; }
+.topic-view-footer p { margin: 0; font: 12px Georgia, serif; color: var(--ink-soft); }
+
 .dark { --ink: #eee7da; --ink-soft: #aaa9a3; --paper: #18231e; --paper-edge: #111a16; --shell: #0d1713; --line: rgba(255,255,255,.1); color-scheme: dark; }
 .dark .reader-header { background: rgba(14,24,20,.94); }
 .dark .toggle-control, .dark .icon-button, .dark .header-page-jump { background: rgba(255,255,255,.025); border-color: rgba(255,255,255,.1); }
@@ -956,6 +1132,15 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .dark .note-editor, .dark .private-note-card, .dark .note-editor textarea, .dark .note-editor input, .dark .notes-index-tools input, .dark .notes-index-tools select, .dark .notes-tag-manager input { background: rgba(255,255,255,.025); }
 .dark .evidence-card { background: rgba(255,255,255,.025); }
 .dark .learn-hero, .dark .guided-courses-card, .dark .learn-review-card, .dark .learn-current-card, .dark .learn-progress-card, .dark .learn-tool-grid button { background: rgba(255,255,255,.025); }
+.dark .hadith-search-bar input { border-color: #455149; background: rgba(255,255,255,.03); color: var(--ink); }
+.dark .hadith-hero-banner, .dark .hadith-collection-card, .dark .hadith-list-card, .dark .hadith-search-result-card { background: rgba(255,255,255,.03); }
+.dark .reader-content-section { background: rgba(255,255,255,.03); }
+.dark .reader-provenance-section { background: rgba(47,122,86,.08); }
+.dark .arabic-unavailable-box { background: rgba(255,255,255,.02); }
+.dark .hadith-back-button, .dark .collection-status-pill, .dark .hadith-target-tag { background: rgba(255,255,255,.04); }
+.dark .foundations-hero-card, .dark .foundations-collection-card, .dark .foundations-topic-card, .dark .foundations-ref-card { background: rgba(255,255,255,.03); }
+.dark .foundations-search-bar input { border-color: #455149; background: rgba(255,255,255,.03); color: var(--ink); }
+.dark .foundations-back-button { background: rgba(255,255,255,.04); }
 .dark .source-content-banner > span, .dark .evidence-results > header span, .dark .evidence-card > header span, .dark .evidence-card summary { color: #8fc5ad; }
 .dark .audio-sheet { color: #f7f0e4; background: #12372e; }
 .dark .contents-tools input, .dark .contents-tools select { border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.025); }
@@ -1160,6 +1345,15 @@ button:disabled { cursor: not-allowed; opacity: .35; }
   .audio-settings-grid { grid-template-columns: 1fr 1fr; }
   .audio-settings-grid label:first-child { grid-column: 1 / -1; }
   .toast { top: 75px; left: 10px; right: 10px; max-width: none; }
+  .foundations-panel-content { max-height: calc(90dvh - 75px); padding: 14px; }
+  .foundations-hero-card { padding: 16px; }
+  .foundations-library-stats { grid-template-columns: 1fr 1fr; }
+  .foundations-collection-grid { grid-template-columns: 1fr; }
+  .foundations-topic-card, .foundations-ref-card { flex-direction: column; align-items: stretch; gap: 12px; }
+  .topic-card-actions, .ref-card-action { align-items: stretch; width: 100%; }
+  .foundations-primary-action, .foundations-action-button, .foundations-action-link { width: 100%; justify-content: center; min-height: 44px; }
+  .collection-view-header, .topic-view-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .collection-readiness-summary, .topic-readiness-summary { align-items: flex-start; }
 }
 
 @media (max-width: 430px) {
@@ -1181,8 +1375,670 @@ button:disabled { cursor: not-allowed; opacity: .35; }
   .note-anchor-options { grid-template-columns: 1fr; }
   .learn-tool-grid, .more-nav-grid { grid-template-columns: 1fr; }
   .learn-progress-card dl { display: grid; grid-template-columns: 1fr 1fr; }
+  .foundations-library-stats { grid-template-columns: 1fr 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+/* M12.1 PRAYER & QIBLA */
+.prayer-panel {
+  width: min(720px, 100%);
+}
+
+.prayer-panel-header {
+  gap: 24px;
+}
+
+.prayer-panel-header > div {
+  min-width: 0;
+}
+
+.prayer-panel-header p {
+  margin: 7px 0 0;
+  max-width: 520px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.prayer-panel-content {
+  max-height: calc(88vh - 82px);
+  overflow-y: auto;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.prayer-panel h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font: 500 20px/1.2 Georgia, serif;
+}
+
+.prayer-section-kicker {
+  display: block;
+  color: var(--brass);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.prayer-location-card,
+.prayer-next-card,
+.prayer-times-card,
+.prayer-qibla-card,
+.prayer-settings-card,
+.prayer-notifications-card,
+.prayer-panel-note,
+.prayer-empty-state {
+  border: 1px solid rgba(112, 87, 51, .18);
+  background: rgba(255, 255, 255, .34);
+}
+
+.prayer-location-card {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+}
+
+.prayer-location-card p {
+  margin: 8px 0 5px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.prayer-location-card small {
+  display: block;
+  max-width: 470px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.prayer-location-card.state-error {
+  border-color: rgba(168, 79, 70, .38);
+  background: rgba(168, 79, 70, .055);
+}
+
+.prayer-location-card.state-ready {
+  border-color: rgba(57, 120, 98, .34);
+  background: rgba(57, 120, 98, .055);
+}
+
+.prayer-location-actions {
+  min-width: 190px;
+  display: grid;
+  gap: 10px;
+}
+
+.prayer-primary-action {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--forest);
+  background: var(--forest);
+  color: #fff;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+.prayer-primary-action:hover:not(:disabled) {
+  background: var(--forest-deep);
+}
+
+.prayer-panel button:focus-visible,
+.prayer-panel input:focus-visible,
+.prayer-panel select:focus-visible,
+.prayer-panel summary:focus-visible {
+  outline: 3px solid rgba(164, 124, 67, .48);
+  outline-offset: 2px;
+}
+
+.prayer-panel button:disabled,
+.prayer-panel input:disabled,
+.prayer-panel select:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.prayer-remember-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.prayer-remember-location input {
+  margin: 1px 0 0;
+  flex: 0 0 auto;
+}
+
+.prayer-error-banner {
+  padding: 12px 14px;
+  border: 1px solid rgba(168, 79, 70, .38);
+  background: rgba(168, 79, 70, .07);
+  color: #793c36;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.prayer-empty-state {
+  padding: 34px 24px;
+  text-align: center;
+}
+
+.prayer-empty-state > span {
+  display: block;
+  color: var(--brass);
+  font-size: 27px;
+}
+
+.prayer-empty-state p {
+  margin: 8px auto 0;
+  max-width: 420px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.prayer-next-card {
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-color: rgba(164, 124, 67, .34);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(164, 124, 67, .09),
+      rgba(255, 255, 255, .3)
+    );
+}
+
+.prayer-next-card h3 {
+  font-size: 26px;
+}
+
+.prayer-next-card p {
+  margin: 6px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.prayer-countdown {
+  min-width: 96px;
+  padding: 12px 14px;
+  border-left: 1px solid rgba(164, 124, 67, .24);
+  color: var(--forest);
+  text-align: right;
+  font: 600 19px/1 Georgia, serif;
+  white-space: nowrap;
+}
+
+.prayer-times-card {
+  overflow: hidden;
+}
+
+.prayer-times-card > header {
+  padding: 18px 20px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+}
+
+.prayer-timezone {
+  color: var(--ink-soft);
+  font-size: 8px;
+  text-align: right;
+}
+
+.prayer-times-list {
+  display: grid;
+}
+
+.prayer-time-row {
+  min-height: 57px;
+  padding: 11px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid rgba(78, 67, 49, .1);
+}
+
+.prayer-time-row:last-child {
+  border-bottom: 0;
+}
+
+.prayer-time-row strong {
+  display: block;
+  font: 500 15px Georgia, serif;
+}
+
+.prayer-time-row time {
+  color: var(--forest);
+  font: 600 15px Georgia, serif;
+  white-space: nowrap;
+}
+
+.prayer-time-context {
+  background: rgba(110, 117, 111, .045);
+}
+
+.prayer-time-context strong,
+.prayer-time-context time {
+  color: var(--ink-soft);
+}
+
+.prayer-time-context small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.prayer-qibla-card {
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+}
+
+.prayer-qibla-copy p {
+  margin: 8px 0 0;
+  max-width: 470px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.prayer-qibla-bearing {
+  width: 112px;
+  height: 112px;
+  border: 1px solid rgba(164, 124, 67, .4);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(164, 124, 67, .09) 0 53%,
+      transparent 54%
+    );
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: var(--forest);
+}
+
+.prayer-qibla-bearing strong {
+  font: 600 27px/1 Georgia, serif;
+}
+
+.prayer-qibla-bearing span {
+  margin-top: 5px;
+  color: var(--brass);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.prayer-settings-card {
+  overflow: hidden;
+}
+
+.prayer-settings-card > summary {
+  padding: 17px 20px;
+  cursor: pointer;
+  color: var(--forest);
+  font-size: 11px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.prayer-settings-card[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.prayer-settings-content {
+  padding: 18px 20px 20px;
+  display: grid;
+  gap: 17px;
+}
+
+.prayer-settings-content > label {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.35fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.prayer-settings-content label > span {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.prayer-settings-content select,
+.prayer-adjustments input {
+  min-height: 40px;
+  border: 1px solid rgba(87, 70, 46, .2);
+  background: rgba(255, 255, 255, .58);
+  color: var(--ink);
+}
+
+.prayer-settings-content select {
+  width: 100%;
+  padding: 0 10px;
+}
+
+.prayer-adjustments {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.prayer-adjustments > div {
+  grid-column: 1 / -1;
+}
+
+.prayer-adjustments > div strong {
+  display: block;
+  font-size: 10px;
+}
+
+.prayer-adjustments > div small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.prayer-adjustments label {
+  display: grid;
+  grid-template-columns: 1fr 58px;
+  gap: 8px;
+  align-items: center;
+}
+
+.prayer-adjustments input {
+  width: 58px;
+  padding: 0 7px;
+  text-align: center;
+}
+
+.prayer-notifications-card {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.prayer-notifications-card > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prayer-notification-state {
+  padding: 5px 9px;
+  border: 1px solid rgba(110, 117, 111, .24);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prayer-notification-state.state-granted {
+  border-color: rgba(57, 120, 98, .34);
+  background: rgba(57, 120, 98, .07);
+  color: var(--forest);
+}
+
+.prayer-notification-state.state-denied {
+  border-color: rgba(168, 79, 70, .34);
+  background: rgba(168, 79, 70, .06);
+  color: #793c36;
+}
+
+.prayer-notification-master {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prayer-notification-master span {
+  display: grid;
+  gap: 4px;
+}
+
+.prayer-notification-master strong {
+  font-size: 11px;
+}
+
+.prayer-notification-master small,
+.prayer-notification-asset-note {
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.prayer-notification-master input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--forest);
+  flex: 0 0 auto;
+}
+
+.prayer-notification-prayers {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.prayer-notification-prayers legend {
+  width: 100%;
+  margin-bottom: 9px;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.prayer-notification-prayers label {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 1px solid rgba(87, 70, 46, .16);
+  background: rgba(255, 255, 255, .42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.prayer-notification-prayers input {
+  accent-color: var(--forest);
+}
+
+.prayer-notification-select {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.35fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.prayer-notification-select > span {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.prayer-notification-select select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(87, 70, 46, .2);
+  background: rgba(255, 255, 255, .58);
+  color: var(--ink);
+}
+
+.prayer-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.prayer-secondary-action {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(23, 63, 52, .28);
+  background: transparent;
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.prayer-notification-status,
+.prayer-notification-capability {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.prayer-notification-status {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.prayer-notification-capability {
+  color: var(--ink-soft);
+}
+
+.prayer-panel-note {
+  padding: 15px 17px;
+  background: rgba(164, 124, 67, .045);
+}
+
+.prayer-panel-note strong {
+  font-size: 9px;
+}
+
+.prayer-panel-note p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .prayer-panel-content {
+    padding: 16px;
+    gap: 13px;
+  }
+
+  .prayer-panel-header p {
+    display: none;
+  }
+
+  .prayer-location-card,
+  .prayer-qibla-card {
+    grid-template-columns: 1fr;
+  }
+
+  .prayer-location-actions {
+    min-width: 0;
+  }
+
+  .prayer-next-card {
+    padding: 19px 18px;
+  }
+
+  .prayer-next-card h3 {
+    font-size: 23px;
+  }
+
+  .prayer-countdown {
+    min-width: 80px;
+    padding-right: 0;
+  }
+
+  .prayer-times-card > header,
+  .prayer-time-row {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .prayer-qibla-bearing {
+    width: 98px;
+    height: 98px;
+    justify-self: center;
+  }
+
+  .prayer-settings-content > label {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .prayer-notification-select {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .prayer-notification-prayers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .prayer-adjustments {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .prayer-panel-content {
+    padding: 12px;
+  }
+
+  .prayer-next-card {
+    align-items: flex-end;
+  }
+
+  .prayer-countdown {
+    font-size: 16px;
+  }
+
+  .prayer-time-row {
+    min-height: 54px;
+  }
+
+  .prayer-adjustments {
+    grid-template-columns: 1fr;
+  }
+  .prayer-notification-prayers {
+    grid-template-columns: 1fr 1fr;
+  }
 }
