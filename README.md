@@ -8,7 +8,7 @@
 
 Mushaf Companion is a calm, page-first Quran reader designed to preserve the visual rhythm of the Madani mushaf while adding optional learning and recitation tools.
 
-The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, an interactive Tajweed primer, Hifz memorization tools, a dedicated Learn hub, direct page navigation, verse and sūrah playback, verified offline audio packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, night mode, and last-read resume behavior. Guided courses are intentionally unavailable until an exact curriculum passes source, rights, integrity, and named scholarly-review approval.
+The current implementation supports all 604 Quran pages, a verified 114-sūrah contents index, Tajweed and Hifz tools, the M1-M8 study platform, a Hadith reader, the 49-topic Islamic Foundations reference library, 160 verified Hafs reciters, Prayer Times and Qibla, opt-in native prayer notifications, verified offline Alafasy packs, Saheeh International translation, Ibn Kathir tafsir, bookmarks, search, themes, and last-read resume behavior. Hafs 'an Asim is the only active Quran reading. Guided courses and alternate readings remain unavailable until their exact sources pass the required rights, integrity, mapping, and review gates.
 
 ![Mushaf Companion cover](./public/mushaf-companion-cover.jpg)
 
@@ -87,24 +87,43 @@ Install or open the public app:
 - Private notes support exact source/revision/course/module/lesson/section anchors while existing ayah and word notes migrate unchanged.
 - Production contains no approved guided curriculum or substantive synthetic teaching; Learn displays an explicit awaiting-approved-curriculum state.
 
+### Study platform
+
+- M1-M8 provide the Ayah Study Lens, source-neutral word-study and occurrence architecture, vocabulary/review state, Today’s Study, private notes, and a fail-closed evidence-provider boundary.
+- Today’s Study actively combines Hifz and reading; vocabulary and Guided Education steps appear only when their exact production sources are approved.
+- Private ayah, word, and source-pinned lesson notes remain device-local during normal use and are included only in an explicit user backup.
+- Production morphology, Foundation 125 vocabulary, and evidence relationships remain disabled: no approved provider is active and zero evidence edges ship.
+
+### Hadith and Islamic Foundations
+
+- A standalone Hadith reader registers the six canonical collections and displays 44 exact HadeethEnc English translation-approved seed records with source attribution and provider grading. It does not claim to bundle complete Hadith corpora or approved Arabic bodies.
+- Islamic Foundations revision `m9r-v10` provides 10 collections, 49 of 49 reference-ready topics, zero planned topics, and 160 reference placements: 78 Quran, 51 Hadith, and 31 scholarly.
+- Islamic Foundations is a source-navigation/reference library, not a course, fatwa service, mastery system, or replacement for qualified scholarship.
+
 ### Audio
 
-- Mishary Rashid Alafasy.
-- Abdul Basit Abdus Samad.
-- Saad Al-Ghamdi.
-- Dr. Aymen Suwayed.
-- Minshawi Kids Repeat.
-- Sheikh Abdul Rashid Ali Sufi.
+- The M10 registry contains 160 verified complete Hafs reciters: 6 default choices and 154 searchable additional reciters.
+- 45 reciters use ayah-scoped audio and 115 use continuous sūrah-scoped audio across Quran Foundation, EveryAyah, Kalamalah, and MP3Quran providers.
+- The default group is Mishary Rashid Alafasy, Abdul Basit Abdus Samad, Dr. Aymen Suwayed, Minshawi Kids Repeat, Sheikh Muhammad Ayyub, and Sheikh Abdul Rashid Ali Sufi; Saad Al-Ghamdi is available in the expanded library.
 - Verse play/pause and previous/next ayah controls.
 - Playback progress with 0.5×, 0.75×, 1×, 1.25×, 1.5×, 1.75×, and 2× speed control.
 - Repeat current ayah or a selected range on the current page.
 - Double-click a displayed sūrah number to begin complete sūrah playback from āyah 1.
 - Stable mini-player plus a full transport/settings bottom sheet on mobile.
-- Five reciters use ayah-by-ayah files; Sheikh Abdul Rashid Ali Sufi uses clearly labeled continuous sūrah playback because verified verse timing is not available from the source.
+- Verse-only controls remain disabled for continuous sūrah sources that do not provide verified verse timing.
 - Download Mishary Rashid Alafasy packs by sūrah or juz with estimated size, free-space checks, progress, pause, resume, retry, repair, and deletion.
 - SHA-256 verification before and after IndexedDB storage; partial packs never appear complete.
 - Downloaded-first playback with streaming fallback when online, plus first-to-last pack sequencing that does not depend on page retrieval.
 - Wi-Fi-only safeguards, cellular warnings, storage persistence status, quota visibility, and per-pack totals.
+
+### Prayer Times, Qibla, and notifications
+
+- Device-local prayer calculations through `adhan@4.4.4`, with 12 calculation presets, standard or Hanafi Asr, per-prayer adjustments, local location handling, and Qibla bearing.
+- Notifications default off and request permission only after an explicit user action.
+- Android and iOS native shells can schedule a seven-day horizon of five-Salah local alerts and reconcile only Mushaf Companion-owned notifications.
+- Android exposes user-controlled exact-alarm settings and an inexact fallback; iOS remains subject to Focus, Silent Mode, and OS policy.
+- Web/PWA supports explicit permission and test display where available, but reliable timed alerts after the browser/PWA closes require a future Web Push service and are not claimed.
+- No approved redistributable Adhan cue is bundled. Native prayer alerts use the system notification sound until a recording passes source, rights, attribution, checksum, duration/format, and device review.
 
 ### Finding and saving places
 
@@ -121,6 +140,7 @@ Install or open the public app:
 - Standalone GitHub Pages PWA containing the real React reader, with repository-base-safe assets and service-worker scope.
 - Capacitor 8 Android and iOS projects using `com.mushafcompanion.reader`.
 - Automated Android debug APK, unsigned release AAB, and unsigned iOS simulator package builds.
+- Store distribution is not release-ready: the last recorded native artifact run predates M11/M12, signed packages and store-account configuration are absent, and physical Android/iPhone/iPad QA remains outstanding.
 
 ## Architecture
 
@@ -140,6 +160,10 @@ The shared page source obtains content from the Quran Foundation/Quran.com Conte
 See [`docs/STANDALONE-PAGES.md`](./docs/STANDALONE-PAGES.md) for the complete static transport, source-rights, PWA, and independent verification design.
 
 See [`docs/GUIDED-EDUCATION.md`](./docs/GUIDED-EDUCATION.md) for the guided-education trust boundary, provider approval requirements, local state model, migration behavior, and release process.
+
+See [`docs/PROJECT-STATUS.md`](./docs/PROJECT-STATUS.md) for the authoritative portfolio status and [`docs/RELEASE-BASELINE.md`](./docs/RELEASE-BASELINE.md) for native release gates and M13 entrance criteria.
+
+The M11 reading registry and transport boundary are active, but only `hafs-an-asim` has a production page edition. Warsh is an artifact/rights/mapping candidate only; Qalun and Khalaf are planned. Unsupported readings fail closed and are never silently rendered with Hafs content.
 
 A disabled-by-default multilingual source registry now records candidate identity, attribution, rights, edition, coverage, and integrity metadata independently of the reader. Provider adapters require exact resource identifiers and can audit candidate packages without enabling or exposing them in the UI. See [`docs/MULTILINGUAL-SOURCES.md`](./docs/MULTILINGUAL-SOURCES.md).
 
@@ -209,6 +233,11 @@ ios/                   Capacitor Xcode project
 pages-static/          Standalone Pages entry, manifest, offline page, and service worker
 docs/
   ANALYTICS.md         Future analytics and event contract
+  PROJECT-STATUS.md    Authoritative current portfolio status
+  RELEASE-BASELINE.md  Web/native baseline and M13 entrance criteria
+  EXTERNAL-DEPENDENCIES.md External source, rights, hardware and store blockers
+  APPROVAL-REGISTER.md Trust-sensitive source and activation approvals
+  BRANCH-INVENTORY.md  Historical branch classifications and namespace policy
   OFFLINE-AUDIO.md     Offline pack integrity, recovery, and platform limits
   MULTILINGUAL-SOURCES.md Candidate translation registry, rights, coverage, checksums, and approval process
   TAFSIR.md            Tafsir source, safety, mapping, and reader behavior
@@ -239,7 +268,8 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 
 ## Current limitations
 
-- Translation and tafsir currently provide one vetted English edition each; source comparison and additional languages are not implemented yet.
+- Hafs 'an Asim is the only active production reading. Warsh remains gated; Qalun and Khalaf are not implemented.
+- Translation and tafsir currently provide one active online English edition each. Amharic is an explicit verified optional pack; Somali and Oromo remain blocked by incomplete original attribution.
 - Tafsir requires a network connection when a section is not already available in the browser’s ordinary HTTP cache; full offline tafsir packs are not claimed.
 - Offline downloads currently support Mishary Rashid Alafasy only; the other reciters continue to stream.
 - Offline packs are limited to sūrah and juz scopes while storage behavior is validated; whole-Quran download remains deferred.
@@ -248,12 +278,21 @@ The bundled Al-Fatihah model is only a fail-safe initial shell while the selecte
 - Representative desktop and responsive screenshots are locked, but the reader is not claimed to be pixel-identical on every browser and device.
 - Bookmarks and preferences remain local by default; users can export and restore a private JSON backup.
 - Native packages currently load the deployed server-backed reader over HTTPS; a fully bundled offline reader remains a future phase.
+- Native prayer notifications are implemented but have not completed the required physical Android and iPhone/iPad release matrix. PWA closed-app scheduling is not implemented.
+- The custom Adhan asset registry is empty; system notification sound is the current fallback.
+- Guided Education, production morphology/vocabulary, and M8 evidence relationships remain disabled pending exact source and approval gates.
+- The package, native metadata, user-agent, tag, and GitHub release versions are inconsistent and require an explicit M13 version decision.
+- Native workflows produce unsigned artifacts. Release signing, store accounts/configuration, current-baseline native packages, store metadata, and physical-device QA are outstanding.
 - Browser storage may be reclaimed unless persistent storage is granted; the Offline Audio manager reports that state and provides verification, repair, and deletion controls.
 - A signed iOS `.ipa` requires macOS, Xcode 26+, and an Apple Developer signing team.
 
 ## Product planning
 
-- [V2 roadmap](./docs/ROADMAP.md)
+- [Authoritative project status](./docs/PROJECT-STATUS.md)
+- [Current roadmap](./docs/ROADMAP.md)
+- [Release baseline and M13 entrance criteria](./docs/RELEASE-BASELINE.md)
+- [External dependencies](./docs/EXTERNAL-DEPENDENCIES.md)
+- [Approval register](./docs/APPROVAL-REGISTER.md)
 - [Offline audio integrity and recovery](./docs/OFFLINE-AUDIO.md)
 - [Tafsir source, safety, and mapping](./docs/TAFSIR.md)
 - [Current UX review](./docs/UX-REVIEW.md)

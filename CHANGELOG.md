@@ -6,37 +6,27 @@ All notable product changes to Mushaf Companion are documented here.
 
 ### Added
 
-- A dedicated Learn destination and responsive Learn hub for Today’s Study, approved guided courses, the current lesson, due education review, My Mushaf, vocabulary, Tajweed, private notes, reader study, and device-local learning progress without replacing the Read → Ayah Study Lens workflow.
-- Source-neutral education course/module/lesson/provider contracts with structured plain-text blocks, separate lesson citations, trusted Quran-reference reconciliation, knowledge checks, and source/revision-pinned local progress.
-- Fail-closed education activation requiring exact independent pins for provider and source identity, author and organization, named scholarly review, revision, rights, capabilities, SHA-256 integrity, normalization, audit identity, coverage, and catalog structure.
-- Today’s Study schema v2 education-review and education-lesson steps using deterministic due-before-new ordering and the shared Again/Hard/Good/Easy scheduler.
-- Study Notes schema v2 source-pinned lesson and section anchors, preference schema v8, and lossless portable restore compatibility from schemas v2 through v8.
-- Server and GitHub Pages education transport parity, Pages release metadata and artifact rejection for undeclared education catalogs, plus the guided-curriculum approval and release guide.
-- Private ayah and exact-word study notes with bounded plain text, user-defined Unicode tags, explicit editing/deletion, local search, trusted anchor navigation, and Saved Study/My Mushaf access.
-- Preference schema v7 migration and portable backup/restore coverage for private notes, tags, anchors, and timestamps while preserving all M1–M6 domains.
-- A source-neutral evidence relationship contract with independently pinned provider/source/revision/origin/approval/checksum/normalization identity, complete delivery-specific rights, fail-closed adapter boundaries, canonical semantic edge identity, partial-provider results, trusted Quran reconciliation, and stale-query protection.
-- Notes and Evidence tabs in the existing Ayah Study Lens with responsive, accessible layouts and clear private-versus-source-backed labeling.
-- A single Ayah Study Lens with Overview, Words, Tafsir, Practice, Notes, and Evidence tabs, shared selected-ayah navigation, responsive drawer/sheet behavior, and reused translation, Ibn Kathir, audio, Tajweed, and Hifz systems.
-- A source-neutral Quran word-study contract with deterministic Mushaf coordinates, provider approval/provenance gates, dataset and runtime audits, and a disabled Quranic Arabic Corpus reference descriptor.
-- Tap-a-word study context, trusted occurrence navigation, and separate lemma/root exploration that remain unavailable when no approved provider is active.
-- A gated Foundation 125 curriculum loader, device-local vocabulary progress, shared Again/Hard/Good/Easy interval semantics, and preference backup/restore support.
-- A unified Today’s Study plan for due Hifz, approved vocabulary, and reading, with deterministic 5/10/20-minute budgets, resumable local sessions, skip/exit controls, and calendar-safe activity.
+- M1-M8 Study Platform: Ayah Study Lens, word-study and occurrence boundaries, vocabulary/review state, Today’s Study, private notes, and source-integrated Evidence architecture.
+- M9 Guided Education architecture with course/lesson/citation/assessment contracts, source-pinned progress, transport parity, and an explicit zero-course production gate pending exact curriculum rights, integrity, and named scholarly review.
+- M9H Hadith reader with six canonical collection registries and 44 exact HadeethEnc English translation-approved seed records.
+- M9R Islamic Foundations revision `m9r-v10`, completing all 49 topics across 10 collections with 160 Quran, Hadith, and scholarly reference placements.
+- M10 reciter expansion to 160 complete Hafs reciters across ayah- and sūrah-scoped providers, with Alafasy remaining the only offline-pack source.
+- M11 reading/riwayat foundation with reading-aware registries, page editions, transports, reciter compatibility, and fail-closed unsupported-reading behavior; Hafs remains the only active reading.
+- M12.1 device-local Prayer Times and Qibla with 12 calculation presets, Asr selection, adjustments, location privacy controls, and no prayer API.
+- M12.2 opt-in Android/iOS local prayer notifications, Android exact/inexact reconciliation, explicit web/PWA test notifications, and an empty approved-Adhan registry with system-sound fallback.
+- Standalone GitHub Pages React PWA restoration with install/update/offline-shell behavior and independently verified translation/education artifact controls.
 
 ### Reliability
 
-- Production guided courses remain explicitly unavailable: the only production registration is a disabled, empty synthetic reference provider with no approved or substantive Islamic teaching content.
-- Curriculum revisions cannot silently reuse lesson completion, review, Today’s Study, or private-note anchors from another source revision.
-- The exact catalog instance must pass independent checksum verification, strict structured validation, runtime audit, rights compatibility, and trusted Quran-reference lookup before activation is cached.
-- The verified education catalog is now a deeply immutable canonical snapshot; provider, audit-time, and consumer mutations cannot change the cached or subsequently returned curriculum.
-- Backdated education reviews preserve existing progress, grouped Today’s Study reviews advance across lessons, Learn restores its exact opener focus, and bounded education state round-trips through local preferences and portable backup.
-- Pages now applies its education release declaration across the entire artifact, including public-derived files and compiled assets, rather than only `_site/content/`.
-- Private note text and tags remain device-local during normal operation, are never sent to Quran APIs or analytics, and leave the device only through explicit backup download.
-- New note drafts freeze their full Quran anchor, exact word anchors are revalidated on save, existing-note edits preserve anchors, secure UUID generation falls back to `crypto.getRandomValues()`, renamed active tag filters remain valid, and backup restore rejects unsupported future schemas.
-- No production evidence relationships are bundled: the reference provider remains disabled until a source passes rights, provenance, integrity, runtime audit, and Quran-mapping review.
-- Evidence failures and partial coverage remain distinct from authoritative zero; authority labels appear only after successful approved runtime checks, and inferred, synthetic, keyword-, root-, lemma-, embedding-, or AI-derived links cannot enter approved provider results.
-- Word-study and curriculum content fail closed on disabled sources, malformed records, duplicate or mismatched coordinates, incomplete provenance, and source-revision changes.
-- Production vocabulary, morphology, root, lemma, and occurrence content remains disabled pending explicit source and rights approval; automated tests use synthetic fixtures only.
-- Preference schema v7 migrates earlier reader, Hifz, vocabulary, Today's Study, audio, and download settings without replacing existing user state.
+- Guided Education, morphology/vocabulary, Evidence, Warsh, Somali/Oromo activation, and custom Adhan audio remain fail-closed until their documented external approval gates pass.
+- Preference schema v8 preserves reader, Hifz, vocabulary, Today’s Study, education, private-note, audio, download, and portable-backup state across supported migrations.
+- Prayer notification reconciliation uses deterministic owned IDs, never cancels unrelated notifications, and reschedules when Android exact-alarm mode changes.
+- PWA notification copy does not promise reliable closed-app timed delivery without future Web Push infrastructure.
+
+### Documentation and governance
+
+- Added an authoritative project status, current M0-M14 roadmap, external dependency register, approval register, branch inventory, release baseline, and M-GOV1 audit record.
+- Documented version drift, unsigned native/store gaps, dependency advisories, protected legacy worktrees, and the new `m7sksystems/*` branch namespace without changing product or release versions.
 
 ## 1.1.0 — 2026-08-07
 

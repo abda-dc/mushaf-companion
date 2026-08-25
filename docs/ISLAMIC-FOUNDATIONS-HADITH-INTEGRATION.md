@@ -30,7 +30,7 @@ The **M9RH-1** milestone integrates the **M9R Islamic Foundations Reference Libr
 ┌─────────────────────────────────────────────────────────────┐
 │                  M9H Hadith Reader Domain                   │
 │  - app/hadith-registry.mjs                                  │
-│  - app/hadith-content.mjs (11 approved English translations)│
+│  - app/hadith-content.mjs (44 approved English translations)│
 │  - app/hadith-resolver.mjs                                  │
 │  - app/hadith-reader-panel.tsx (Production UI)              │
 │  - ZERO dependencies on M9R or Islamic Foundations          │
@@ -40,7 +40,7 @@ The **M9RH-1** milestone integrates the **M9R Islamic Foundations Reference Libr
 ### Key Architectural Principles:
 1. **Core M9H Is Completely M9R-Independent**: `hadith-registry.mjs`, `hadith-content.mjs`, and `hadith-resolver.mjs` contain zero references to Islamic Foundations.
 2. **Zero Text Duplication**: M9R contains no English or Arabic Hadith texts, no explanations, and no benefits. M9H remains the single source of truth for Hadith text content.
-3. **Bridge / Adapter Pattern**: A lightweight adapter ([`app/islamic-reference-hadith-bridge.mjs`](file:///C:/Users/Kiya/Documents/Mushaf-m9rh/app/islamic-reference-hadith-bridge.mjs)) bridges the two domains without polluting core models.
+3. **Bridge / Adapter Pattern**: A lightweight adapter (`app/islamic-reference-hadith-bridge.mjs`) bridges the two domains without polluting core models.
 
 ---
 
@@ -103,7 +103,7 @@ Per milestone constraints, these topics have **not** been modified or populated.
 
 ## Bridge API & Fail-Closed Validation
 
-The bridge exposes two functions in [`app/islamic-reference-hadith-bridge.mjs`](file:///C:/Users/Kiya/Documents/Mushaf-m9rh/app/islamic-reference-hadith-bridge.mjs):
+The bridge exposes two functions in `app/islamic-reference-hadith-bridge.mjs`:
 
 ```typescript
 export function resolveIslamicReferenceHadith(

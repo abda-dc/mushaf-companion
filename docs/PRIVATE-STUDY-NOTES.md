@@ -10,10 +10,11 @@ Local/private does not mean encrypted: notes are **not encrypted** in browser st
 
 ## Model, IDs, and frozen anchors
 
-`app/study-notes.mjs` owns schema-v1 `StudyNote` records with plain-text bodies, tags, creation/update instants, and one trusted anchor:
+`app/study-notes.mjs` owns schema-v2 `StudyNote` records with plain-text bodies, tags, creation/update instants, and one trusted anchor. Schema v1 ayah/word records migrate without loss:
 
 - Ayah: exact verse key and authoritative page.
 - Word: verse key, one-based word position, authoritative page, line, and Quran Foundation source word ID.
+- Lesson: exact source ID/revision, course, module, lesson and optional section. Lesson anchors are available only for an activated, matching Guided Education source revision.
 
 Stable cryptographic UUIDs use `crypto.randomUUID()` when available. A browser-safe RFC 4122 v4 fallback uses `crypto.getRandomValues()`; if neither secure API exists, note creation fails safely. No timestamp, counter, or `Math.random()` fallback exists.
 
@@ -42,7 +43,7 @@ The Study Lens Notes tab supports ayah and exact-word notes. Saved Study provide
 
 ## Persistence and backup
 
-Preference schema v7 adds notes while probing and deterministically migrating v6 through v2 and fragmented legacy keys. Portable restore validates its plain-object envelope, supported schema version, and optional export timestamp before sectional migration. Known v2–v6 backups migrate to v7; future schemas are rejected rather than silently interpreted as current.
+Preference schema v8 preserves schema-v2 notes and lesson anchors while probing and deterministically migrating earlier supported preference schemas and fragmented legacy keys. Portable restore validates its plain-object envelope, supported schema version, and optional export timestamp before sectional migration. Known v2–v7 backups migrate to v8; future schemas are rejected rather than silently interpreted as current.
 
 ## Limitations
 

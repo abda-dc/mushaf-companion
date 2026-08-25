@@ -1,185 +1,121 @@
-# V2 product roadmap
+# Mushaf Companion Roadmap
 
-> Delivery update — 2026-08-06: the trust foundation is complete in version 0.8.0, the offline-audio MVP is code-complete in version 0.9.0, and the source-attributed tafsir MVP is complete in version 1.0.0.
+Baseline: 2026-08-24 at `73f7c99b2187535d2ec3cfe0c1178e22eaf1397e`.
 
-This roadmap covers translations, tafsir, and offline audio without compromising the page-first reading experience.
+This roadmap describes portfolio state, not sprint estimates or delivery commitments. Historical milestone/source documents remain evidence of the state when they were written. Current high-level status is maintained in [PROJECT-STATUS.md](./PROJECT-STATUS.md).
 
-## Prioritization model
+## Status language
 
-Impact measures expected improvement to reading comprehension, retention, and reliable daily use. Effort includes product design, engineering, content licensing, content validation, QA, and release operations.
+- **COMPLETE** — implemented and validated at the current baseline.
+- **ACTIVE** — available in the current production runtime.
+- **GATED** — implementation exists but activation requires explicit source, rights, integrity, approval or device gates.
+- **BLOCKED** — progress depends on an external source, right, account, approval or hardware result that is not available.
+- **PLANNED** — accepted future work that has not started.
+- **DEFERRED** — intentionally outside the near-term release sequence.
 
-| Rating | Impact definition | Effort guide |
+## Completed foundation
+
+| Capability | Status | Current boundary |
 | --- | --- | --- |
-| High | Benefits a large share of readers or protects trust in Quran content. | Large: approximately 3–5 engineer-weeks plus content review. |
-| Medium | Improves an important workflow for a meaningful segment. | Medium: approximately 1–2 engineer-weeks. |
-| Low | Useful refinement with limited effect on core reading. | Small: approximately 2–5 engineer-days. |
+| Page-first Quran reader | COMPLETE / ACTIVE | 604-page Madani Mushaf ID 1; Hafs 'an Asim only |
+| Quran trust and provenance | COMPLETE / ACTIVE | 6,236-ayah full audit, per-page SHA-256 provenance, fail-closed source validation |
+| Reading assistance | COMPLETE / ACTIVE | Tajweed, transliteration, selection, themes, fonts, page navigation and accessibility controls |
+| English translation | COMPLETE / ACTIVE | Saheeh International, Quran Foundation resource 20, online use |
+| English tafsir | COMPLETE / ACTIVE | Ibn Kathir (Abridged), resource 169, online when not ordinarily cached |
+| Audio and offline packs | COMPLETE / ACTIVE | 160 Hafs reciters; verified offline sūrah/juz packs remain Alafasy-only |
+| PWA | COMPLETE / ACTIVE | Standalone GitHub Pages React reader, verified service worker and install metadata |
+| Native shell | COMPLETE / GATED FOR DISTRIBUTION | Capacitor Android/iOS projects; signed store packages not yet produced |
 
-Estimates assume one product engineer with part-time design and qualified content review. They are planning ranges, not delivery commitments.
+## Study platform
 
-## Ranked initiatives
+| Milestone | Capability | Status | Current boundary |
+| --- | --- | --- | --- |
+| M1 | Ayah Study Lens | COMPLETE / ACTIVE | Reuses verified translation, tafsir, audio, Tajweed and Hifz ownership |
+| M2 | Word-study contracts | COMPLETE / GATED | No approved production morphology/word provider |
+| M3 | Tap-a-Word | COMPLETE / PARTIALLY ACTIVE | Coordinate selection works; unapproved linguistic fields stay unavailable |
+| M4 | Vocabulary / Foundation 125 | COMPLETE ARCHITECTURE / BLOCKED | Zero approved production entries |
+| M5 | Occurrence Explorer | COMPLETE ARCHITECTURE / BLOCKED | Requires approved lemma/root/occurrence corpus |
+| M6 | Today Study | COMPLETE / ACTIVE | Hifz and reading active; vocabulary/education steps appear only with approved content |
+| M7 | Private Notes | COMPLETE / ACTIVE | Device-local, unencrypted storage and explicit backup only |
+| M8 | Evidence relationships | COMPLETE ARCHITECTURE / GATED | No approved provider; zero evidence edges ship |
 
-| Order | Initiative | Impact | Effort | Why it is ranked here |
-| ---: | --- | --- | --- | --- |
-| 0 | Page-fidelity and content-provenance gate | High | Medium | Every new layer depends on a trustworthy verse/page anchor. Fixing line geometry and recording source editions prevents translation or tafsir from attaching to the wrong content. |
-| 1 | Translation MVP | High | Medium | Delivers immediate comprehension value with limited storage and playback complexity. It can reuse the current selected-ayah model. |
-| 2 | Real settings and content-layer architecture | High | Medium | Makes translation, tafsir, reciter, display, download, and accessibility preferences coherent on desktop and mobile. |
-| 3 | Offline audio MVP | High | Large | Directly strengthens the existing listening use case, but requires storage, download recovery, integrity, and quota management. |
-| 4 | Tafsir MVP | High | Large | High learning value, but source licensing, structured long-form content, citations, and careful presentation make it more complex than translation. |
-| 5 | Multiple translations and comparison | Medium | Medium | Valuable after the single-translation interaction and source model are proven. |
-| 6 | Offline download management and smart packs | Medium | Medium | Improves a working offline core with Wi-Fi rules, cleanup, repair, and recommended download scopes. |
-| 7 | Expanded tafsir library and cross-references | Medium | Large | Should follow evidence that readers use the focused single-source tafsir flow without disrupting recitation. |
+## Islamic knowledge
 
-## Phase 0 — foundation and trust gate
+| Milestone | Capability | Status | Current boundary |
+| --- | --- | --- | --- |
+| M9 | Guided Education | COMPLETE ARCHITECTURE / BLOCKED | Zero courses/lessons; exact curriculum, rights, integrity and named scholarly review required |
+| M9H | Hadith foundation and reader | COMPLETE / ACTIVE | Six collection registries and 44 approved English seed records; no claim of full corpora |
+| M9R | Islamic Foundations | COMPLETE / ACTIVE | `m9r-v10`: 10 collections, 49/49 reference-ready topics, 160 references, 0 planned |
 
-Status: completed 2026-08-06.
+Guided Education is not activated by architectural completeness. Candidate status is not approval.
 
-### Deliverables
+## Recitation and Quran readings
 
-- Validate line mapping against the selected printed Madani edition.
-- Add visual fixtures for pages 1, 2, 3, a surah boundary, a dense page, a sajdah page, and page 604.
-- Create a content manifest with source, edition, language, author, license, attribution, revision, and checksum fields.
-- Use stable `verse_key` identifiers across Arabic, translation, tafsir, bookmarks, audio, and analytics.
-- Introduce a versioned preference store with migration from the current local-storage keys.
-- Build a single responsive settings panel/sheet.
-- Define loading, unavailable, outdated, and source-attribution states for every optional content layer.
-- Adopt the event contract in [ANALYTICS.md](./ANALYTICS.md) before shipping new features.
+| Milestone | Capability | Status | Current boundary |
+| --- | --- | --- | --- |
+| M10 | Expanded reciter library | COMPLETE / ACTIVE | 160 complete Hafs reciters; reading identity remains Hafs |
+| M11 | Qira'at/Riwayat architecture | COMPLETE / ACTIVE FOUNDATION | Reading-aware registry, page edition and compatibility layer; Hafs is the only registered runtime reading |
+| M11 follow-up | Warsh activation | GATED / BLOCKED | Artifact not received; rights, checksums, page/line geometry, font, adapter and audio compatibility unapproved |
+| Future | Qalun | PLANNED | No source, rights record or implementation |
+| Future | Khalaf | PLANNED | No source, rights record or implementation |
 
-### Exit criteria
+The existing generic verse-to-page lookup remains bound to the active Hafs transport unless a reading-specific page edition is supplied. Unsupported readings fail closed; they must never silently fall back to Hafs.
 
-- Representative page screenshots match the chosen reference edition within approved tolerances.
-- All 604 pages have valid verse and page mappings.
-- No optional layer can change Arabic page line breaks or page dimensions.
-- Content responses identify their source edition and revision.
-- Existing reader preferences migrate without data loss.
+## Salah
 
-Evidence: [`content-audit.json`](./content-audit.json), [`page-fidelity.json`](../tests/fixtures/page-fidelity.json), and the [reviewed screenshot baselines](../tests/fixtures/page-fidelity/README.md).
+| Milestone | Capability | Status | Current boundary |
+| --- | --- | --- | --- |
+| M12.1 | Prayer times and Qibla | COMPLETE / ACTIVE | Device-local calculations and location handling; physical-device comparison remains release QA |
+| M12.2 | Adhan/prayer notifications | IMPLEMENTED / GATED FOR NATIVE RELEASE | Android/iOS local scheduling implemented; system sound only; physical-device QA outstanding |
+| Future | Reliable closed-PWA alerts | DEFERRED | Requires separately authorized, privacy-reviewed Web Push infrastructure |
 
-## Phase 1 — translation MVP
+No approved redistributable Adhan recording is bundled. The registry is empty and the system notification sound is the current fallback.
 
-Target: one to two sprints after Phase 0.
+## Current governance milestone
 
-### Scope
+### M-GOV1 — Portfolio Cleanup
 
-- Launch with one vetted, licensed English translation.
-- Add a translation toggle to the settings panel and a compact reader shortcut.
-- Display translation in a dismissible side panel on wide screens and bottom sheet on narrow screens.
-- Keep the selected ayah synchronized between Arabic, translation, bookmarks, search, and audio.
-- Support next/previous ayah inside the panel without reflowing the mushaf page.
-- Show translator name, edition, revision, attribution, and footnotes.
-- Cache translation data by page and edition.
-- Preserve the last selected translation and panel state as user preferences.
+**ACTIVE.** Establish the authoritative status, roadmap, branch inventory, dependency/approval registers and release baseline. This milestone changes documentation only.
 
-### Deliberate exclusions
+### M-GOV1B — Legacy Worktree / Branch Cleanup
 
-- No inline translation between Arabic lines.
-- No translation comparison in the first release.
-- No machine-generated translation presented as Quran translation.
+**PLANNED.** Review the two protected dirty legacy worktrees, preserve any unique work, then execute separately authorized branch/worktree cleanup. Historical PRs and merge evidence are not rewritten.
 
-### Acceptance criteria
+## Next: M13 Native Release Readiness
 
-- Translation coverage is complete for all 6,236 numbered ayat in the selected edition.
-- Opening or closing translation causes zero shift in Arabic page line breaks.
-- Cached translation appears within 150 ms on a typical supported device.
-- Every displayed passage includes accessible source attribution.
-- Footnote markup is sanitized and keyboard accessible.
-- A missing translation never suppresses or alters verified Arabic content.
+**PLANNED — NOT STARTED.**
 
-## Phase 2 — offline audio MVP
+M13 begins only after M-GOV1 and M-GOV1B acceptance. Its entrance criteria are defined in [RELEASE-BASELINE.md](./RELEASE-BASELINE.md). The milestone must resolve or explicitly accept:
 
-Status: completed 2026-08-06 in version 0.9.0.
+- one release-version decision across package, Android, iOS and release tags;
+- current-baseline Android/iOS package verification;
+- Android and iPhone/iPad physical-device QA;
+- prayer-notification permission, scheduling, exact/inexact, background/closed-app and tap flows;
+- Android signing/Play prerequisites and iOS signing/App Store Connect prerequisites;
+- security-advisory remediation decisions;
+- store artwork, metadata, privacy and support material;
+- a release/rollback record with no unverified content activation.
 
-### Scope
+## Then: Native Distribution
 
-- Download audio by surah and juz; defer whole-Quran downloads until storage behavior is proven.
-- Support one reciter initially, then enable all three through the same manifest contract.
-- Provide estimated size, free-space check, progress, pause, resume, cancel, retry, and delete actions.
-- Store a versioned audio manifest containing reciter, verse key, URL revision, byte size, and checksum.
-- Verify each file before marking it available offline.
-- Prefer downloaded audio automatically and fall back to streaming when online.
-- Add Wi-Fi-only downloads, cellular warning, and storage-location information.
-- Handle partial packs and interrupted downloads without making the pack appear complete.
-- Expose a storage manager in Settings with per-reciter and per-pack totals.
+**PLANNED.** Signed builds, store submission and rollout are separate from readiness. Distribution requires explicit authorization after M13 evidence is reviewed.
 
-### Technical direction
+## Then: M14 Controlled Content Expansion
 
-- For the web application, use a service worker plus Cache Storage or IndexedDB-backed blobs after a quota proof of concept.
-- Keep the manifest and download state separate from cached files.
-- Queue downloads with bounded concurrency and retry only transient failures.
-- Do not cache audio opportunistically without user intent.
-- Design the manifest so a future native wrapper can use device file storage without changing product semantics.
+**PLANNED.** Candidate work streams may include:
 
-### Acceptance criteria
+- Hadith expansion through separately approved datasets;
+- translation expansion, beginning only with sources whose attribution and rights are complete;
+- tafsir expansion using separately vetted editions;
+- approved morphology/vocabulary/evidence providers;
+- Warsh activation only after every M11 gate passes.
 
-- A completed pack plays in airplane/offline mode from its first to last verse.
-- Corrupt or truncated files are detected and repaired.
-- Interrupted downloads resume without restarting completed files.
-- Users can see and reclaim all storage used by the app.
-- Audio event ordering, repeat behavior, and page-follow mode remain correct offline.
-- Download controls meet platform background-execution limits without promising unsupported behavior.
+Each content stream must remain independently reviewable. M14 must not treat a registered candidate as approved or activate multiple trust-sensitive sources in one opaque change.
 
-Evidence: [`OFFLINE-AUDIO.md`](./OFFLINE-AUDIO.md), [`offline-audio.test.mjs`](../tests/offline-audio.test.mjs), and the versioned manifest endpoint at `GET /api/audio-manifest`.
+## Deferred
 
-Release note: automated integrity, interruption, storage, and sequence gates pass. A final installed-device airplane-mode walkthrough remains part of publication QA.
-
-## Phase 3 — tafsir MVP
-
-Status: completed 2026-08-06 in version 1.0.0.
-
-### Scope
-
-- Launch with one vetted, licensed tafsir source in one language.
-- Open tafsir from the selected ayah action menu and the study panel.
-- Use the same responsive side-panel/bottom-sheet shell as translation.
-- Display source, author, edition, section boundaries, citations, and footnotes.
-- Preserve ayah context while scrolling long commentary.
-- Support next/previous ayah without losing the reader’s position in the mushaf.
-- Cache recently opened tafsir sections; do not claim full offline support initially.
-- Provide a clear unavailable state when a source does not map one-to-one to an ayah.
-
-### Deliberate exclusions
-
-- No AI-generated tafsir.
-- No unattributed excerpts.
-- No mixing multiple tafsir sources into a synthetic answer.
-- No automatic opening during normal recitation.
-
-### Acceptance criteria
-
-- Every tafsir passage identifies its exact source and edition.
-- Verse and multi-verse section mappings pass content-review sampling.
-- Long-form reading is keyboard and screen-reader accessible.
-- Opening tafsir never changes the Arabic page geometry.
-- Users can return to the exact selected ayah with one action.
-
-Evidence: [`TAFSIR.md`](./TAFSIR.md), [`tafsir.test.mjs`](../tests/tafsir.test.mjs), and the checksummed endpoint at `GET /api/tafsir?verse=2:255`.
-
-## Phase 4 — expansion after evidence
-
-Prioritize these only after Phase 1–3 metrics meet their adoption and reliability thresholds:
-
-- Additional licensed translations and a two-column comparison mode.
-- Additional tafsir sources with explicit source switching.
-- Translation and tafsir language packs.
-- Smart audio packs for recently read pages or memorization ranges.
-- Background download scheduling where the host platform supports it.
-- Optional offline translation and tafsir packs.
-
-## Recommended release gates
-
-| Gate | Required signal |
-| --- | --- |
-| Trust | Content-source metadata, coverage checks, and human sampling are complete. |
-| Fidelity | Optional layers do not alter page dimensions, Arabic text, or line breaks. |
-| Performance | Reader remains responsive on a representative low-to-mid-range mobile device. |
-| Accessibility | All new controls have stable names, focus handling, and keyboard operation. |
-| Offline integrity | Downloads have checksums, explicit states, repair, and deletion paths. |
-| Analytics | Required events pass schema tests without collecting prohibited data. |
-| Rollback | A feature flag can disable a content source or offline subsystem without blocking core reading. |
-
-## Suggested outcome metrics
-
-- Translation: percentage of weekly readers who open translation and continue reading for at least two ayat.
-- Offline audio: successful pack completion rate and offline playback success rate.
-- Tafsir: percentage of tafsir opens that return to the same ayah and continue reading.
-- Reader health: page-load success, page-turn latency, audio-start success, and crash-free sessions.
-- Trust: zero known mismatches between Arabic text, page, ayah, translation, tafsir, and audio anchors.
+- Qalun and Khalaf until authoritative artifacts and rights are identified.
+- Whole-Quran browser audio downloads and offline packs for all 160 reciters.
+- A fully bundled offline native Quran runtime.
+- Production analytics until privacy, consent and retention policy are approved.
+- Cloud synchronization for private notes and learning state.
