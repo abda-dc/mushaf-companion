@@ -119,3 +119,20 @@ test("PrayerPanel has no M9R, Hadith, Quran reader, or M11 dependency", async ()
   assert.doesNotMatch(code, /reading-registry/);
   assert.doesNotMatch(code, /qiraat/);
 });
+
+test("full Adhan playback is explicit, foreground-only, and base-path safe", async () => {
+  const code = await panelCode();
+
+  assert.match(code, /APPROVED_FULL_ADHAN_ASSETS/);
+  assert.match(code, /findApprovedFullAdhan/);
+  assert.match(code, /appPath\(asset\.fileName\)/);
+  assert.match(code, /Play Regular Adhan/);
+  assert.match(code, /Play Fajr Adhan/);
+  assert.match(code, />\s*Stop\s*</);
+  assert.match(code, /<audio/);
+  assert.match(code, /preload="none"/);
+  assert.doesNotMatch(code, /autoPlay/);
+  assert.match(code, /system\s+notification sound/);
+  assert.match(code, /Islamic Center\s+Malm/);
+  assert.match(code, /CC BY 3\.0/);
+});

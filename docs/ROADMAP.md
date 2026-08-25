@@ -66,10 +66,25 @@ The existing generic verse-to-page lookup remains bound to the active Hafs trans
 | Milestone | Capability | Status | Current boundary |
 | --- | --- | --- | --- |
 | M12.1 | Prayer times and Qibla | COMPLETE / ACTIVE | Device-local calculations and location handling; physical-device comparison remains release QA |
-| M12.2 | Adhan/prayer notifications | IMPLEMENTED / GATED FOR NATIVE RELEASE | Android/iOS local scheduling implemented; system sound only; physical-device QA outstanding |
+| M12.2 | Adhan/prayer notifications | IMPLEMENTED / GATED FOR NATIVE RELEASE | Android/iOS local scheduling implemented; system sound remains the notification fallback because no approved `<30s` custom cue is registered; physical-device QA outstanding |
 | Future | Reliable closed-PWA alerts | DEFERRED | Requires separately authorized, privacy-reviewed Web Push infrastructure |
 
-No approved redistributable Adhan recording is bundled. The registry is empty and the system notification sound is the current fallback.
+M13D contains two reviewed redistributable full-Adhan release candidates for explicit foreground playback: Regular Adhan (CC0 1.0) and Fajr Adhan (CC BY 3.0); shared-baseline bundling remains pending merge. They are purpose-isolated from notification sounds. No approved `<30s` custom Adhan notification cue is registered, so the platform system sound remains the notification fallback.
+
+### M13D — Adhan Rights, Provenance, and Full Playback
+
+**IMPLEMENTED / VALIDATED — PENDING MERGE.**
+
+M13D establishes a reviewed Regular/Fajr full-playback asset registry, exact SHA-256 identities, provenance and licensing records, Fajr attribution/change disclosure, base-path-safe foreground playback, explicit Play/Stop controls, Pages packaging, and exact artifact-inventory protection.
+
+The boundary remains deliberate:
+
+- full recordings are `full-playback` assets only;
+- they can never resolve through the notification-cue registry;
+- no custom `<30s` notification cue is currently approved;
+- system notification sound remains the native notification fallback;
+- full Adhan autoplay while the application is closed or backgrounded is not claimed;
+- Android/iOS physical-device validation remains part of native release readiness.
 
 ## Current governance milestone
 

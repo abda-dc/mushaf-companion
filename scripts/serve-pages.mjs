@@ -9,6 +9,7 @@ const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".ico": "image/x-icon",
   ".js": "text/javascript; charset=utf-8",
+  ".mp3": "audio/mpeg",
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml",
