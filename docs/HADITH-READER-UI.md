@@ -21,9 +21,9 @@ Learn Panel (Hub)
 ```
 
 ### Key Component Architecture
-- **Component**: [`app/hadith-reader-panel.tsx`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/app/hadith-reader-panel.tsx)
-- **Integration**: Rendered as an overlay in [`app/page.tsx`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/app/page.tsx) (`overlay === "Hadith"`).
-- **Access Point**: First-class entry in [`app/learn-panel.tsx`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/app/learn-panel.tsx) via `props.onOpenHadith`.
+- **Component**: `app/hadith-reader-panel.tsx`
+- **Integration**: Rendered as an overlay in `app/page.tsx` (`overlay === "Hadith"`).
+- **Access Point**: First-class entry in `app/learn-panel.tsx` via `props.onOpenHadith`.
 - **Programmatic Contract**: `openHadithLibrary(target?: string | null)` in `app/page.tsx` for direct target navigation.
 
 ---

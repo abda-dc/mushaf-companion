@@ -7,9 +7,9 @@ The **M9H** initiative establishes a standalone, robust, and reusable Hadith dat
 M9H-1 is **ARCHITECTURE + VALIDATION + RESOLUTION ONLY**.
 
 > [!IMPORTANT]
-> **No Corpus Bundling**: Registering collections in M9H-1 does **NOT** mean complete Hadith corpora (such as the thousands of hadiths in Sahih al-Bukhari or Sahih Muslim) are bundled or imported. All core collections are currently registered with `contentAvailability: "metadata-only"`.
+> **No Corpus Bundling**: Registering collections does **NOT** mean complete Hadith corpora (such as the thousands of hadiths in Sahih al-Bukhari or Sahih Muslim) are bundled or imported. All six core collection definitions remain `contentAvailability: "metadata-only"`; approved individual seed records are tracked separately.
 >
-> **Zero Unverified Bodies**: No unvetted or rights-unclear hadith bodies (Arabic or translations) are copied or included. All 11 seeded records are strictly `metadata-only`.
+> **Bounded Approved Bodies**: The current reader contains 44 exact HadeethEnc English translation-approved seed records with attribution and checksums. It contains no approved Arabic corpus and makes no full-collection claim.
 
 ---
 
@@ -163,8 +163,8 @@ Content activation states enforce strict fail-closed constraints:
 
 ### 1. HadeethEnc (`hadeethenc`)
 - **Approved Origin**: Strictly HTTPS `https://hadeethenc.com`
-- **Role in M9H-1**: Citation, metadata, grading verification, and external reference URL target.
-- **Policy**: No full text bodies are imported in M9H-1. All seeded records maintain `metadata-only` status.
+- **M9H-1 role:** Citation, metadata, grading verification, and external reference URL target; the original architecture milestone imported no bodies.
+- **Current role:** The controlled v1.25.0 ingestion supplies 44 exact English translation-approved records. Arabic remains absent and all other collection records remain metadata-only/unavailable.
 
 ### 2. Sunnah.com (`sunnah`)
 - **Role in M9H-1**: External citation and numbering cross-check only (`external-only`).
@@ -179,11 +179,11 @@ Content activation states enforce strict fail-closed constraints:
 ## Current Milestone Status (M9H-1, M9H-2A, M9H-3 Completed)
 
 - **M9H-1**: Hadith Reader Foundation (Registry, fail-closed schemas, pure resolver, deep freeze).
-- **M9H-2A**: HadeethEnc English Translation Ingestion (11 approved records, exact byte preservation, SHA-256 verification, v1.25.0 manifest).
-- **M9H-3**: Production Hadith Reader UI ([`app/hadith-reader-panel.tsx`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/app/hadith-reader-panel.tsx), Learn Hub integration, collection browser, reader views, search, direct target navigation, accessibility, and responsive drill-down).
+- **M9H-2A and controlled source batches**: HadeethEnc English Translation Ingestion (44 approved records at the current baseline, exact source preservation, SHA-256 verification, v1.25.0 manifest).
+- **M9H-3**: Production Hadith Reader UI (`app/hadith-reader-panel.tsx`), Learn Hub integration, collection browser, reader views, search, direct target navigation, accessibility, and responsive drill-down.
 
-For detailed UI documentation, see [HADITH-READER-UI.md](file:///C:/Users/Kiya/Documents/Mushaf-m9h/docs/HADITH-READER-UI.md).
-For detailed ingestion documentation, see [HADITH-ENGLISH-INGESTION.md](file:///C:/Users/Kiya/Documents/Mushaf-m9h/docs/HADITH-ENGLISH-INGESTION.md).
+For detailed UI documentation, see [HADITH-READER-UI.md](./HADITH-READER-UI.md).
+For ingestion architecture and the original M9H-2A snapshot, see [HADITH-ENGLISH-INGESTION.md](./HADITH-ENGLISH-INGESTION.md). Current aggregate counts come from `app/hadith-content.mjs` and [PROJECT-STATUS.md](./PROJECT-STATUS.md).
 
 ---
 
@@ -221,14 +221,13 @@ resolveHadithReferenceByCanonicalLabel("Bukhari 4485");
 
 ## Roadmap
 
-### M9H-2: Verified Corpus Acquisition & Packaging
-- Define offline pack format for hadith collections.
-- Secure vetted, rights-approved Arabic texts and translations with verified scholarly review.
-- Generate canonical SHA-256 integrity checksums.
+### M9H-2: Controlled verified-record ingestion — COMPLETE FOR CURRENT SEEDS
+- The current release includes 44 exact approved English records, not complete collection corpora.
+- Full offline collections and approved Arabic text remain future source/rights/review work.
 
-### M9H-3: Hadith Reader UI
-- Reader shell supporting collection browsing, chapter indexing, search, and dual Arabic/translation view.
-- Support deep linking from internal navigation targets (`hadith:muslim:8`).
+### M9H-3: Hadith Reader UI — COMPLETE
+- Collection browsing, search, record display and deep linking from internal targets such as `hadith:muslim:8` are implemented.
+- Dual Arabic/translation display remains bounded by approved text availability; current seeds are English-only.
 
 ### M9R Integration
 - Connect M9R Curriculum citations to M9H Pure Resolver to enable direct in-app citation lookup and metadata preview.

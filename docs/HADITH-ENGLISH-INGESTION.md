@@ -1,5 +1,7 @@
 # M9H-2A HadeethEnc English Translation Ingestion
 
+> Historical milestone snapshot: M9H-2A began with 11 approved records. Later controlled Islamic Foundations batches expanded the current production seed to 44 records. See [PROJECT-STATUS.md](./PROJECT-STATUS.md) for the current aggregate state; the figures below preserve the original M9H-2A evidence.
+
 ## Overview
 
 The **M9H-2A** milestone executes the verified ingestion of official English Hadith translations from the HadeethEnc encyclopedia into Mushaf Companion for the **11 already-vetted M9H records**.
@@ -95,7 +97,7 @@ The canonical numbering (e.g. Sahih Muslim 8) remains strictly separate from the
 ## Deterministic Ingestion Tooling
 
 The deterministic ingestion script is located at:
-[`scripts/import-hadeethenc-m9h.mjs`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/scripts/import-hadeethenc-m9h.mjs)
+`scripts/import-hadeethenc-m9h.mjs`
 
 To re-ingest or verify upstream releases:
 ```powershell
@@ -106,7 +108,7 @@ The script:
 1. Validates the row 1 manifest transcript.
 2. Validates the row 2 column header positions.
 3. Selects only the approved IDs.
-4. Generates the frozen production module [`content/hadith/hadeethenc-en-v1.25.0.mjs`](file:///C:/Users/Kiya/Documents/Mushaf-m9h/content/hadith/hadeethenc-en-v1.25.0.mjs).
+4. Generates the frozen production module `content/hadith/hadeethenc-en-v1.25.0.mjs`.
 5. Asserts that the read-only source workbook remains completely untouched.
 
 ---

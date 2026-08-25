@@ -78,7 +78,7 @@ HadeethEnc is the approved external hadith source for this version. Hadith recor
 
 Under M9RH-1, Hadith references use `action: "internal-hadith-navigation"` and `contentPolicy: "metadata-only"`. They resolve through the Islamic Reference Hadith Bridge to internal M9H Hadith Reader targets (e.g. `hadith:muslim:8`), while the HadeethEnc `sourceUrl` remains preserved for provenance and external fallback. Translated hadith bodies, explanations, copied HTML, excerpts, and other external content are not bundled into M9R.
 
-At `m9r-v9`, M9H contains **42 translation-approved seeded records**: **19 Sahih al-Bukhari**, **21 Sahih Muslim**, **1 Sunan Abi Dawud**, and **1 Jami' at-Tirmidhi**; Sunan an-Nasa'i and Sunan Ibn Majah currently have zero locally approved records. Batch 9 introduced the first local `tirmidhi` seed (`tirmidhi:2307`).
+At the current `m9r-v10` baseline, M9H contains **44 translation-approved seeded records**: **20 Sahih al-Bukhari**, **21 Sahih Muslim**, **1 Sunan Abi Dawud**, and **2 Jami' at-Tirmidhi**; Sunan an-Nasa'i and Sunan Ibn Majah currently have zero locally approved records. Provider grading is preserved exactly, including the corrected Tirmidhi 1987 `Hasan` record.
 
 For Batch 9 source provenance and the exact Akhirah source matrix, see [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-9-AKHIRAH.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-9-AKHIRAH.md).
 
@@ -118,6 +118,7 @@ M9R-3 provides Learn-panel integration, routing, browsing, search, and source-ac
 - **`m9r-v7` — Source Batch 7:** Halal and Haram became reference-ready, producing 35 reference-ready topics, 14 planned topics, 132 total references, and 32 seeded M9H records. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-7-HALAL-HARAM.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-7-HALAL-HARAM.md).
 - **`m9r-v8` — Source Batch 8:** Du'a and Dhikr became fully reference-ready with four Qur'an anchors and four Hadith references, producing 39 reference-ready topics, 10 planned topics, 140 total references, an 80-key Qur'an whitelist, and 36 seeded M9H records. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-8-DUA-DHIKR.md).
 - **`m9r-v9` — Source Batch 9:** Akhirah became fully reference-ready with seven Qur'an anchors and seven Hadith references, producing 46 reference-ready topics, 3 planned topics, 154 total references, an 85-key Qur'an whitelist, and 42 seeded M9H records across Bukhari, Muslim, Abu Dawud, and Tirmidhi. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-9-AKHIRAH.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-9-AKHIRAH.md).
+- **`m9r-v10` — Source Batch 10:** Ihsan became fully reference-ready, completing 49/49 topics with 0 planned topics, 160 reference placements (78 Qur'an, 51 Hadith, 31 scholarly), an 88-key Qur'an whitelist, and 44 seeded M9H records. See [ISLAMIC-FOUNDATIONS-SOURCE-BATCH-10-IHSAN.md](./ISLAMIC-FOUNDATIONS-SOURCE-BATCH-10-IHSAN.md).
 
 ## Future content expansion
 
