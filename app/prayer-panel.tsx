@@ -54,6 +54,7 @@ import type { PrayerNotificationCapabilities } from "./prayer-notification-platf
 
 export interface PrayerPanelProps {
   onClose: () => void;
+  onBeforeAdhanPlayback?: () => void;
 }
 
 type LocationState = "idle" | "requesting" | "ready" | "error";
@@ -130,7 +131,10 @@ function displayPrayerName(name: string): string {
   }
 }
 
-export function PrayerPanel({ onClose }: PrayerPanelProps) {
+export function PrayerPanel({
+  onClose,
+  onBeforeAdhanPlayback,
+}: PrayerPanelProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -577,6 +581,8 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
     }
 
     const source = appPath(asset.fileName);
+
+    onBeforeAdhanPlayback?.();
 
     try {
       if (audio.getAttribute("src") !== source) {

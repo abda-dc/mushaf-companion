@@ -136,3 +136,20 @@ test("full Adhan playback is explicit, foreground-only, and base-path safe", asy
   assert.match(code, /Islamic Center\s+Malm/);
   assert.match(code, /CC BY 3\.0/);
 });
+
+test("Adhan playback stops existing Quran recitation before starting", async () => {
+  const panel = await panelCode();
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(panel, /onBeforeAdhanPlayback\?\.\(\)/);
+  assert.match(
+    page,
+    /onBeforeAdhanPlayback=\{\(\) => stopPlayback\(false\)\}/,
+  );
+
+  const stopIndex = panel.indexOf("onBeforeAdhanPlayback?.()");
+  const playIndex = panel.indexOf("await audio.play()");
+
+  assert.ok(stopIndex >= 0);
+  assert.ok(playIndex > stopIndex);
+});

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -86,16 +87,39 @@ test("production registry contains standard and Fajr full-playback assets only",
     "adhan-fajr-islamic-center-malmo-2012"), null);
 });
 
-test("production registry pins the reviewed runtime checksums", () => {
-  assert.equal(
-    findApprovedFullAdhan("standard")?.checksumSha256,
-    "7BA5B33B89B1A136F09F08DAC28E99F6BFB6BEAAA55AAC77F2C863EA9FCF2807",
-  );
+test("production registry checksums match the bundled reviewed MP3 bytes", async () => {
+  const expected = new Map([
+    [
+      "standard",
+      "7BA5B33B89B1A136F09F08DAC28E99F6BFB6BEAAA55AAC77F2C863EA9FCF2807",
+    ],
+    [
+      "fajr",
+      "080D1203872434E77E162D10CC8DA6321F60AC2328C8B13AE4BC3371449C0284",
+    ],
+  ]);
 
-  assert.equal(
-    findApprovedFullAdhan("fajr")?.checksumSha256,
-    "080D1203872434E77E162D10CC8DA6321F60AC2328C8B13AE4BC3371449C0284",
-  );
+  for (const [variant, expectedSha256] of expected) {
+    const approved = findApprovedFullAdhan(variant);
+
+    assert.ok(approved);
+    assert.equal(approved.checksumSha256, expectedSha256);
+
+    const bytes = await readFile(
+      new URL(`../public/${approved.fileName}`, import.meta.url),
+    );
+
+    const actualSha256 = createHash("sha256")
+      .update(bytes)
+      .digest("hex")
+      .toUpperCase();
+
+    assert.equal(
+      actualSha256,
+      approved.checksumSha256,
+      `${approved.fileName} does not match its reviewed SHA-256`,
+    );
+  }
 });
 
 test("PrayerPanel notification UI consumes only the cue registry", async () => {

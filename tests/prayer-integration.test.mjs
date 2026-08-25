@@ -20,7 +20,7 @@ test("PrayerPanel is integrated through the existing overlay mechanism", () => {
   );
   assert.match(
     page,
-    /overlay === "Prayer" && \([\s\S]*?<PrayerPanel onClose=\{\(\) => setOverlay\(null\)\} \/>/,
+    /overlay === "Prayer" && \([\s\S]*?<PrayerPanel[\s\S]*?onBeforeAdhanPlayback=\{\(\) => stopPlayback\(false\)\}[\s\S]*?onClose=\{\(\) => setOverlay\(null\)\}[\s\S]*?\/>/,
   );
 });
 
