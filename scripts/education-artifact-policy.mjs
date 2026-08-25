@@ -11,6 +11,8 @@ const DECLARED_ARTIFACT_KEYS = ["mediaType", "path", "sha256"];
 const BASE_PAGES_ARTIFACTS = new Set([
   "404.html",
   "apple-touch-icon.png",
+  "audio/adhan/fajr-adhan.mp3",
+  "audio/adhan/regular-adhan.mp3",
   "content/amharic_zain-update.txt",
   "content/amharic_zain.xml",
   "content/content-manifest.json",

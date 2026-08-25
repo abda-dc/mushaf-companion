@@ -36,7 +36,13 @@ import {
   getDeviceTimeZone,
   requestPrayerLocation,
 } from "./prayer-location.ts";
-import { APPROVED_ADHAN_ASSETS } from "./adhan-assets.ts";
+import {
+  APPROVED_ADHAN_CUES,
+  APPROVED_FULL_ADHAN_ASSETS,
+  findApprovedFullAdhan,
+  type AdhanVariant,
+} from "./adhan-assets.ts";
+import { appPath } from "./runtime-config.ts";
 import {
   inspectPrayerNotificationCapabilities,
   openPrayerExactAlarmSettings,
@@ -48,6 +54,7 @@ import type { PrayerNotificationCapabilities } from "./prayer-notification-platf
 
 export interface PrayerPanelProps {
   onClose: () => void;
+  onBeforeAdhanPlayback?: () => void;
 }
 
 type LocationState = "idle" | "requesting" | "ready" | "error";
@@ -124,7 +131,10 @@ function displayPrayerName(name: string): string {
   }
 }
 
-export function PrayerPanel({ onClose }: PrayerPanelProps) {
+export function PrayerPanel({
+  onClose,
+  onBeforeAdhanPlayback,
+}: PrayerPanelProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -148,6 +158,23 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
     "Prayer notifications are off by default.",
   );
   const [notificationBusy, setNotificationBusy] = useState(false);
+  const adhanAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingAdhanVariant, setPlayingAdhanVariant] =
+    useState<AdhanVariant | null>(null);
+  const [adhanPlaybackStatus, setAdhanPlaybackStatus] = useState(
+    "Choose a recording to play. Playback starts only after you press Play.",
+  );
+
+  useEffect(() => {
+    const audio = adhanAudioRef.current;
+
+    return () => {
+      if (!audio) return;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    };
+  }, []);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -466,7 +493,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
       return;
     }
 
-    const cue = APPROVED_ADHAN_ASSETS[0] ?? null;
+    const cue = APPROVED_ADHAN_CUES[0] ?? null;
     setPreferences((current) => ({
       ...current,
       notifications: {
@@ -482,7 +509,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
   }
 
   function handleAdhanCue(event: ChangeEvent<HTMLSelectElement>) {
-    const cue = APPROVED_ADHAN_ASSETS.find(
+    const cue = APPROVED_ADHAN_CUES.find(
       (asset) => asset.id === event.target.value,
     );
     if (!cue) return;
@@ -543,6 +570,49 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
     }
   }
 
+  async function handlePlayAdhan(variant: AdhanVariant) {
+    const asset = findApprovedFullAdhan(variant);
+    const audio = adhanAudioRef.current;
+
+    if (!asset || !audio) {
+      setPlayingAdhanVariant(null);
+      setAdhanPlaybackStatus("The selected Adhan recording is unavailable.");
+      return;
+    }
+
+    const source = appPath(asset.fileName);
+
+    onBeforeAdhanPlayback?.();
+
+    try {
+      if (audio.getAttribute("src") !== source) {
+        audio.pause();
+        audio.src = source;
+        audio.load();
+      }
+
+      await audio.play();
+      setPlayingAdhanVariant(variant);
+      setAdhanPlaybackStatus(`Playing ${asset.displayName}.`);
+    } catch {
+      setPlayingAdhanVariant(null);
+      setAdhanPlaybackStatus(
+        "Playback could not start. Check device audio settings and try again.",
+      );
+    }
+  }
+
+  function handleStopAdhan() {
+    const audio = adhanAudioRef.current;
+
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    setPlayingAdhanVariant(null);
+    setAdhanPlaybackStatus("Adhan playback stopped.");
+  }
   const nextPrayer = calculationState.nextPrayer;
 
   return (
@@ -812,6 +882,104 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
         </details>
 
         <section
+          className="prayer-notifications-card prayer-adhan-playback-card"
+          aria-labelledby="prayer-adhan-playback-heading"
+        >
+          <header>
+            <div>
+              <span className="prayer-section-kicker">ADHAN PLAYBACK</span>
+              <h3 id="prayer-adhan-playback-heading">Listen to the Adhan</h3>
+            </div>
+          </header>
+
+          <p className="prayer-notification-capability">
+            Foreground playback only. The full recording starts only when you
+            press Play. Prayer notifications continue to use the system
+            notification sound.
+          </p>
+
+          <div className="prayer-notification-actions">
+            {APPROVED_FULL_ADHAN_ASSETS.map((asset) => (
+              <button
+                key={asset.id}
+                type="button"
+                className={
+                  playingAdhanVariant === asset.variant
+                    ? "prayer-primary-action"
+                    : "prayer-secondary-action"
+                }
+                onClick={() => void handlePlayAdhan(asset.variant)}
+                aria-pressed={playingAdhanVariant === asset.variant}
+              >
+                {asset.variant === "fajr"
+                  ? "Play Fajr Adhan"
+                  : "Play Regular Adhan"}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="prayer-secondary-action"
+              onClick={handleStopAdhan}
+              disabled={playingAdhanVariant === null}
+            >
+              Stop
+            </button>
+          </div>
+
+          <audio
+            ref={adhanAudioRef}
+            preload="none"
+            onEnded={() => {
+              setPlayingAdhanVariant(null);
+              setAdhanPlaybackStatus("Adhan playback finished.");
+            }}
+            onError={() => {
+              setPlayingAdhanVariant(null);
+              setAdhanPlaybackStatus(
+                "The selected Adhan recording could not be loaded.",
+              );
+            }}
+          />
+
+          <p
+            className="prayer-notification-status"
+            role="status"
+            aria-live="polite"
+          >
+            {adhanPlaybackStatus}
+          </p>
+
+          <small className="prayer-notification-asset-note">
+            Regular Adhan: Adam-synagda, CC0 1.0. Fajr Adhan: Islamic Center
+            Malmö, CC BY 3.0; source audio extracted from the original video
+            and re-encoded to MP3 for Mushaf Companion.{" "}
+            <a
+              href="https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Regular source
+            </a>
+            {" · "}
+            <a
+              href="https://commons.wikimedia.org/wiki/File:Eid_al-Fitr_Fajr_azan_at_Malm%C3%B6_Mosque_-_19_August_2012.webm"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Fajr source
+            </a>
+            {" · "}
+            <a
+              href="https://creativecommons.org/licenses/by/3.0/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              CC BY 3.0
+            </a>
+          </small>
+        </section>
+        <section
           className="prayer-notifications-card"
           aria-labelledby="prayer-notifications-heading"
         >
@@ -874,7 +1042,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
               disabled={!preferences.notifications.enabled || notificationBusy}
             >
               <option value="notification">System notification sound</option>
-              {APPROVED_ADHAN_ASSETS.length > 0 && (
+              {APPROVED_ADHAN_CUES.length > 0 && (
                 <option value="notification-with-adhan-cue">
                   Approved short Adhan cue
                 </option>
@@ -884,7 +1052,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
 
           {preferences.notifications.alertMode ===
             "notification-with-adhan-cue" &&
-            APPROVED_ADHAN_ASSETS.length > 0 && (
+            APPROVED_ADHAN_CUES.length > 0 && (
               <label className="prayer-notification-select">
                 <span>Adhan cue</span>
                 <select
@@ -892,7 +1060,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
                   onChange={handleAdhanCue}
                   disabled={notificationBusy}
                 >
-                  {APPROVED_ADHAN_ASSETS.map((asset) => (
+                  {APPROVED_ADHAN_CUES.map((asset) => (
                     <option key={asset.id} value={asset.id}>
                       {asset.displayName}
                     </option>
@@ -934,7 +1102,7 @@ export function PrayerPanel({ onClose }: PrayerPanelProps) {
           <p className="prayer-notification-capability">
             {notificationCapabilities.message}
           </p>
-          {APPROVED_ADHAN_ASSETS.length === 0 && (
+          {APPROVED_ADHAN_CUES.length === 0 && (
             <small className="prayer-notification-asset-note">
               No licensed Adhan recording is bundled. Alerts use the system
               notification sound; a short cue will appear only after its license

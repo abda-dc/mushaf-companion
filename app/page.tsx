@@ -2222,7 +2222,10 @@ export default function Home() {
           )}
 
           {overlay === "Prayer" && (
-            <PrayerPanel onClose={() => setOverlay(null)} />
+            <PrayerPanel
+              onBeforeAdhanPlayback={() => stopPlayback(false)}
+              onClose={() => setOverlay(null)}
+            />
           )}
           {overlay === "Hifz" && (
             <section className="panel-shell hifz-panel" role="dialog" aria-modal="true" aria-labelledby="hifz-title">

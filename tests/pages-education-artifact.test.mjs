@@ -53,3 +53,37 @@ test("Pages policy rejects a candidate-intake file even without lesson prose", a
 test("Pages exact inventory rejects candidate-shaped data under a non-education-looking path", async (t) => {
   await rejectedFixture(t, "assets/cache/data.json", '{"sourceStatus":"pending","productionEligible":false}');
 });
+
+test("Pages policy allows only the approved Adhan audio inventory", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "mushaf-pages-adhan-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  for (const relativePath of [
+    "audio/adhan/regular-adhan.mp3",
+    "audio/adhan/fajr-adhan.mp3",
+  ]) {
+    const path = join(root, relativePath);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "approved-audio-fixture");
+  }
+
+  await verifyEducationArtifactPolicy(
+    root,
+    await listPagesArtifactFiles(root),
+    DISABLED_RELEASE,
+  );
+});
+
+test("Pages policy still rejects undeclared Adhan or arbitrary audio files", async (t) => {
+  await rejectedFixture(
+    t,
+    "audio/adhan/unapproved-adhan.mp3",
+    "unapproved-audio-fixture",
+  );
+
+  await rejectedFixture(
+    t,
+    "audio/other-sound.mp3",
+    "unapproved-audio-fixture",
+  );
+});

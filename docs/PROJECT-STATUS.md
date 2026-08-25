@@ -19,7 +19,7 @@ This is the authoritative high-level status source for the current Mushaf Compan
 
 Mushaf Companion is a production-active, installable GitHub Pages PWA and server-backed Capacitor application shell built around a verified 604-page Madani Mushaf. The core reader, M1-M8 study architecture, M9H Hadith reader, M9R Islamic Foundations library, M10 reciter expansion, M11 reading architecture, M12.1 Prayer/Qibla, and M12.2 local-notification architecture are implemented.
 
-Production content remains deliberately narrower than the architecture. Hafs 'an Asim is the only active Quran reading. Saheeh International and Ibn Kathir are the single active online English translation and tafsir. Guided Education, production morphology/vocabulary content, M8 evidence relationships, Warsh, Somali/Oromo translations, and custom Adhan audio remain gated or blocked. Native projects build unsigned artifacts, but current-baseline packaging, signing, store setup, and physical-device QA remain release gates.
+Production content remains deliberately narrower than the architecture. Hafs 'an Asim is the only active Quran reading. Saheeh International and Ibn Kathir are the single active online English translation and tafsir. Guided Education, production morphology/vocabulary content, M8 evidence relationships, Warsh, Somali/Oromo translations, and custom Adhan notification cues remain gated or blocked. M13D has validated two reviewed full Adhan recordings for explicit foreground playback; activation in the shared production baseline remains pending merge. Native projects build unsigned artifacts, but current-baseline packaging, signing, store setup, and physical-device QA remain release gates.
 
 ## 3. Milestone matrix
 
@@ -40,7 +40,8 @@ Production content remains deliberately narrower than the architecture. Hafs 'an
 | M10 | Hafs reciter expansion | COMPLETE | ACTIVE | Upstream audio availability; offline packs limited to Alafasy | Maintain 160-reciter identity/completeness audit |
 | M11 | Qira'at/Riwayat foundation | COMPLETE | HAFS ONLY | Reading-specific text, page geometry, fonts, rights and audio compatibility | Keep Warsh fail-closed until all gates pass |
 | M12.1 | Prayer times and Qibla | COMPLETE | ACTIVE, DEVICE-LOCAL | User location and selected calculation method | Physical-device comparison during M13 |
-| M12.2 | Adhan/prayer notifications | IMPLEMENTED | NATIVE LOCAL SCHEDULING; PWA TEST-ONLY | Permission, Android exact-alarm setting, physical-device QA; approved cue absent | Validate current baseline on Android/iOS hardware |
+| M12.2 | Adhan/prayer notifications | IMPLEMENTED | NATIVE LOCAL SCHEDULING; PWA TEST-ONLY | Permission, Android exact-alarm setting, physical-device QA; custom `<30s` cue absent, so system sound remains fallback | Validate current baseline on Android/iOS hardware |
+| M13D | Adhan rights/provenance and full playback | IMPLEMENTED / VALIDATED; PENDING MERGE | FOREGROUND FULL PLAYBACK | Two reviewed Regular/Fajr recordings; no notification-cue reuse and no closed/background autoplay claim | Preserve provenance/attribution and complete native physical-device QA during M13 |
 | M13 | Native Release Readiness | NOT STARTED | PLANNED | M-GOV1B, version decision, current native packages, signing and QA | Enter only after M-GOV1/M-GOV1B acceptance |
 | M14 | Controlled Content Expansion | NOT STARTED | PLANNED | Rights, sources, checksums and content review | Prioritize Hadith, translations and tafsir separately |
 
@@ -55,6 +56,7 @@ Production content remains deliberately narrower than the architecture. Hafs 'an
 - 160 verified Hafs reciters: 45 ayah-scoped and 115 surah-scoped; only Alafasy supports verified offline packs.
 - Device-local prayer calculations, 12 calculation presets, standard/Hanafi Asr choices, adjustments, local/remembered approximate location and Qibla.
 - Opt-in Android/iOS local prayer scheduling and explicit web/PWA test notifications; reliable closed-PWA scheduling is not claimed.
+- M13D release candidate: explicit foreground full-Adhan playback using separately reviewed Regular and Fajr recordings; playback starts only from a user action and the full recordings are excluded from notification-cue eligibility. Shared-baseline activation remains pending merge.
 - Installable GitHub Pages PWA plus Capacitor Android/iOS projects and unsigned native artifact workflows.
 
 ## 5. Implemented but gated capabilities
@@ -72,7 +74,7 @@ Production content remains deliberately narrower than the architecture. Hafs 'an
 - Nasiha Guided Education candidate: exact documents, owner/signatory, revision, rights, checksums and named scholarly review are absent.
 - Warsh artifact and redistribution/bundling/offline rights; Qalun and Khalaf sources and rights.
 - Somali responsible-organization/publisher attribution and Oromo publisher attribution.
-- Approved redistributable Adhan notification cue/full recording.
+- Approved redistributable `<30s` custom Adhan notification cue. Separately reviewed Regular/Fajr foreground-playback recordings are validated in M13D but remain pending merge into the shared baseline.
 - Android/iOS signing, store accounts/configuration and physical-device QA.
 
 ## 7. Deferred capabilities
@@ -91,7 +93,7 @@ Production content remains deliberately narrower than the architecture. Hafs 'an
 - `npm audit` reports 22 vulnerable dependency nodes (14 high, 7 moderate, 1 low); production-only audit reports one transitive high-severity `nanoid` advisory. Remediation requires a separately reviewed dependency change.
 - `main` is not branch-protected. CODEOWNERS, Dependabot configuration, issue templates and a PR template are absent.
 - Native notification behavior has automated coverage but still needs Android and iPhone/iPad device validation.
-- No approved custom Adhan audio is distributed; system notification sound is the functional fallback.
+- No approved custom `<30s` Adhan notification cue is distributed; system notification sound remains the notification fallback. The M13D-reviewed Regular/Fajr release candidates are separate foreground playback assets and are never used as notification sounds or claimed to autoplay while the app is closed/backgrounded; shared-baseline activation remains pending merge.
 
 ## 9. Next milestone sequence
 

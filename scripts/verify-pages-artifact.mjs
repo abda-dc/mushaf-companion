@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 import { listPagesArtifactFiles, verifyEducationArtifactPolicy } from "./education-artifact-policy.mjs";
+import { APPROVED_FULL_ADHAN_ASSETS } from "../app/adhan-assets.ts";
 
 const root = process.cwd();
 const outputDirectory = resolve(root, process.argv[2] || "_site");
@@ -92,6 +93,20 @@ assert.equal(buildMetadata.amharic.records, 6236);
 assert.equal(buildMetadata.amharic.rawChecksum, "3b765a67dc43eb54fc08518c66964ea246209c1284def73d1a69d8c7663780f9");
 assert.equal(buildMetadata.amharic.normalizedChecksum, "77ac2ad5f35ba878b07bc7aed9f233ee418a6f43dbe4d095d6ae32f3153ffb13");
 assert.equal(createHash("sha256").update(amharicBytes).digest("hex"), buildMetadata.amharic.rawChecksum);
+
+for (const asset of APPROVED_FULL_ADHAN_ASSETS) {
+  const bytes = await readFile(resolve(outputDirectory, asset.fileName));
+  const actualChecksum = createHash("sha256")
+    .update(bytes)
+    .digest("hex")
+    .toUpperCase();
+
+  assert.equal(
+    actualChecksum,
+    asset.checksumSha256,
+    `Built Adhan asset checksum mismatch: ${asset.fileName}`,
+  );
+}
 
 console.log(`Verified standalone Pages artifact at ${outputDirectory}`);
 console.log(`${scripts.length} reader script(s), ${styles.length} stylesheet(s), correct ${basePath} scope, no iframe or ChatGPT Site dependency.`);
