@@ -112,7 +112,8 @@ test("standalone source, PWA scope, navigation fallback, and workflow remove the
   const pagesRuntimeSource = `${page}\n${panel}\n${pagesTransport}\n${entry}\n${index}`;
   assert.doesNotMatch(pagesRuntimeSource, /["'`]\/api\//);
   assert.doesNotMatch(pagesRuntimeSource, /chatgpt\.site|<iframe\b/i);
-  assert.match(entry, /configureReaderRuntime\(\{ mode: "pages", basePath: "\/mushaf-companion\/" \}\)/);
+  assert.match(entry, /configureReaderRuntime\(\{ mode: runtimeMode, basePath: __MUSHAF_RUNTIME_BASE_PATH__ \}\)/);
+  assert.match(entry, /runtimeMode === "pages" && <PwaRegister \/>/);
   assert.match(entry, /<Home \/>/);
   assert.match(page, /AyahContextLens/);
   assert.match(page, />Study</);

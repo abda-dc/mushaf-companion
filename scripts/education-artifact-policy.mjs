@@ -34,6 +34,16 @@ const BASE_PAGES_ARTIFACTS = new Set([
   "web-app-manifest-512x512.png",
   "window.svg",
 ]);
+const BASE_NATIVE_ARTIFACTS = new Set([
+  ...[...BASE_PAGES_ARTIFACTS].filter((path) => !new Set([
+    "404.html",
+    "content/pages-build.json",
+    "manifest.webmanifest",
+    "offline.html",
+    "sw.js",
+  ]).has(path)),
+  "content/native-build.json",
+]);
 const BASE_COMPILED_ASSET = /^assets\/index-[A-Za-z0-9_-]+\.(?:css|js)$/u;
 
 export async function listPagesArtifactFiles(directory) {
@@ -104,7 +114,9 @@ function validateRelease(release) {
   assert.ok(release.artifacts.length > 0, "An active education release must declare every packaged artifact.");
 }
 
-export async function verifyEducationArtifactPolicy(outputDirectory, files, release) {
+export async function verifyEducationArtifactPolicy(outputDirectory, files, release, runtime = "pages") {
+  assert.ok(runtime === "pages" || runtime === "native", `Unsupported artifact runtime: ${runtime}`);
+  const baseArtifacts = runtime === "native" ? BASE_NATIVE_ARTIFACTS : BASE_PAGES_ARTIFACTS;
   validateRelease(release);
   const declared = new Map();
   for (const artifact of release.artifacts) {
@@ -128,8 +140,8 @@ export async function verifyEducationArtifactPolicy(outputDirectory, files, rele
     const relativePath = artifactRelativePath(outputDirectory, path);
     if (declared.has(relativePath)) continue;
     assert.ok(
-      BASE_PAGES_ARTIFACTS.has(relativePath) || BASE_COMPILED_ASSET.test(relativePath),
-      `Pages artifact contains an undeclared artifact outside the approved base/education inventory: ${relativePath}`,
+      baseArtifacts.has(relativePath) || BASE_COMPILED_ASSET.test(relativePath),
+      `${runtime} artifact contains an undeclared artifact outside the approved base/education inventory: ${relativePath}`,
     );
     assert.doesNotMatch(relativePath, EDUCATION_PATH, `Pages artifact contains an undeclared education path: ${relativePath}`);
     const extension = extname(path).toLowerCase();

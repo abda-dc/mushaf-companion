@@ -40,6 +40,7 @@ next-env.d.ts
 *.tsbuildinfo
 /dist/
 /_site/
+/native-runtime/
 /.wrangler/
 /outputs/
 /work/
