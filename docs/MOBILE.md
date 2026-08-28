@@ -1,13 +1,15 @@
 # Native mobile packages
 
-Mushaf Companion uses Capacitor 8 to provide Android and iOS projects around the deployed, server-backed reader.
+Mushaf Companion uses Capacitor 8 to package the audited React reader locally in its Android and iOS applications.
 
 ## Architecture
 
 - App ID: `com.mushafcompanion.reader`
-- Production reader: `https://mushaf-companion.abda-dc.chatgpt.site`
-- The native shell opens the production reader over HTTPS because the 604-page data, search, chapter index, and lookup endpoints are server-rendered.
-- A bundled `mobile-shell/index.html` supplies a calm offline/error surface.
+- Native web output: `native-runtime/`
+- `npm run build:native` builds the shared standalone reader with native-local asset paths, reviewed release-owned media, and `content/native-build.json` provenance.
+- Capacitor has no production `server.url`; Android and iOS start the packaged `index.html`, JavaScript, and stylesheet.
+- Quran pages, search, chapter metadata, tafsir, and non-release-owned recitation media remain intentional network-provider requests through the shared static-reader transport.
+- GitHub Pages remains a separate `_site/` build with `/mushaf-companion/` base paths, manifest, offline document, and service worker. Those Pages behaviors are not registered by the native runtime.
 
 ## Prepare projects
 
@@ -15,6 +17,8 @@ Mushaf Companion uses Capacitor 8 to provide Android and iOS projects around the
 npm install
 npm run mobile:sync
 ```
+
+`mobile:sync`, `mobile:android`, and `mobile:ios` build the deterministic native reader before Capacitor synchronization. For an inspection-only build, use `npm run build:native`, `npm run verify:native`, and `npm run smoke:native`.
 
 ## Android
 
@@ -44,8 +48,9 @@ An App Store `.ipa` requires an Apple Developer team, bundle signing, and a macO
 
 ## Release checklist
 
-1. Deploy and verify the production Sites version.
-2. Run `npm run mobile:sync` so both native projects receive the current configuration.
-3. Test page gestures, audio continuation, external audio hosts, keyboard/accessibility focus, and safe-area layouts on physical devices.
-4. Replace development icons and splash assets with approved store artwork.
-5. Configure Android signing or the Apple Development Team outside source control.
+1. Build and verify the native web runtime and inspect `content/native-build.json` for the intended source revision.
+2. Run `npm run mobile:sync` so both native projects receive the same verified local runtime.
+3. Inspect the native packages for the reader JS/CSS and exact Regular/Fajr Adhan hashes.
+4. Test page gestures, notifications, Adhan playback, external content providers, keyboard/accessibility focus, and safe-area layouts on physical devices.
+5. Replace development icons and splash assets with approved store artwork.
+6. Configure Android signing or the Apple Development Team outside source control.

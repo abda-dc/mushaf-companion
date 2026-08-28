@@ -118,9 +118,9 @@ test("server and Pages transports expose the same education operation", async ()
   assert.match(route, /lookupVerseFromSource/);
 });
 
-test("Pages release build fails closed before packaging undeclared education content", async () => {
+test("static release builds fail closed before packaging undeclared education content", async () => {
   const [build, verifier] = await Promise.all([
-    readFile(new URL("../scripts/build-pages.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/build-static-runtime.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/verify-pages-artifact.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(build, /createProductionEducationRegistry/);

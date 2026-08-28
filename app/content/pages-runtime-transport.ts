@@ -1,5 +1,5 @@
 import { findTranslationSource } from "./source-registry.ts";
-import { appPath } from "../runtime-config.ts";
+import { appPath, getReaderRuntimeConfig } from "../runtime-config.ts";
 import {
   fetchAudioManifestFromSource,
   fetchChaptersFromSource,
@@ -15,8 +15,10 @@ import { createProductionEducationRegistry } from "../education-content.ts";
 const AMHARIC_SOURCE = findTranslationSource("quranenc:amharic_zain");
 
 export function createPagesReaderTransport(fetchImpl: typeof fetch = fetch): ReaderContentTransport {
+  const configuredMode = getReaderRuntimeConfig().mode;
+  const runtimeMode = configuredMode === "native" ? "native" : "pages";
   return {
-    mode: "pages",
+    mode: runtimeMode,
     contentManifestUrl: appPath("content/content-manifest.json"),
     loadPage(page, signal) {
       return fetchQuranPageFromSource(page, fetchImpl, signal);

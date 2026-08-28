@@ -135,7 +135,10 @@ test("implements dynamic Madani pages and every requested navigation path", asyn
   assert.match(runtimeSource, /revelationOrder/);
   assert.match(runtimeSource, /versesCount/);
   assert.match(capacitorConfig, /com\.mushafcompanion\.reader/);
-  assert.match(capacitorConfig, /mushaf-companion\.abda-dc\.chatgpt\.site/);
+  assert.match(capacitorConfig, /webDir: "native-runtime"/);
+  assert.doesNotMatch(capacitorConfig, /server:\s*\{|chatgpt\.site/);
+  assert.match(mobileWorkflow, /npm run build:native/);
+  assert.match(mobileWorkflow, /npm run verify:native/);
   assert.match(mobileWorkflow, /assembleDebug/);
   assert.match(mobileWorkflow, /bundleRelease/);
   assert.match(mobileWorkflow, /iphonesimulator/);

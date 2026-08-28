@@ -144,7 +144,7 @@ Install or open the public app:
 
 ## Architecture
 
-Mushaf Companion uses one React reader with two content transports. Local/server builds use the vinext API routes. The GitHub Pages build uses browser-safe Quran Foundation requests plus build-produced, rights-compatible static metadata and Amharic package assets. Both modes share the same page, chapter, search, audio-manifest, and tafsir normalization and integrity code.
+Mushaf Companion uses one React reader with two content transports. Local/server builds use the vinext API routes. GitHub Pages and native Capacitor builds use browser-safe Quran Foundation requests plus build-produced, rights-compatible static metadata and Amharic package assets. Pages emits repository-scoped PWA paths to `_site/`; native emits local relative assets and source provenance to `native-runtime/`. All modes share the same page, chapter, search, audio-manifest, and tafsir normalization and integrity code.
 
 ```text
 Shared React reader
@@ -192,6 +192,9 @@ npm run dev      # Start the development server on port 5550
 npm run build    # Create a production build
 npm run build:pages   # Create the standalone GitHub Pages reader in _site/
 npm run verify:pages  # Reject wrappers, server API paths, bad base paths, and invalid PWA scope
+npm run build:native  # Create the deterministic Capacitor reader in native-runtime/
+npm run verify:native # Verify local JS/CSS, provenance, gated content, and reviewed Adhan assets
+npm run smoke:native  # Load native HTML, JS, CSS, provenance, and Adhan assets locally
 npm run start    # Run the production build on port 5550
 npm test         # Build and run the reader/API test suite
 npm run lint     # Run ESLint

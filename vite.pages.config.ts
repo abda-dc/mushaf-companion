@@ -15,6 +15,10 @@ export default defineConfig({
     ],
   },
   plugins: [react()],
+  define: {
+    __MUSHAF_RUNTIME_MODE__: JSON.stringify("pages"),
+    __MUSHAF_RUNTIME_BASE_PATH__: JSON.stringify("/mushaf-companion/"),
+  },
   build: {
     outDir: resolve(process.cwd(), "_site"),
     emptyOutDir: true,

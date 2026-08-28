@@ -1,4 +1,4 @@
-export type ReaderRuntimeMode = "server" | "pages";
+export type ReaderRuntimeMode = "server" | "pages" | "native";
 
 export interface ReaderRuntimeConfig {
   mode: ReaderRuntimeMode;
